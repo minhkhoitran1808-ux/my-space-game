@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Phi Thuyền: Update 1.4 - Kỹ Năng</title>
+    <style>
+        body {
+            margin: 0; overflow: hidden; background-color: #0d0d1a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none; user-select: none;
+        }
+        canvas { display: block; }
+        
+        /* HUD & SKILLS UI */
+        #hud-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            padding: 15px; box-sizing: border-box; pointer-events: none;
+            z-index: 10;
+        }
+        .top-bar { display: flex; justify-content: space-between; align-items: flex-start; }
+        .hud-box { color: white; font-weight: bold; text-shadow: 2px 2px 0 #000; }
+        
+        #exp-container {
+            width: 200px; height: 10px; background: #333; border: 1px solid #fff;
+            margin-top: 5px; border-radius: 5px; overflow: hidden;
+        }
+        #exp-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #ff00cc, #333399); transition: width 0.3s; }
+        
+        /* SKILL BAR (Góc dưới bên trái hoặc giữa dưới) */
+        #skill-bar {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 15px; pointer-events: auto;
+        }
+        .skill-slot {
+            width: 60px; height: 60px; background: rgba(0,0,0,0.5);
+            border: 2px solid #00ffcc; border-radius: 10px;
+            position: relative; display: flex; justify-content: center; align-items: center;
+            color: white; font-weight: bold; font-size: 20px;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+        }
+        .skill-key { position: absolute; top: 2px; left: 5px; font-size: 12px; color: #ffff00; }
+        .cooldown-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 0%;
+            background: rgba(0,0,0,0.8); border-radius: 8px; transition: height 0.1s linear;
+        }
+        .cd-text { position: absolute; font-size: 18px; color: white; display: none; }
+
+        /* UPGRADE BUTTON */
+        #upgrade-btn {
+            position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+            pointer-events: auto; background: linear-gradient(45deg, #ffcc00, #ff6600);
+            border: 2px solid white; color: black; padding: 10px 20px;
+            border-radius: 20px; font-weight: bold; cursor: pointer;
+            display: none; animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        /* SCREENS */
+        .screen {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; color: white; background: rgba(0, 15, 30, 0.98);
+            padding: 30px; border-radius: 15px; border: 2px solid #00ffcc;
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.5); pointer-events: auto; z-index: 20;
+            min-width: 600px; display: none; /* Rộng hơn để chứa patch notes */
+        }
+        
+        /* Layout Start Screen */
+        .start-layout { display: flex; gap: 20px; text-align: left; }
+        .patch-notes {
+            flex: 1; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;
+            font-size: 14px; max-height: 300px; overflow-y: auto; border: 1px solid #444;
+        }
+        .patch-notes h3 { margin-top: 0; color: #ffcc00; border-bottom: 1px solid #666; padding-bottom: 5px; }
+        .patch-notes ul { padding-left: 20px; margin: 5px 0; }
+        .patch-notes li { margin-bottom: 5px; color: #ddd; }
+        .main-start { flex: 1.5; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        .btn-play {
+            background: #00ffcc; color: black; font-size: 24px; font-weight: bold;
+            padding: 15px 50px; border: none; border-radius: 50px; cursor: pointer;
+            margin-top: 20px; transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-play:hover { transform: scale(1.05); box-shadow: 0 0 20px #00ffcc; }
+
+        .stat-row { display: flex; justify-content: space-between; margin: 10px 0; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .btn-plus { background: #00ffcc; border: none; width: 30px; height: 30px; border-radius: 50%; font-weight: bold; cursor: pointer; }
+        .btn-confirm { margin-top: 20px; padding: 10px 30px; background: #ff0055; color: white; border: none; font-size: 18px; border-radius: 5px; cursor: pointer; }
+        
+        /* Mobile Controls */
+        #mobile-controls {
+            display: none; position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: auto;
+        }
+        .control-area { position: absolute; bottom: 0; width: 50%; height: 150px; }
+        #touch-left { left: 0; background: linear-gradient(to top, rgba(255,255,255,0.05), transparent); border-top: 1px solid rgba(255,255,255,0.1); }
+        #touch-right { right: 0; background: linear-gradient(to top, rgba(255,255,255,0.05), transparent); border-top: 1px solid rgba(255,255,255,0.1); }
+        
+        .mobile-skill-btn {
+            position: absolute; bottom: 180px; width: 60px; height: 60px;
+            border-radius: 50%; border: 2px solid white; color: white; font-weight: bold;
+            display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.5);
+        }
+        #btn-skill-e { right: 20px; border-color: #00ffff; color: #00ffff; }
+        #btn-skill-q { right: 90px; border-color: #ff00ff; color: #ff00ff; }
+
+        @media (max-width: 768px) {
+            #mobile-controls { display: block; }
+            .screen { min-width: 90%; width: 90%; }
+            .start-layout { flex-direction: column-reverse; } /* Đảo ngược để nút play lên trên patch note ở mobile */
+            .patch-notes { max-height: 150px; }
+            #skill-bar { display: none; } /* Ẩn skill bar PC trên mobile, dùng nút tròn */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="hud-layer">
+        <div class="top-bar">
+            <div class="hud-box">
+                <div id="level-display">Level: 1</div>
+                <div id="exp-container"><div id="exp-bar"></div></div>
+                <div style="margin-top: 5px; font-size: 12px; color: #ccc;">EXP: <span id="exp-text">0/100</span></div>
+            </div>
+            <div style="text-align: right;">
+                <div class="hud-box" id="score-display">Điểm: 0</div>
+                <div class="hud-box" id="hp-display" style="color: #ff3333;">HP: 3/3</div>
+            </div>
+        </div>
+
+        <button id="upgrade-btn" onclick="openUpgradeMenu()">⬆️ Nâng Cấp</button>
+
+        <!-- Skill Bar (PC) -->
+        <div id="skill-bar">
+            <div class="skill-slot">
+                <span class="skill-key">Q</span>
+                <span style="font-size: 24px;">🔮</span>
+                <div class="cooldown-overlay" id="cd-overlay-q"></div>
+                <span class="cd-text" id="cd-text-q">30</span>
+            </div>
+            <div class="skill-slot">
+                <span class="skill-key">E</span>
+                <span style="font-size: 24px;">⚡</span>
+                <div class="cooldown-overlay" id="cd-overlay-e"></div>
+                <span class="cd-text" id="cd-text-e">10</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="screen" style="display: block;">
+        <h1 style="color: #00ffcc; text-transform: uppercase; margin-bottom: 30px;">Phi Thuyền Huyền Thoại</h1>
+        
+        <div class="start-layout">
+            <!-- Bảng cập nhật -->
+            <div class="patch-notes">
+                <h3>📜 Nhật Ký Cập Nhật</h3>
+                <ul>
+                    <li style="color: #00ffcc;"><strong>v1.4 (Mới):</strong> Thêm Kỹ năng E (Laser) & Q (Cầu Năng Lượng). Giao diện mới.</li>
+                    <li><strong>v1.3:</strong> Đồ họa Vector tích hợp siêu đẹp.</li>
+                    <li><strong>v1.2:</strong> Hỗ trợ tải hình ảnh PNG.</li>
+                    <li><strong>v1.1:</strong> Hệ thống Level, EXP và Nâng điểm chỉ số.</li>
+                    <li><strong>v1.0:</strong> Ra mắt game.</li>
+                </ul>
+            </div>
+
+            <!-- Nút Play -->
+            <div class="main-start">
+                <p>Sẵn sàng chiến đấu?</p>
+                <button class="btn-play" onclick="startGame()">▶ PLAY GAME</button>
+                <p style="font-size: 13px; color: #aaa; margin-top: 15px;">Dùng phím Mũi tên để di chuyển, Space bắn<br>Phím Q và E để dùng kỹ năng</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upgrade Screen -->
+    <div id="upgrade-menu" class="screen" style="min-width: 320px;">
+        <h2 style="color: #ffcc00;">NÂNG CẤP</h2>
+        <p>Điểm còn lại: <span id="menu-points" style="font-weight: bold; color: #00ffcc;">0</span></p>
+        <div class="stat-row"><span>❤️ Máu (HP)</span> <button class="btn-plus" onclick="addStat('hp')">+</button></div>
+        <div class="stat-row"><span>⚔️ Sức Mạnh</span> <button class="btn-plus" onclick="addStat('dmg')">+</button></div>
+        <div class="stat-row"><span>⚡ Tốc Độ</span> <button class="btn-plus" onclick="addStat('spd')">+</button></div>
+        <button class="btn-confirm" onclick="closeUpgradeMenu()">Tiếp Tục</button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="screen" style="min-width: 320px;">
+        <h1>THUA CUỘC!</h1>
+        <p id="final-score">Điểm: 0</p>
+        <button class="btn-confirm" onclick="startGame()">CHƠI LẠI</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+        <div class="control-area" id="touch-left"></div>
+        <div class="control-area" id="touch-right"></div>
+        <div class="mobile-skill-btn" id="btn-skill-q" onclick="useSkill('q')">Q</div>
+        <div class="mobile-skill-btn" id="btn-skill-e" onclick="useSkill('e')">E</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let cw, ch;
+        let gameRunning = false, isPaused = false;
+        let score = 0, frameCount = 0, animationId;
+
+        // --- CẤU HÌNH PLAYER & SKILLS ---
+        const player = {
+            x: 0, y: 0, w: 40, h: 50, 
+            emoji: '🚀', bullets: [],
+            baseHp: 3, currentHp: 3, damage: 1, speed: 7,
+            level: 1, exp: 0, nextLevelExp: 100, statPoints: 0, invincibleTime: 0,
+            // Skill System
+            skills: {
+                e: { cdMax: 600, cd: 0, active: false, duration: 0 }, // 10s * 60fps
+                q: { cdMax: 1800, cd: 0 } // 30s * 60fps
+            }
+        };
+
+        // Skill Objects Lists
+        let activeLaser = null; // Chỉ có 1 laser tại 1 thời điểm
+        let energyBalls = [];
+
+        const MONSTER_TYPES = [
+            { id: 'basic', hp: 1, exp: 10, score: 10, speed: 2.5, weight: 50, color: '#00ff00' },
+            { id: 'assassin', hp: 2, exp: 20, score: 30, speed: 6.0, weight: 20, color: '#ff3333' },
+            { id: 'ufo', hp: 4, exp: 30, score: 50, speed: 1.5, weight: 20, color: '#aa00ff' },
+            { id: 'tank', hp: 15, exp: 100, score: 100, speed: 0.8, weight: 10, color: '#888888' }
+        ];
+
+        let enemies = [];
+        let particles = [];
+        let stars = [];
+
+        // --- DOM ELEMENTS ---
+        const ui = {
+            level: document.getElementById('level-display'),
+            expBar: document.getElementById('exp-bar'),
+            expText: document.getElementById('exp-text'),
+            score: document.getElementById('score-display'),
+            hp: document.getElementById('hp-display'),
+            upgradeBtn: document.getElementById('upgrade-btn'),
+            upgradeMenu: document.getElementById('upgrade-menu'),
+            menuPoints: document.getElementById('menu-points'),
+            start: document.getElementById('start-screen'),
+            gameOver: document.getElementById('game-over-screen'),
+            finalScore: document.getElementById('final-score'),
+            // Skills UI
+            cdOverlayQ: document.getElementById('cd-overlay-q'),
+            cdTextQ: document.getElementById('cd-text-q'),
+            cdOverlayE: document.getElementById('cd-overlay-e'),
+            cdTextE: document.getElementById('cd-text-e'),
+            mobBtnQ: document.getElementById('btn-skill-q'),
+            mobBtnE: document.getElementById('btn-skill-e')
+        };
+
+        window.onload = () => { resize(); initStars(); drawStart(); };
+        window.addEventListener('resize', resize);
+        function resize() {
+            cw = window.innerWidth; ch = window.innerHeight;
+            canvas.width = cw; canvas.height = ch;
+            if(!gameRunning) { player.x = cw/2 - 20; player.y = ch - 100; drawStart(); }
+        }
+
+        // --- GRAPHICS ---
+        function initStars() {
+            stars = [];
+            for(let i=0; i<100; i++) stars.push({x: Math.random()*cw, y: Math.random()*ch, size: Math.random()*2, speed: Math.random()*3+0.5});
+        }
+        function drawPlayer(x, y, w, h) {
+            ctx.save(); ctx.translate(x+w/2, y+h/2);
+            // Lửa
+            ctx.fillStyle = `rgba(255, 100, 0, ${Math.random()*0.5+0.5})`;
+            ctx.beginPath(); ctx.moveTo(-5, h/2-5); ctx.lineTo(0, h/2+Math.random()*15+5); ctx.lineTo(5, h/2-5); ctx.fill();
+            // Thân
+            ctx.fillStyle = '#00ccff';
+            ctx.beginPath(); ctx.moveTo(0, -h/2); ctx.lineTo(w/2, h/2); ctx.lineTo(0, h/2-10); ctx.lineTo(-w/2, h/2); ctx.closePath(); ctx.fill();
+            // Kính
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(0, -5, 5, 10, 0, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+        }
+        function drawEnemy(e) {
+            ctx.save(); ctx.translate(e.x+e.w/2, e.y+e.h/2);
+            ctx.fillStyle = e.color;
+            if(e.id==='basic') { ctx.beginPath(); ctx.arc(0,0,e.w/2,0,Math.PI*2); ctx.fill(); ctx.fillStyle='black'; ctx.fillRect(-8,-5,4,4); ctx.fillRect(4,-5,4,4); }
+            else if(e.id==='assassin') { ctx.beginPath(); ctx.moveTo(0,e.h/2); ctx.lineTo(e.w/2,-e.h/2); ctx.lineTo(0,-e.h/2+10); ctx.lineTo(-e.w/2,-e.h/2); ctx.fill(); }
+            else if(e.id==='ufo') { ctx.beginPath(); ctx.ellipse(0,5,e.w/2,e.h/4,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#00ffff'; ctx.beginPath(); ctx.arc(0,-5,e.w/4,Math.PI,0); ctx.fill(); }
+            else if(e.id==='tank') { ctx.rotate(frameCount*0.05); ctx.fillStyle='#666'; ctx.beginPath(); for(let i=0;i<6;i++){let a=(i*2*Math.PI)/6; ctx.lineTo(Math.cos(a)*e.w/2, Math.sin(a)*e.w/2);} ctx.fill(); ctx.fillStyle='#ff4400'; ctx.beginPath(); ctx.arc(0,0,e.w/5,0,Math.PI*2); ctx.fill(); }
+            ctx.restore();
+        }
+
+        // --- SKILL LOGIC ---
+        function useSkill(key) {
+            if (!gameRunning || isPaused) return;
+
+            // Skill E: Laser
+            if (key === 'e' && player.skills.e.cd <= 0) {
+                player.skills.e.cd = player.skills.e.cdMax;
+                // Tạo laser
+                activeLaser = {
+                    x: player.x + player.w/2,
+                    y: 0,
+                    w: 20, // Độ rộng tia
+                    h: player.y, // Dài từ đầu đến phi thuyền
+                    duration: 30, // Tồn tại trong 0.5s (30 frames)
+                    damage: 5
+                };
+                // Rung màn hình nhẹ
+                createParticles(player.x, player.y, '#00ffff', 20);
+            }
+
+            // Skill Q: Energy Ball
+            if (key === 'q' && player.skills.q.cd <= 0) {
+                player.skills.q.cd = player.skills.q.cdMax;
+                // Tạo cầu
+                energyBalls.push({
+                    x: player.x + player.w/2,
+                    y: player.y,
+                    r: 15,
+                    vx: (Math.random() - 0.5) * 10, // Bay chéo ngẫu nhiên
+                    vy: -8,
+                    bounces: 3,
+                    damage: 100 // One shot kill (như mô tả "tiêu diệt mọi thứ")
+                });
+            }
+        }
+
+        function updateSkills() {
+            // Giảm hồi chiêu
+            ['e', 'q'].forEach(k => {
+                if (player.skills[k].cd > 0) player.skills[k].cd--;
+                
+                // Update UI Skill Bar
+                let pct = (player.skills[k].cd / player.skills[k].cdMax) * 100;
+                let overlay = (k === 'e') ? ui.cdOverlayE : ui.cdOverlayQ;
+                let text = (k === 'e') ? ui.cdTextE : ui.cdTextQ;
+                let mobBtn = (k === 'e') ? ui.mobBtnE : ui.mobBtnQ;
+                
+                overlay.style.height = pct + '%';
+                if(player.skills[k].cd > 0) {
+                    text.style.display = 'block';
+                    text.innerText = Math.ceil(player.skills[k].cd / 60);
+                    mobBtn.style.opacity = 0.3;
+                } else {
+                    text.style.display = 'none';
+                    mobBtn.style.opacity = 1.0;
+                }
+            });
+
+            // Logic Laser (E)
+            if (activeLaser) {
+                activeLaser.x = player.x + player.w/2; // Laser đi theo người chơi
+                activeLaser.h = player.y; // Cập nhật chiều dài
+                activeLaser.duration--;
+                
+                // Check va chạm Laser
+                if (activeLaser.duration > 0) {
+                    enemies.forEach(e => {
+                        // Kiểm tra va chạm hình chữ nhật (Laser) với e
+                        // Laser rect: x - w/2, 0, w, h
+                        let lx = activeLaser.x - activeLaser.w/2;
+                        if (e.x + e.w > lx && e.x < lx + activeLaser.w && e.y + e.h > 0 && e.y < activeLaser.h) {
+                            // Hit
+                            if (activeLaser.duration % 5 === 0) { // Gây dmg mỗi 5 frame để không quá bá đạo
+                                e.hp -= activeLaser.damage;
+                                e.flash = 5;
+                                createParticles(e.x + e.w/2, e.y + e.h/2, '#00ffff', 2);
+                                if(e.hp <= 0) { killEnemy(e); e.dead = true; } // Mark dead
+                            }
+                        }
+                    });
+                    // Clean dead enemies immediately inside loop can be buggy, cleanup happens in main update
+                } else {
+                    activeLaser = null;
+                }
+            }
+
+            // Logic Energy Ball (Q)
+            for (let i = energyBalls.length - 1; i >= 0; i--) {
+                let b = energyBalls[i];
+                b.x += b.vx;
+                b.y += b.vy;
+                
+                // Dội tường
+                if (b.x - b.r < 0 || b.x + b.r > cw) {
+                    b.vx = -b.vx;
+                    b.bounces--;
+                    createParticles(b.x, b.y, '#ff00ff', 5);
+                }
+                if (b.y - b.r < 0) { // Dội trần
+                    b.vy = -b.vy;
+                    b.bounces--;
+                }
+
+                // Check va chạm quái
+                enemies.forEach(e => {
+                    if (e.dead) return;
+                    // Va chạm tròn (ball) vs chữ nhật (enemy) - giản lược
+                    if (b.x > e.x && b.x < e.x + e.w && b.y > e.y && b.y < e.y + e.h) {
+                        e.hp -= b.damage;
+                        createParticles(e.x + e.w/2, e.y + e.h/2, '#ff00ff', 10);
+                        if(e.hp <= 0) { killEnemy(e); e.dead = true; }
+                        // Bóng không mất khi trúng quái, nó xuyên qua
+                    }
+                });
+
+                if (b.bounces < 0 || b.y > ch) energyBalls.splice(i, 1);
+            }
+        }
+
+        function drawSkills() {
+            // Draw Laser
+            if (activeLaser) {
+                ctx.save();
+                ctx.shadowBlur = 20; ctx.shadowColor = '#00ffff';
+                ctx.fillStyle = `rgba(0, 255, 255, ${Math.random() * 0.5 + 0.5})`;
+                ctx.fillRect(activeLaser.x - activeLaser.w/2, 0, activeLaser.w, activeLaser.h);
+                // Lõi trắng
+                ctx.fillStyle = 'white';
+                ctx.fillRect(activeLaser.x - activeLaser.w/4, 0, activeLaser.w/2, activeLaser.h);
+                ctx.restore();
+            }
+
+            // Draw Energy Balls
+            energyBalls.forEach(b => {
+                ctx.save();
+                ctx.shadowBlur = 15; ctx.shadowColor = '#ff00ff';
+                ctx.fillStyle = '#ff00ff';
+                ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.beginPath(); ctx.arc(b.x, b.y, b.r/2, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        // --- CONTROLS ---
+        const keys = { Left: false, Right: false };
+        window.addEventListener('keydown', e => {
+            if(e.code === 'ArrowLeft') keys.Left = true;
+            if(e.code === 'ArrowRight') keys.Right = true;
+            if(e.code === 'Space' && gameRunning && !isPaused) shoot();
+            if(e.code === 'KeyE') useSkill('e');
+            if(e.code === 'KeyQ') useSkill('q');
+            if(e.key.toLowerCase() === 'u' && player.statPoints > 0) openUpgradeMenu();
+        });
+        window.addEventListener('keyup', e => {
+            if(e.code === 'ArrowLeft') keys.Left = false;
+            if(e.code === 'ArrowRight') keys.Right = false;
+        });
+
+        // Mobile Controls
+        const touchLeft = document.getElementById('touch-left');
+        const touchRight = document.getElementById('touch-right');
+        let autoShootInt;
+        function handleTouch(dir, pressed) {
+            if(!gameRunning || isPaused) return;
+            if(dir === 'left') keys.Left = pressed;
+            if(dir === 'right') keys.Right = pressed;
+            if(pressed) { if(!autoShootInt) { shoot(); autoShootInt = setInterval(shoot, 200); } } 
+            else { if(!keys.Left && !keys.Right) { clearInterval(autoShootInt); autoShootInt = null; } }
+        }
+        touchLeft.addEventListener('touchstart', e => { e.preventDefault(); handleTouch('left', true); });
+        touchLeft.addEventListener('touchend', e => { e.preventDefault(); handleTouch('left', false); });
+        touchRight.addEventListener('touchstart', e => { e.preventDefault(); handleTouch('right', true); });
+        touchRight.addEventListener('touchend', e => { e.preventDefault(); handleTouch('right', false); });
+
+        // --- GAME LOGIC ---
+        function startGame() {
+            player.level = 1; player.exp = 0; player.nextLevelExp = 100;
+            player.baseHp = 3; player.currentHp = 3; player.damage = 1; player.speed = 7;
+            player.statPoints = 0; player.bullets = []; player.invincibleTime = 0;
+            // Reset Skills
+            player.skills.e.cd = 0; player.skills.q.cd = 0;
+            activeLaser = null; energyBalls = [];
+
+            score = 0; enemies = []; particles = []; frameCount = 0;
+            gameRunning = true; isPaused = false;
+            player.x = cw/2 - 20; player.y = ch - 100;
+            ui.start.style.display = 'none'; ui.gameOver.style.display = 'none'; ui.upgradeBtn.style.display = 'none';
+            updateHUD(); loop();
+        }
+
+        function loop() {
+            if(!gameRunning) return;
+            if(!isPaused) { update(); draw(); }
+            animationId = requestAnimationFrame(loop);
+        }
+
+        function update() {
+            if(keys.Left && player.x > 0) player.x -= player.speed;
+            if(keys.Right && player.x < cw - player.w) player.x += player.speed;
+            if(player.invincibleTime > 0) player.invincibleTime--;
+
+            stars.forEach(s => { s.y += s.speed; if(s.y > ch) { s.y = 0; s.x = Math.random() * cw; } });
+
+            // Skills Update
+            updateSkills();
+
+            // Bullets
+            for(let i = player.bullets.length - 1; i >= 0; i--) {
+                let b = player.bullets[i]; b.y -= b.speed; if(b.y < -20) player.bullets.splice(i, 1);
+            }
+
+            // Spawn
+            let spawnRate = Math.max(20, 60 - Math.floor(score/200));
+            if(frameCount % spawnRate === 0) spawnEnemy();
+
+            // Enemies
+            for(let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                if (e.dead) { enemies.splice(i, 1); continue; } // Cleanup dead from skills
+                
+                e.y += e.speed;
+                if(e.flash > 0) e.flash--;
+
+                // Hit by Bullet
+                for(let j = player.bullets.length - 1; j >= 0; j--) {
+                    let b = player.bullets[j];
+                    if(rectIntersect(b, e)) {
+                        e.hp -= player.damage; e.flash = 5; player.bullets.splice(j, 1);
+                        createParticles(b.x, b.y, '#fff', 3);
+                        if(e.hp <= 0) { killEnemy(e); enemies.splice(i, 1); }
+                        break;
+                    }
+                }
+
+                // Hit Player
+                if(i < enemies.length && rectIntersect(player, e)) {
+                    if(player.invincibleTime <= 0) {
+                        player.currentHp--; player.invincibleTime = 60;
+                        createParticles(player.x+20, player.y+25, '#ff0000', 15);
+                        updateHUD();
+                        if(player.currentHp <= 0) { gameOver(); return; }
+                    }
+                }
+                if(e.y > ch) enemies.splice(i, 1);
+            }
+
+            for(let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i]; p.x += p.vx; p.y += p.vy; p.life -= 0.05; if(p.life <= 0) particles.splice(i, 1);
+            }
+            frameCount++;
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0d0d1a'; ctx.fillRect(0, 0, cw, ch);
+            ctx.fillStyle = 'white'; stars.forEach(s => { ctx.globalAlpha = Math.random()*0.5+0.3; ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI*2); ctx.fill(); }); ctx.globalAlpha = 1.0;
+
+            drawSkills(); // Vẽ Skill layer dưới player
+
+            if(player.invincibleTime <= 0 || Math.floor(Date.now()/100)%2===0) drawPlayer(player.x, player.y, player.w, player.h);
+
+            ctx.fillStyle = '#ffff00'; player.bullets.forEach(b => { ctx.shadowBlur = 10; ctx.shadowColor = 'yellow'; ctx.fillRect(b.x, b.y, b.w, b.h); ctx.shadowBlur = 0; });
+
+            enemies.forEach(e => {
+                if(e.flash > 0) { ctx.globalAlpha = 0.5; ctx.fillStyle = 'white'; ctx.fillRect(e.x, e.y, e.w, e.h); ctx.globalAlpha = 1.0; }
+                else { drawEnemy(e); if(e.maxHp > 1) { let pct = e.hp / e.maxHp; ctx.fillStyle = 'red'; ctx.fillRect(e.x, e.y-8, e.w, 4); ctx.fillStyle = '#00ff00'; ctx.fillRect(e.x, e.y-8, e.w*pct, 4); } }
+            });
+
+            particles.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1.0; });
+        }
+
+        function drawStart() {
+            ctx.fillStyle = '#0d0d1a'; ctx.fillRect(0, 0, cw, ch);
+            initStars(); ctx.fillStyle = 'white'; stars.forEach(s => { ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI*2); ctx.fill(); });
+        }
+
+        // --- UTILS ---
+        function killEnemy(e) { score += e.score; gainExp(e.exp); createParticles(e.x+e.w/2, e.y+e.h/2, e.color, 10); updateHUD(); }
+        function gainExp(amount) { player.exp += amount; if(player.exp >= player.nextLevelExp) levelUp(); }
+        function levelUp() { player.level++; player.exp -= player.nextLevelExp; player.nextLevelExp = Math.floor(player.nextLevelExp * 1.5); player.statPoints += 3; if(player.currentHp < player.baseHp) player.currentHp++; createParticles(player.x, player.y, '#00ffcc', 20); updateHUD(); }
+        function updateHUD() {
+            ui.score.innerText = `Điểm: ${score}`; ui.level.innerText = `LV: ${player.level}`; ui.hp.innerText = `HP: ${player.currentHp}/${player.baseHp}`;
+            ui.expBar.style.width = `${(player.exp/player.nextLevelExp)*100}%`; ui.expText.innerText = `${Math.floor(player.exp)}/${player.nextLevelExp}`;
+            ui.upgradeBtn.style.display = (player.statPoints > 0) ? 'block' : 'none'; if (player.statPoints > 0) ui.upgradeBtn.innerText = `⬆️ Nâng Cấp (${player.statPoints})`;
+        }
+        window.openUpgradeMenu = () => { isPaused = true; ui.upgradeMenu.style.display = 'block'; ui.menuPoints.innerText = player.statPoints; };
+        window.closeUpgradeMenu = () => { isPaused = false; ui.upgradeMenu.style.display = 'none'; };
+        window.addStat = (type) => {
+            if(player.statPoints <= 0) return;
+            if(type === 'hp') { player.baseHp++; player.currentHp++; } if(type === 'dmg') player.damage++; if(type === 'spd') player.speed += 0.5;
+            player.statPoints--; ui.menuPoints.innerText = player.statPoints; updateHUD(); if(player.statPoints === 0) closeUpgradeMenu();
+        };
+        function shoot() { player.bullets.push({x: player.x+player.w/2-2, y: player.y, w: 4, h: 15, speed: 10}); }
+        function spawnEnemy() { let rand=Math.random()*100, acc=0, type=MONSTER_TYPES[0]; for(let m of MONSTER_TYPES) { acc+=m.weight; if(rand<=acc){type=m; break;} } let size = (type.id==='ufo')?60:(type.id==='tank'?70:40); enemies.push({...type, x:Math.random()*(cw-size), y:-size, w:size, h:size, maxHp:type.hp, flash:0}); }
+        function rectIntersect(r1, r2) { return !(r2.x > r1.x+r1.w || r2.x+r2.w < r1.x || r2.y > r1.y+r1.h || r2.y+r2.h < r1.y); }
+        function createParticles(x, y, color, count) { for(let i=0; i<count; i++) particles.push({x, y, vx:(Math.random()-0.5)*5, vy:(Math.random()-0.5)*5, life:1, color}); }
+        function gameOver() { gameRunning = false; ui.finalScore.innerText = `Điểm: ${score}`; ui.gameOver.style.display = 'block'; clearInterval(autoShootInt); }
+    </script>
+</body>
+</html>
