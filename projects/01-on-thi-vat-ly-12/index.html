@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Ôn thi Vật lý 12 theo dạng đề THPT mới: trắc nghiệm, Đúng/Sai, trả lời ngắn; lặp lại ngắt quãng và sổ câu sai.">
+  <title>Ôn thi Vật lý 12</title>
+  <link rel="stylesheet" href="../shared/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="../shared/theme.css">
+  <link rel="stylesheet" href="../shared/quiz/quiz.css">
+  <script src="../shared/common.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="wrap">
+      <a class="brand" href="#/"><span class="brand-dot" aria-hidden="true"></span><span id="bank-title">Ôn thi Vật lý 12</span></a>
+      <select id="bank-switch" hidden aria-label="Chọn ngân hàng câu hỏi"></select>
+      <nav class="nav" aria-label="Điều hướng">
+        <a href="#/">Tổng quan</a>
+        <a href="#/practice">Luyện tập</a>
+        <a href="#/exam">Thi thử</a>
+        <a href="#/wrong">Sổ câu sai</a>
+        <a href="#/bank">Ngân hàng</a>
+        <a href="#/data">Dữ liệu</a>
+        <a href="../index.html" title="Về trang tổng các dự án">⌂ Hub</a>
+        <button type="button" id="theme-btn"></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap" id="app" aria-live="polite">
+    <noscript><div class="card">Trang này cần bật JavaScript.</div></noscript>
+  </main>
+
+  <script src="../shared/vendor/katex/katex.min.js"></script>
+  <script src="../shared/vendor/katex/auto-render.min.js"></script>
+  <script src="banks/vatly12.js"></script>
+  <script>
+    window.QUIZ_APP = { id: 'vatly12-app', title: 'Ôn thi Vật lý 12', bankIds: ['vatly12'] };
+  </script>
+  <script src="../shared/quiz/quiz.js"></script>
+</body>
+</html>
