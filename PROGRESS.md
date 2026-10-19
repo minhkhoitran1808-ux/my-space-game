@@ -8,8 +8,8 @@
 | # | Sản phẩm | Thư mục | Trạng thái |
 |---|---|---|---|
 | P1 | Ôn thi Vật lý 12 | `projects/01-on-thi-vat-ly-12/` | ✅ Xong (đã tự kiểm tra) |
-| P2 | Orbit Lab | `projects/02-orbit-lab/` | ⏳ Tiếp theo |
-| P3 | Sổ tay công thức Vật lý 12 | `projects/03-so-tay-cong-thuc/` | ⬜ Chưa làm |
+| P2 | Orbit Lab | `projects/02-orbit-lab/` | ✅ Xong (đã tự kiểm tra) |
+| P3 | Sổ tay công thức Vật lý 12 | `projects/03-so-tay-cong-thuc/` | ⏳ Tiếp theo |
 | P4 | Phòng thí nghiệm ảo Vật lý 12 | `projects/04-phong-thi-nghiem-ao/` | ⬜ Chưa làm |
 | P5 | Bảng điều khiển ôn thi + sổ lỗi sai | `projects/05-bang-dieu-khien/` | ⬜ Chưa làm |
 | P6 | Gói Toán 12 + Tư duy V-ACT | `projects/06-on-thi-toan-vact/` | ⬜ Chưa làm |
@@ -31,12 +31,20 @@
 - **Sửa trong vòng kiểm tra:** cảnh báo KaTeX với chữ Việt trong `\text{}` (lọc riêng cảnh báo vô hại), thiếu định dạng `code`, 4 chú thích phương án nhiễu chưa chuẩn.
 - **Còn tồn / cần xác minh:** cấu trúc đề 2027 (đang theo đề 2025); chưa có câu hỏi về sóng điện từ chi tiết (mới 1 câu Đ/S + 2 câu TN).
 
+### P2 · Orbit Lab — ✅ XONG
+- **Đã làm:** `orbit.js` (lõi vật lý thuần, chạy được trong Node), `app.js` + `index.html` + `style.css` (4 tab: mô phỏng quỹ đạo, Hohmann, tên lửa, 9 bài tập có lời giải).
+- **Tự kiểm tra:** `node tools/test-orbit.js` → 31/31 (so với giá trị tham chiếu + độ chính xác số); `node tools/test-orbit-ui.js` → 22/22.
+- **Sửa trong vòng kiểm tra:** quạt Kepler bị xóa sau mỗi chu kì (→ vòng xoay 12 quạt); `hidden` bị `display:grid` đè (→ quy tắc chung trong theme.css); khung Hohmann/sandbox căn tỉ lệ khi canvas còn ẩn (→ căn trễ khi vẽ); điểm sáng hành tinh quá gắt.
+- **Còn tồn:** không có lực cản khí quyển, chỉ 2D (ghi trong README).
+
 ## Việc tiếp theo
-1. P2 Orbit Lab (mô phỏng quỹ đạo, Hohmann, Tsiolkovsky + bài tập).
+1. P3 Sổ tay công thức Vật lý 12 (in được A4).
 
 ## Cách chạy toàn bộ kiểm thử
 ```bash
 node tools/validate-bank.js projects/01-on-thi-vat-ly-12/banks/vatly12.js
 node tools/verify-vatly12.js
 node tools/test-quiz.js projects/01-on-thi-vat-ly-12/index.html [thư-mục-ảnh]
+node tools/test-orbit.js
+node tools/test-orbit-ui.js [thư-mục-ảnh]
 ```

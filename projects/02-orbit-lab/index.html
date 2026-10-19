@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Orbit Lab: mô phỏng quỹ đạo vệ tinh, chuyển quỹ đạo Hohmann và phương trình tên lửa Tsiolkovsky, kèm bài tập có lời giải.">
+  <title>Orbit Lab</title>
+  <link rel="stylesheet" href="../shared/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="../shared/theme.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="../shared/common.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="wrap">
+      <a class="brand" href="#sandbox"><span class="brand-dot" aria-hidden="true"></span>Orbit Lab</a>
+      <nav class="nav" aria-label="Các phần">
+        <a href="#sandbox" data-tab="sandbox">Mô phỏng quỹ đạo</a>
+        <a href="#hohmann" data-tab="hohmann">Chuyển quỹ đạo Hohmann</a>
+        <a href="#rocket" data-tab="rocket">Tên lửa</a>
+        <a href="#exercises" data-tab="exercises">Bài tập</a>
+        <a href="../index.html" title="Về trang tổng các dự án">⌂ Hub</a>
+        <button type="button" id="theme-btn"></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- ================= MÔ PHỎNG QUỸ ĐẠO ================= -->
+    <section class="tab" id="tab-sandbox">
+      <div class="lab">
+        <div class="viewport card flat">
+          <canvas id="cv-orbit" aria-label="Mô phỏng quỹ đạo"></canvas>
+          <div class="overlay">
+            <div class="ov-status" id="status"></div>
+            <div class="ov-time" id="simtime"></div>
+          </div>
+          <div class="zoom">
+            <button class="btn sm" id="zoom-in" title="Phóng to">＋</button>
+            <button class="btn sm" id="zoom-out" title="Thu nhỏ">－</button>
+            <button class="btn sm" id="zoom-fit" title="Vừa khung">⤢</button>
+          </div>
+        </div>
+        <aside class="panel">
+          <div class="card stack">
+            <div class="row">
+              <label class="field" style="flex:1"><span>Vật trung tâm</span>
+                <select id="body">
+                  <option value="earth">Trái Đất</option>
+                  <option value="moon">Mặt Trăng</option>
+                  <option value="mars">Sao Hỏa</option>
+                </select></label>
+            </div>
+            <div>
+              <span class="small muted">Kịch bản mẫu</span>
+              <div class="presets" id="presets"></div>
+            </div>
+            <div class="grid3">
+              <label class="field"><span>Độ cao (km)</span><input type="number" id="in-h" step="10" min="0"></label>
+              <label class="field"><span>Vận tốc (km/s)</span><input type="number" id="in-v" step="0.01" min="0"></label>
+              <label class="field"><span>Góc bay (°)</span><input type="number" id="in-g" step="1" min="-89" max="89"></label>
+            </div>
+            <p class="small muted" style="margin:0" id="ref-speeds"></p>
+            <div class="row">
+              <button class="btn primary" id="btn-launch">🚀 Phóng</button>
+              <button class="btn" id="btn-pause">⏸ Tạm dừng</button>
+              <label class="field" style="margin-left:auto"><span>Tua nhanh</span>
+                <select id="warp"></select></label>
+            </div>
+          </div>
+
+          <div class="card stack">
+            <b>Đốt động cơ tức thời</b>
+            <div class="row">
+              <label class="field"><span>Δv (m/s)</span><input type="number" id="in-dv" value="200" step="10" min="0" style="width:7em"></label>
+              <button class="btn sm" id="btn-pro" title="Tăng tốc theo hướng chuyển động">⬆ Tăng tốc</button>
+              <button class="btn sm" id="btn-retro" title="Hãm ngược hướng chuyển động">⬇ Hãm</button>
+            </div>
+            <p class="small muted" style="margin:0">Mẹo: đốt <b>tăng tốc ở cận điểm</b> làm viễn điểm cao lên — đó là cách chuyển quỹ đạo Hohmann.</p>
+          </div>
+
+          <div class="card">
+            <div class="toggles">
+              <label class="chip"><input type="checkbox" id="t-conic" checked> Quỹ đạo dự đoán</label>
+              <label class="chip"><input type="checkbox" id="t-vec" checked> Vectơ vận tốc</label>
+              <label class="chip"><input type="checkbox" id="t-kepler"> Định luật II Kepler</label>
+            </div>
+            <table class="table readout" id="readout"></table>
+            <div id="kepler-box" hidden>
+              <p class="small muted" style="margin:8px 0 4px">Diện tích quét được trong các khoảng thời gian bằng nhau (Δt = T/12), chuẩn hóa theo trung bình:</p>
+              <div class="kbars" id="kbars"></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <div class="card explain-card" id="sandbox-theory"></div>
+    </section>
+
+    <!-- ================= HOHMANN ================= -->
+    <section class="tab" id="tab-hohmann" hidden>
+      <div class="lab">
+        <div class="viewport card flat">
+          <canvas id="cv-hoh" aria-label="Mô phỏng chuyển quỹ đạo Hohmann"></canvas>
+          <div class="overlay"><div class="ov-status" id="hoh-status"></div><div class="ov-time" id="hoh-time"></div></div>
+        </div>
+        <aside class="panel">
+          <div class="card stack">
+            <label class="field"><span>Hệ</span>
+              <select id="hoh-mode">
+                <option value="sun">Liên hành tinh (quanh Mặt Trời)</option>
+                <option value="earth">Quanh Trái Đất</option>
+              </select></label>
+            <div class="grid2" id="hoh-sun-inputs">
+              <label class="field"><span>Từ</span><select id="hoh-from"></select></label>
+              <label class="field"><span>Đến</span><select id="hoh-to"></select></label>
+            </div>
+            <div class="grid2" id="hoh-earth-inputs" hidden>
+              <label class="field"><span>Độ cao đầu (km)</span><input type="number" id="hoh-h1" value="300" min="100" step="50"></label>
+              <label class="field"><span>Độ cao cuối (km)</span><input type="number" id="hoh-h2" value="35786" min="100" step="100"></label>
+            </div>
+            <label class="field"><span>Lệch pha so với thời điểm phóng lý tưởng: <b id="hoh-off-val">0°</b></span>
+              <input type="range" id="hoh-off" min="-40" max="40" value="0" step="1"></label>
+            <div class="row">
+              <button class="btn primary" id="hoh-play">▶ Chạy</button>
+              <button class="btn" id="hoh-reset">↺ Về lúc phóng</button>
+              <label class="field" style="margin-left:auto"><span>Tốc độ</span>
+                <input type="range" id="hoh-speed" min="0" max="100" value="50"></label>
+            </div>
+          </div>
+          <div class="card"><table class="table readout" id="hoh-table"></table></div>
+        </aside>
+      </div>
+      <div class="card explain-card" id="hoh-theory"></div>
+    </section>
+
+    <!-- ================= TÊN LỬA ================= -->
+    <section class="tab" id="tab-rocket" hidden>
+      <div class="grid grid-2">
+        <div class="card stack">
+          <div class="row"><h2 style="margin:0">Thiết kế tên lửa nhiều tầng</h2></div>
+          <div class="presets" id="rk-presets"></div>
+          <div class="table-wrap">
+            <table class="table rk-table">
+              <thead><tr><th>Tầng</th><th>Nhiên liệu (tấn)</th><th>Vỏ + động cơ (tấn)</th><th>Isp (s)</th><th></th></tr></thead>
+              <tbody id="rk-stages"></tbody>
+            </table>
+          </div>
+          <div class="row">
+            <button class="btn sm" id="rk-add">+ Thêm tầng</button>
+            <label class="field" style="margin-left:auto"><span>Tải trọng (tấn)</span><input type="number" id="rk-payload" min="0" step="0.5" style="width:7em"></label>
+          </div>
+          <p class="small muted" style="margin:0">Isp tham khảo (chân không, gần đúng): nhiên liệu rắn ~ 250–290 s; dầu hỏa + ôxi lỏng ~ 300–350 s; hiđrô lỏng + ôxi lỏng ~ 420–465 s. Số liệu mẫu trong ô chọn là <b>minh họa</b>, không phải thông số của tên lửa thật.</p>
+        </div>
+        <div class="card stack">
+          <h2 style="margin:0">Kết quả</h2>
+          <div id="rk-result"></div>
+          <canvas id="cv-rocket" height="220" aria-label="Biểu đồ Δv tích lũy theo tầng"></canvas>
+        </div>
+      </div>
+      <div class="card explain-card" id="rk-theory"></div>
+    </section>
+
+    <!-- ================= BÀI TẬP ================= -->
+    <section class="tab" id="tab-exercises" hidden>
+      <h1>Bài tập có lời giải</h1>
+      <p class="muted">Mỗi bài gắn với một phần mô phỏng: đọc đề → tự tính → mở gợi ý/lời giải → bấm <b>Thử trong mô phỏng</b> để kiểm chứng bằng mắt. Số liệu trong lời giải được tính trực tiếp từ cùng lõi vật lý của mô phỏng.</p>
+      <div class="stack" id="ex-list"></div>
+    </section>
+  </main>
+
+  <script src="../shared/vendor/katex/katex.min.js"></script>
+  <script src="../shared/vendor/katex/auto-render.min.js"></script>
+  <script src="orbit.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
