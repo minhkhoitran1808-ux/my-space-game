@@ -11,8 +11,8 @@
 | P2 | Orbit Lab | `projects/02-orbit-lab/` | ✅ Xong (đã tự kiểm tra) |
 | P3 | Sổ tay công thức Vật lý 12 | `projects/03-so-tay-cong-thuc/` | ✅ Xong (đã tự kiểm tra) |
 | P4 | Phòng thí nghiệm ảo Vật lý 12 | `projects/04-phong-thi-nghiem-ao/` | ✅ Xong (đã tự kiểm tra) |
-| P5 | Bảng điều khiển ôn thi + sổ lỗi sai | `projects/05-bang-dieu-khien/` | ⏳ Tiếp theo |
-| P6 | Gói Toán 12 + Tư duy V-ACT | `projects/06-on-thi-toan-vact/` | ⬜ Chưa làm |
+| P5 | Bảng điều khiển ôn thi + sổ lỗi sai | `projects/05-bang-dieu-khien/` | ✅ Xong (đã tự kiểm tra) |
+| P6 | Gói Toán 12 + Tư duy V-ACT | `projects/06-on-thi-toan-vact/` | ⏳ Tiếp theo |
 | P7 | Hub portfolio + lộ trình du học Đức | `projects/index.html`, `projects/07-lo-trinh-du-hoc-duc/` | ⬜ Chưa làm |
 | P8 | Review code game Phi Thuyền | `projects/08-review-game/` | ⬜ Chưa làm |
 
@@ -48,8 +48,14 @@
 - **Sửa trong vòng kiểm tra:** phản xạ ở pit-tông viết rối → viết lại; biểu thức kiểm tra số liệu máy phát trong test sai (ứng dụng đúng).
 - **Còn tồn:** khí mô phỏng 2D (ghi rõ trên trang).
 
+### P5 · Bảng điều khiển ôn thi — ✅ XONG
+- **Đã làm:** `dash.js` (5 tab: tổng quan, kế hoạch tuần, Pomodoro & nhật ký, sổ lỗi sai có lịch ôn, dữ liệu), đọc thống kê từ `sl.quiz.*`.
+- **Tự kiểm tra:** `node tools/test-dash.js` → 16/16.
+- **Sửa trong vòng kiểm tra:** kỳ vọng sai trong test (ứng dụng tính đúng 67 %).
+- **Cần xác minh:** ngày thi 2027 (đang để giả định).
+
 ## Việc tiếp theo
-1. P5 Bảng điều khiển ôn thi: đếm ngược, kế hoạch tuần, Pomodoro, nhật ký giờ học, sổ lỗi sai, đọc thống kê từ P1/P6.
+1. P6 Gói Toán 12 + Tư duy V-ACT dùng engine P1 (≥ 40 câu Toán + ≥ 15 câu V-ACT, có script kiểm đáp án).
 
 ## Cách chạy toàn bộ kiểm thử
 ```bash
@@ -61,4 +67,5 @@ node tools/test-orbit-ui.js [thư-mục-ảnh]
 node tools/test-formulas.js [thư-mục-ảnh]
 node tools/test-labs.js
 node tools/test-labs-ui.js [thư-mục-ảnh]
+node tools/test-dash.js [thư-mục-ảnh]
 ```

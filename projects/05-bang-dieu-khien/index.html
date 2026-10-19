@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Bảng điều khiển ôn thi: đếm ngược kỳ thi, kế hoạch tuần, Pomodoro, nhật ký giờ học, sổ lỗi sai có lịch ôn lại.">
+  <title>Bảng điều khiển ôn thi</title>
+  <link rel="stylesheet" href="../shared/theme.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="../shared/common.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="wrap">
+      <a class="brand" href="#home"><span class="brand-dot" aria-hidden="true"></span>Bảng điều khiển ôn thi</a>
+      <nav class="nav" aria-label="Phần">
+        <a href="#home" data-tab="home">Tổng quan</a>
+        <a href="#plan" data-tab="plan">Kế hoạch tuần</a>
+        <a href="#focus" data-tab="focus">Pomodoro & nhật ký</a>
+        <a href="#mistakes" data-tab="mistakes">Sổ lỗi sai</a>
+        <a href="#data" data-tab="data">Dữ liệu</a>
+        <a href="../index.html" title="Về trang tổng các dự án">⌂ Hub</a>
+        <button type="button" id="theme-btn"></button>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap" id="app" aria-live="polite"></main>
+  <script src="dash.js"></script>
+</body>
+</html>
