@@ -10,8 +10,8 @@
 | P1 | Ôn thi Vật lý 12 | `projects/01-on-thi-vat-ly-12/` | ✅ Xong (đã tự kiểm tra) |
 | P2 | Orbit Lab | `projects/02-orbit-lab/` | ✅ Xong (đã tự kiểm tra) |
 | P3 | Sổ tay công thức Vật lý 12 | `projects/03-so-tay-cong-thuc/` | ✅ Xong (đã tự kiểm tra) |
-| P4 | Phòng thí nghiệm ảo Vật lý 12 | `projects/04-phong-thi-nghiem-ao/` | 🚧 Đang làm (lõi xong, thiếu `app.js`) |
-| P5 | Bảng điều khiển ôn thi + sổ lỗi sai | `projects/05-bang-dieu-khien/` | ⬜ Chưa làm |
+| P4 | Phòng thí nghiệm ảo Vật lý 12 | `projects/04-phong-thi-nghiem-ao/` | ✅ Xong (đã tự kiểm tra) |
+| P5 | Bảng điều khiển ôn thi + sổ lỗi sai | `projects/05-bang-dieu-khien/` | ⏳ Tiếp theo |
 | P6 | Gói Toán 12 + Tư duy V-ACT | `projects/06-on-thi-toan-vact/` | ⬜ Chưa làm |
 | P7 | Hub portfolio + lộ trình du học Đức | `projects/index.html`, `projects/07-lo-trinh-du-hoc-duc/` | ⬜ Chưa làm |
 | P8 | Review code game Phi Thuyền | `projects/08-review-game/` | ⬜ Chưa làm |
@@ -42,12 +42,14 @@
 - **Tự kiểm tra:** `node tools/test-formulas.js` → 16/16; đã xem bản PDF in thật.
 - **Sửa trong vòng kiểm tra:** lỗi `${` trong template literal làm hỏng cả trang; tìm "bán rã" không ra (thêm từ khóa + tìm không dấu); công thức dạng chữ bị tràn (chuyển sang văn bản); bản in khi giao diện tối bị nền đen (ép bảng màu sáng khi in — áp dụng cho mọi trang).
 
-### P4 · Phòng thí nghiệm ảo — 🚧 ĐANG LÀM
-- **Đã có:** `labs-core.js` (khí 2D đĩa cứng + pit-tông + đo áp suất, phân rã phóng xạ, từ thông lưỡng cực, máy phát) — `node tools/test-labs.js` → 17/17; `index.html`, `style.css` (khung 4 tab); `SL.fitCanvas`, `SL.cssVar` thêm vào `shared/common.js`.
-- **Còn thiếu:** `app.js` (giao diện 4 thí nghiệm: vẽ canvas, đồ thị, câu hỏi khám phá), README, test giao diện. Trang hiện CHƯA dùng được.
+### P4 · Phòng thí nghiệm ảo — ✅ XONG
+- **Đã làm:** `labs-core.js` (lõi), `app.js` (4 thí nghiệm: khí lí tưởng, phóng xạ, Lenz, máy phát), mỗi cái 4 câu hỏi khám phá.
+- **Tự kiểm tra:** `node tools/test-labs.js` → 17/17; `node tools/test-labs-ui.js` → 16/16; đã xem ảnh chụp.
+- **Sửa trong vòng kiểm tra:** phản xạ ở pit-tông viết rối → viết lại; biểu thức kiểm tra số liệu máy phát trong test sai (ứng dụng đúng).
+- **Còn tồn:** khí mô phỏng 2D (ghi rõ trên trang).
 
 ## Việc tiếp theo
-1. Viết `projects/04-phong-thi-nghiem-ao/app.js`, test giao diện, README.
+1. P5 Bảng điều khiển ôn thi: đếm ngược, kế hoạch tuần, Pomodoro, nhật ký giờ học, sổ lỗi sai, đọc thống kê từ P1/P6.
 
 ## Cách chạy toàn bộ kiểm thử
 ```bash
@@ -58,4 +60,5 @@ node tools/test-orbit.js
 node tools/test-orbit-ui.js [thư-mục-ảnh]
 node tools/test-formulas.js [thư-mục-ảnh]
 node tools/test-labs.js
+node tools/test-labs-ui.js [thư-mục-ảnh]
 ```
