@@ -11,7 +11,7 @@ Dùng chung engine với P1 (lặp lại ngắt quãng, sổ câu sai, thi thử
 Mở `index.html`. Tiến độ Toán và V-ACT lưu riêng (`sl.quiz.toan12.v1`, `sl.quiz.vact.v1`) và hiện trong Bảng điều khiển (P5).
 
 ## Độ tin cậy
-- `node tools/verify-toan-vact.js` tính lại **độc lập cả 74 câu**: đạo hàm/cực trị bằng đạo hàm số và quét giá trị, tích phân bằng Simpson, thống kê ghép nhóm tính từ bảng, xác suất bằng liệt kê, bài logic bằng duyệt mọi trường hợp, ngày trong tuần bằng lịch máy tính. 11 câu thuần lý thuyết/suy luận định tính được ghi rõ là "đã đọc lại" thay vì tính.
+- `node tools/verify-toan-vact.js` tính lại **độc lập cả 74 câu**: đạo hàm/cực trị bằng đạo hàm số và quét giá trị, tích phân bằng Simpson, thống kê ghép nhóm tính từ bảng, xác suất bằng liệt kê, bài logic bằng duyệt mọi trường hợp, ngày trong tuần bằng lịch máy tính. 10 câu thuần lý thuyết/suy luận định tính được ghi rõ là "đã đọc lại" thay vì tính.
 - `node tools/validate-bank.js projects/06-on-thi-toan-vact/banks/*.js` — cấu trúc + 379 công thức KaTeX.
 - `node tools/test-quiz.js projects/06-on-thi-toan-vact/index.html` — 51 phép kiểm giao diện cho cả hai ngân hàng (làm đúng hết = 10/10).
 

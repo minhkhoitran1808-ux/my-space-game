@@ -52,16 +52,24 @@ const num = s => parseFloat(String(s).replace(/\s/g, '').replace(',', '.'));
     await page.waitForTimeout(1500);
     const lzs = await page.evaluate(() => window.Labs.lz.hist.length);
     check(lzs > 30, 'đồ thị Φ, e có dữ liệu');
-    // kiểm tra Lenz: đặt nam châm (N hướng vào vòng) đi lại gần → e < 0 → mặt trái thành N, lời giải thích nói "đẩy"
+    // kiểm tra Lenz: di chuyển nam châm (cực N hướng vào vòng) MỖI KHUNG HÌNH và ghi lại trạng thái trong lúc chuyển động
     await page.uncheck('#lz-auto');
-    await page.evaluate(() => { const lz = window.Labs.lz; lz.auto = false; lz.x = -4; lz.lastPhi = null; lz.e = 0; });
-    for (let i = 0; i < 20; i++) { await page.evaluate(() => { window.Labs.lz.x += 0.08; }); await page.waitForTimeout(30); }
-    const say = await page.locator('#lz-say').innerText();
-    const eNow = await page.evaluate(() => window.Labs.lz.e);
-    check(eNow < 0 && /tăng/.test(say) && /cực N/.test(say) && /đẩy/.test(say), `lại gần: e = ${eNow.toFixed(2)}, "${say.slice(0, 90)}…"`);
-    for (let i = 0; i < 20; i++) { await page.evaluate(() => { window.Labs.lz.x -= 0.08; }); await page.waitForTimeout(30); }
-    const say2 = await page.locator('#lz-say').innerText();
-    check(/giảm/.test(say2) && /hút/.test(say2), 'ra xa: từ thông giảm, vòng dây hút nam châm');
+    const sweep = dir => page.evaluate(d => new Promise(res => {
+      const lz = window.Labs.lz; lz.auto = false; lz.x = d > 0 ? -3.0 : -1.0; lz.lastPhi = null; lz.e = 0;   // lại gần: −3 → −1; ra xa: −1 → −3 (không đi qua tâm vòng)
+      const rec = []; let n = 0;
+      function f() {
+        lz.x += d * 0.05;
+        if (n > 8) rec.push({ e: lz.e, say: document.getElementById('lz-say').textContent });
+        if (++n < 40) requestAnimationFrame(f); else res(rec);
+      }
+      requestAnimationFrame(f);
+    }), dir);
+    const near = await sweep(1);
+    const okNear = near.filter(r => r.e < 0 && /tăng/.test(r.say) && /cực N/.test(r.say) && /đẩy/.test(r.say)).length / near.length;
+    check(okNear > 0.9, `lại gần: e < 0, |Φ| tăng, mặt đối diện thành cực N, đẩy (${Math.round(100 * okNear)} % khung hình)`);
+    const far = await sweep(-1);
+    const okFar = far.filter(r => r.e > 0 && /giảm/.test(r.say) && /hút/.test(r.say)).length / far.length;
+    check(okFar > 0.9, `ra xa: e > 0, |Φ| giảm, vòng dây hút nam châm (${Math.round(100 * okFar)} % khung hình)`);
     await shot(page, 'labs-3-lenz', true);
 
     console.log('\n== Máy phát ==');

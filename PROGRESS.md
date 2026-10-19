@@ -13,8 +13,8 @@
 | P4 | Phòng thí nghiệm ảo Vật lý 12 | `projects/04-phong-thi-nghiem-ao/` | ✅ Xong (đã tự kiểm tra) |
 | P5 | Bảng điều khiển ôn thi + sổ lỗi sai | `projects/05-bang-dieu-khien/` | ✅ Xong (đã tự kiểm tra) |
 | P6 | Gói Toán 12 + Tư duy V-ACT | `projects/06-on-thi-toan-vact/` | ✅ Xong (đã tự kiểm tra) |
-| P7 | Hub portfolio + lộ trình du học Đức | `projects/index.html`, `projects/07-lo-trinh-du-hoc-duc/` | ⏳ Tiếp theo |
-| P8 | Review code game Phi Thuyền | `projects/08-review-game/` | ⬜ Chưa làm |
+| P7 | Hub portfolio + lộ trình du học Đức | `projects/index.html`, `projects/07-lo-trinh-du-hoc-duc/` | ✅ Xong (đã tự kiểm tra) |
+| P8 | Review code game Phi Thuyền | `projects/08-review-game/` | ✅ Xong (lỗi đã tái hiện) |
 
 ## Nhật ký
 
@@ -59,8 +59,24 @@
 - **Tự kiểm tra:** `node tools/verify-toan-vact.js` → 74/74; `validate-bank` → 0 lỗi; `test-quiz` → 51/51 (cả 2 ngân hàng). Chạy lại test P1 sau khi sửa engine → 29/29.
 - **Sửa trong vòng kiểm tra:** engine giữ lựa chọn chương của ngân hàng khác → 0 câu (sửa: lọc theo ngân hàng đang mở); test giả định có câu Đúng/Sai; validator báo nhầm "chọn D…"; lời giải va-l6 viết "lùi" thay vì "tiến thêm" 1 thứ.
 
-## Việc tiếp theo
-1. P7 Trang hub `projects/index.html` + lộ trình du học Đức ngành hàng không (có nguồn, đánh dấu cần xác minh).
+### P7 · Hub portfolio + Lộ trình du học Đức — ✅ XONG
+- **Đã làm:** `projects/index.html` (hub có 8 ảnh thu nhỏ tạo bằng `tools/make-thumbs.js`), `projects/07-lo-trinh-du-hoc-duc/index.html` (tổng quan, 3 con đường, mốc thời gian, bảng trường, checklist 17 việc, nguồn). Đã tra cứu web ngày 19/10/2026 (trang APS & thị thực của Đại sứ quán Đức, DAAD, Uni Stuttgart, TUM + nguồn thứ cấp).
+- **Tự kiểm tra:** `node tools/test-hub.js` → 14/14 (mọi liên kết nội bộ của 8 trang tồn tại, ảnh tải được, checklist lưu được, 14 nhãn "cần xác minh", điện thoại).
+- **Sửa trong vòng kiểm tra:** số liệu tổng trên hub đếm lại cho đúng (140 đáp số, 7 mô phỏng, 340+ kiểm thử); CSS làm số lớn bị nhỏ.
+
+### P8 · Nhận xét code game — ✅ XONG
+- **Đã làm:** `projects/08-review-game/REVIEW.md` + `tools/probe-game-bugs.js` (tái hiện lỗi). Không sửa game.
+- **Tự kiểm tra:** tái hiện được lỗi "quái đã chết vẫn trừ HP" (cần ≥ 2 quái), `autoShootInt` không về null; 2 nghi vấn khác chạy thử thấy **không** phải lỗi → ghi riêng.
+
+### Kết thúc
+- `README.md` gốc, `tools/run-all-tests.sh`, `SUMMARY.md`.
+- Chạy toàn bộ: 13 bộ, 362 phép kiểm, tất cả đạt; kiểm thêm qua web server (http-server): 9 trang không lỗi.
+- Trong lần chạy tổng, test Lenz bị chập chờn (phụ thuộc thời gian) → viết lại để di chuyển nam châm mỗi khung hình; phát hiện thêm lỗi trong chính test (đặt ngược điểm xuất phát) và sửa.
+
+## Việc tiếp theo (gợi ý cho phiên sau)
+1. Mở rộng ngân hàng câu hỏi (sóng điện từ, Toán lớp 10–11, thêm câu V-ACT phần ngôn ngữ).
+2. Thay `prompt()` sửa ngày thi trong Bảng điều khiển bằng form.
+3. Orbit Lab: lực cản khí quyển / bản 3D.
 
 ## Cách chạy toàn bộ kiểm thử
 ```bash
@@ -75,4 +91,7 @@ node tools/test-labs-ui.js [thư-mục-ảnh]
 node tools/test-dash.js [thư-mục-ảnh]
 node tools/verify-toan-vact.js
 node tools/test-quiz.js projects/06-on-thi-toan-vact/index.html
+node tools/test-hub.js
+# hoặc tất cả một lần:
+bash tools/run-all-tests.sh
 ```

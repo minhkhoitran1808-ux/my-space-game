@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Lộ trình du học Đức ngành Kỹ thuật Hàng không – Vũ trụ cho học sinh lớp 12 Việt Nam: APS, TestAS, Studienkolleg, tiếng Đức, tài chính, danh sách trường, checklist.">
+  <title>Lộ trình du học Đức · Hàng không</title>
+  <link rel="stylesheet" href="../shared/theme.css">
+  <script src="../shared/common.js"></script>
+  <style>
+    .verify { display: inline-block; font-size: 0.72rem; font-weight: 700; color: var(--warn); background: var(--warn-soft); border-radius: 999px; padding: 1px 8px; margin-left: 4px; white-space: nowrap; vertical-align: 1px; }
+    .timeline { list-style: none; margin: 0; padding: 0; position: relative; }
+    .timeline::before { content: ""; position: absolute; left: 11px; top: 6px; bottom: 6px; width: 2px; background: var(--border); }
+    .timeline li { position: relative; padding: 0 0 18px 36px; }
+    .timeline li::before { content: ""; position: absolute; left: 4px; top: 5px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); border: 3px solid var(--accent); }
+    .timeline li.now::before { background: var(--accent); }
+    .timeline .when { font-weight: 700; color: var(--accent); }
+    .paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .path h3 { display: flex; gap: 8px; align-items: center; }
+    .path .num { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-weight: 800; flex: none; }
+    .path ol { padding-left: 18px; margin: 6px 0; }
+    .path li { margin-bottom: 4px; }
+    .pros { font-size: 0.88rem; }
+    .checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+    .checklist label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+    .checklist input { margin-top: 4px; accent-color: var(--accent); width: 18px; height: 18px; flex: none; }
+    .checklist .done span { text-decoration: line-through; color: var(--muted); }
+    .src li { margin-bottom: 4px; overflow-wrap: anywhere; }
+    .toc { display: flex; flex-wrap: wrap; gap: 6px; }
+    section h2 { scroll-margin-top: 70px; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="wrap">
+      <a class="brand" href="#"><span class="brand-dot" aria-hidden="true"></span>Lộ trình du học Đức</a>
+      <nav class="nav" aria-label="Mục lục">
+        <a href="#tong-quan">Tổng quan</a><a href="#con-duong">3 con đường</a><a href="#moc-thoi-gian">Mốc thời gian</a><a href="#truong">Trường</a><a href="#checklist">Checklist</a><a href="#nguon">Nguồn</a>
+        <a href="../index.html" title="Về trang tổng các dự án">⌂ Hub</a>
+        <button type="button" id="theme-btn"></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap stack">
+    <div>
+      <h1>Lộ trình du học Đức ngành Kỹ thuật Hàng không – Vũ trụ</h1>
+      <p class="muted" style="margin:0">Dành cho học sinh lớp 12 Việt Nam (tốt nghiệp THPT 2027). Tổng hợp ngày 19/10/2026 từ nguồn chính thức và nguồn tham khảo — xem mục <a href="#nguon">Nguồn</a>.</p>
+    </div>
+
+    <div class="callout warn">
+      <b>Đọc trước:</b> quy định tuyển sinh và thị thực thay đổi hằng năm. Mọi chỗ gắn nhãn <span class="verify">cần xác minh</span> là thông tin lấy từ nguồn thứ cấp hoặc có thể đã đổi — <b>phải kiểm tra lại trên trang chính thức</b> (Đại sứ quán Đức, APS, DAAD, uni-assist, trang trường) trước khi nộp hồ sơ hay chuyển tiền. Tài liệu này không thay thế tư vấn chính thức.
+    </div>
+
+    <section class="card stack" id="tong-quan">
+      <h2>1. Bức tranh tổng quan</h2>
+      <ul style="margin:0;padding-left:20px">
+        <li><b>Bằng THPT Việt Nam chưa đủ để vào thẳng đại học Đức.</b> Theo đánh giá dựa trên cơ sở dữ liệu anabin/DAAD, học sinh chỉ có bằng THPT thường phải học <b>Studienkolleg</b> (dự bị, khoảng 1 năm) rồi thi <b>Feststellungsprüfung</b>; hoặc học 1–2 năm tại một đại học Việt Nam được công nhận để được xét vào thẳng / có điều kiện <span class="verify">cần xác minh trên anabin cho trường hợp của bạn</span>.</li>
+        <li><b>APS là bắt buộc.</b> Bộ phận kiểm tra học vấn APS thuộc Đại sứ quán Đức tại Hà Nội kiểm tra hồ sơ học sinh Việt Nam từ năm 2007. Với người học đại học lần đầu (chưa có bằng đại học Việt Nam): kiểm tra hồ sơ <b>và thi TestAS</b> (tiếng Anh hoặc tiếng Đức); không phỏng vấn. TestAS tổ chức 3 lần/năm, đăng ký cá nhân tại testas.de.</li>
+        <li><b>Thị thực</b> cần chứng chỉ APS và kết quả TestAS (trừ khi được trường nhận vô điều kiện), cùng chứng minh tài chính — thường là <b>tài khoản phong tỏa (Sperrkonto)</b> khoảng <b>11.904 €/năm (992 €/tháng)</b> theo mức áp dụng gần đây <span class="verify">cần xác minh mức năm 2027</span>.</li>
+        <li><b>Ngôn ngữ:</b> đa số chương trình cử nhân kỹ thuật dạy bằng <b>tiếng Đức</b> (thường cần C1, ví dụ TestDaF/DSH); Studienkolleg cũng dạy bằng tiếng Đức (thường cần khoảng B1–B2 để thi đầu vào) <span class="verify">cần xác minh</span>. Có một số ít chương trình tiếng Anh (ví dụ B.Sc. Aerospace của TUM).</li>
+        <li><b>Học phí:</b> đa số bang miễn học phí đại học công lập (chỉ đóng phí học kỳ). Riêng Bayern (TUM) và Baden-Württemberg (Stuttgart) thu học phí với sinh viên ngoài EU <span class="verify">cần xác minh mức hiện hành</span>.</li>
+      </ul>
+    </section>
+
+    <section class="stack" id="con-duong">
+      <h2>2. Ba con đường khả thi</h2>
+      <div class="paths">
+        <div class="card path">
+          <h3><span class="num">1</span>Studienkolleg (T-Kurs)</h3>
+          <ol>
+            <li>Tốt nghiệp THPT 2027 với điểm tốt (điểm THPT thường được xem khi xét Studienkolleg) <span class="verify">cần xác minh</span>.</li>
+            <li>Học tiếng Đức lên B1–B2; làm APS + TestAS.</li>
+            <li>Nộp hồ sơ Studienkolleg (thường qua uni-assist hoặc trực tiếp trường), thi đầu vào (thường gồm tiếng Đức và Toán).</li>
+            <li>Học T-Kurs (khối kỹ thuật) ~2 học kỳ → thi Feststellungsprüfung.</li>
+            <li>Nộp Bachelor kỹ thuật hàng không / cơ khí (tiếng Đức C1).</li>
+          </ol>
+          <p class="pros"><b>+</b> Con đường chuẩn, Studienkolleg công lập không thu học phí. <b>−</b> Cần tiếng Đức sớm; mất thêm ~1 năm.</p>
+        </div>
+        <div class="card path">
+          <h3><span class="num">2</span>Học trước 1–2 năm đại học ở Việt Nam</h3>
+          <ol>
+            <li>Dùng điểm THPT / V-ACT vào ngành kỹ thuật liên quan (ví dụ <b>Kỹ thuật Hàng không</b> tại ĐH Bách khoa – ĐHQG-HCM, hoặc Cơ khí) ở trường được anabin xếp hạng phù hợp <span class="verify">cần xác minh ngành & xếp hạng</span>.</li>
+            <li>Song song học tiếng Đức; học tốt năm 1–2 (bảng điểm sẽ được xét).</li>
+            <li>APS → nộp thẳng vào Bachelor (năm 1) hoặc xin công nhận tín chỉ.</li>
+          </ol>
+          <p class="pros"><b>+</b> Không "trắng tay" nếu kế hoạch du học chậm; có nền tảng kỹ thuật; <b>V-ACT trở thành phương án dự phòng có giá trị</b>. <b>−</b> Một số trường Đức vẫn yêu cầu Studienkolleg tùy điểm <span class="verify">cần xác minh</span>.</p>
+        </div>
+        <div class="card path">
+          <h3><span class="num">3</span>Chương trình dạy bằng tiếng Anh</h3>
+          <ol>
+            <li>Ví dụ: <b>B.Sc. Aerospace – TU München</b>: dạy bằng tiếng Anh (một số môn tiếng Đức), khai giảng tháng 10; danh mục DAAD ghi yêu cầu tiếng Anh B2 và tiếng Đức A2 <span class="verify">cần xác minh</span>.</li>
+            <li>Vẫn phải đáp ứng điều kiện vào đại học Đức (thường vẫn qua con đường 1 hoặc 2) + APS.</li>
+            <li>Học phí cho sinh viên ngoài EU (danh mục ghi khoảng 3.000 €/học kỳ) <span class="verify">cần xác minh</span>.</li>
+          </ol>
+          <p class="pros"><b>+</b> Dùng tiếng Anh sẵn có. <b>−</b> Rất ít chương trình, cạnh tranh cao, có học phí; vẫn nên học tiếng Đức để sống & thực tập.</p>
+        </div>
+      </div>
+      <div class="callout small"><b>Gợi ý chiến lược (ý kiến, không phải quy định):</b> chuẩn bị song song con đường 1 và 2. Ôn THPT + V-ACT thật tốt giữ cửa vào ngành kỹ thuật ở Việt Nam; học tiếng Đức đều từ bây giờ để không bị động khi chọn Studienkolleg.</div>
+    </section>
+
+    <section class="card stack" id="moc-thoi-gian">
+      <h2>3. Mốc thời gian gợi ý (từ tháng 10/2026)</h2>
+      <ol class="timeline">
+        <li class="now"><span class="when">10/2026 – 03/2027</span><br>Ưu tiên số 1: ôn THPT & V-ACT. Tiếng Đức A1 → A2 (2–4 giờ/tuần, đều đặn). Đọc kỹ anabin cho trường hợp "THPT Việt Nam".</li>
+        <li><span class="when">Khoảng 04/2027</span><br>Thi V-ACT đợt 1 (ngày giả định trong Bảng điều khiển) <span class="verify">cần xác minh lịch</span>.</li>
+        <li><span class="when">Khoảng 06/2027</span><br>Thi tốt nghiệp THPT <span class="verify">cần xác minh lịch</span>. Chọn con đường 1 hay 2 dựa trên kết quả.</li>
+        <li><span class="when">07/2027 – 2028</span><br>Tiếng Đức B1 → B2 (khóa tập trung). Chuẩn bị hồ sơ APS (công chứng học bạ, bằng/giấy chứng nhận tốt nghiệp, kết quả thi). Đăng ký TestAS (3 đợt/năm).</li>
+        <li><span class="when">Sau khi có APS</span><br>Nộp Studienkolleg / Bachelor theo hạn của từng trường (nhiều trường dùng hạn 15/1 cho học kỳ hè và 15/7 cho học kỳ đông) <span class="verify">cần xác minh từng trường</span>. Mở Sperrkonto, mua bảo hiểm, xin thị thực.</li>
+        <li><span class="when">Suốt quá trình</span><br>Xây portfolio: các dự án trong repo này (Orbit Lab, phòng thí nghiệm ảo…), dự án robot/cơ điện tử, chứng chỉ tiếng Anh. Các trường kỹ thuật Đức thường yêu cầu <b>Vorpraktikum</b> (thực tập cơ khí trước/đầu khóa, ví dụ Uni Stuttgart ghi 6 tuần) — tìm hiểu sớm.</li>
+      </ol>
+    </section>
+
+    <section class="card stack" id="truong">
+      <h2>4. Một số nơi đào tạo kỹ thuật hàng không – vũ trụ <span class="verify">cần xác minh trên Hochschulkompass & trang trường</span></h2>
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Trường</th><th>Chương trình (bậc cử nhân)</th><th>Ghi chú</th></tr></thead>
+        <tbody>
+          <tr><td>Universität Stuttgart</td><td>B.Sc. Luft- und Raumfahrttechnik</td><td>Tiếng Đức, 6 học kỳ, nhập học kỳ đông, giới hạn chỉ tiêu, Vorpraktikum 6 tuần (theo trang trường).</td></tr>
+          <tr><td>TU München</td><td>B.Sc. Aerospace</td><td>Tiếng Anh, khai giảng tháng 10; có học phí cho sinh viên ngoài EU.</td></tr>
+          <tr><td>TU Braunschweig</td><td>B.Sc. Maschinenbau, hướng Luft- und Raumfahrttechnik</td><td>Thành phố có trung tâm nghiên cứu hàng không lớn (DLR, sân bay nghiên cứu).</td></tr>
+          <tr><td>RWTH Aachen</td><td>Cơ khí (Maschinenbau) với hướng chuyên sâu hàng không – vũ trụ</td><td>Chưa kiểm được chi tiết trong lần tra cứu này.</td></tr>
+          <tr><td>TU Dresden, TU Berlin</td><td>Các chương trình cơ khí / hàng không</td><td>Chưa kiểm được chi tiết.</td></tr>
+          <tr><td>Các Hochschule ứng dụng (FH/HAW), ví dụ FH Aachen, Hochschule München, HAW Hamburg, TH Ingolstadt</td><td>B.Eng. Luft- und Raumfahrttechnik / Flugzeugbau / Luftfahrttechnik</td><td>Thiên về thực hành, gắn doanh nghiệp. Chưa kiểm được chi tiết.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="small muted" style="margin:0">Nhiều kỹ sư hàng không ở Đức học <b>Cơ khí (Maschinenbau)</b> ở bậc cử nhân rồi chuyên sâu hàng không ở bậc thạc sĩ — đây là lựa chọn an toàn nếu không vào được chương trình hàng không ngay.</p>
+    </section>
+
+    <section class="card stack" id="checklist">
+      <div class="row"><h2 style="margin:0">5. Checklist chuẩn bị</h2><span class="spacer"></span><span class="badge accent" id="ck-count"></span></div>
+      <p class="small muted" style="margin:0">Đánh dấu được lưu trong trình duyệt này.</p>
+      <ul class="checklist" id="ck"></ul>
+    </section>
+
+    <section class="card stack" id="nguon">
+      <h2>6. Nguồn đã tra cứu (19/10/2026)</h2>
+      <p class="small muted" style="margin:0"><b>Chính thức</b> (ưu tiên đọc):</p>
+      <ul class="src small">
+        <li>Đại sứ quán Đức tại Việt Nam — Bộ phận kiểm tra học vấn APS: <a href="https://vietnam.diplo.de/vn-de/willkommen/aktuelles/aps-1236800" rel="noopener">vietnam.diplo.de/…/aps-1236800</a></li>
+        <li>Merkblatt APS cho bậc đại học lần đầu (TestAS, thị thực): <a href="https://vietnam.diplo.de/vn-de/willkommen/aktuelles/1602320-1602320" rel="noopener">vietnam.diplo.de/…/1602320</a></li>
+        <li>Merkblatt APS — thủ tục đối tác cho học sinh tốt nghiệp THPT: <a href="https://vietnam.diplo.de/vn-de/willkommen/aktuelles/1603996-1603996" rel="noopener">vietnam.diplo.de/…/1603996</a></li>
+        <li>Thị thực du học: <a href="https://vietnam.diplo.de/vn-de/service/05-VisaEinreise/-/2306542" rel="noopener">vietnam.diplo.de/…/2306542</a></li>
+        <li>DAAD — chương trình B.Sc. Aerospace (TUM): <a href="https://www2.daad.de/deutschland/studienangebote/international-programmes/en/detail/7256" rel="noopener">daad.de/…/detail/7256</a></li>
+        <li>Universität Stuttgart — B.Sc. Luft- und Raumfahrttechnik: <a href="https://www.uni-stuttgart.de/studium/studienangebot/Luft--und-Raumfahrttechnik-B.Sc." rel="noopener">uni-stuttgart.de/…</a></li>
+        <li>TUM — điều kiện đầu vào cho bằng nước ngoài: <a href="https://www.tum.de/en/studies/application/higher-education-entrance-qualification/international-higher-education-entrance-qualification" rel="noopener">tum.de/…</a></li>
+        <li>Cơ sở dữ liệu điều kiện đầu vào (anabin/DAAD), TestAS, uni-assist, Hochschulkompass: tự tra trên anabin.kmk.org, daad.de, testas.de, uni-assist.de, hochschulkompass.de.</li>
+      </ul>
+      <p class="small muted" style="margin:0"><b>Tham khảo</b> (thứ cấp, có thể là trang thương mại — chỉ để định hướng):</p>
+      <ul class="src small">
+        <li><a href="https://www.studienkolleg.org/en/blog/studienkolleg-guide-vietnamese-students-complete/" rel="noopener">studienkolleg.org — Studienkolleg for Vietnamese students</a> (bảng các trường hợp THPT / 1 năm / 2 năm đại học)</li>
+        <li><a href="https://www.mygermanuniversity.com/articles/APS-for-Vietnamese-Students" rel="noopener">mygermanuniversity.com — APS for Vietnamese students</a></li>
+        <li><a href="https://www.bankdaten.de/ratgeber/sperrkonto.html" rel="noopener">bankdaten.de — Sperrkonto</a> (mức 11.904 €/năm; một nguồn khác ghi 12.030 € → cần xác minh)</li>
+        <li><a href="https://www.htwg-konstanz.de/en/academics/center-for-international-students-konstanz/country-specific-instructions" rel="noopener">HTWG Konstanz — hướng dẫn hồ sơ theo quốc gia</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+      SL.initThemeToggle(document.getElementById('theme-btn'));
+      var ITEMS = [
+        'Đọc mục Việt Nam trên anabin / cơ sở dữ liệu điều kiện đầu vào của DAAD',
+        'Chọn con đường chính (1, 2 hoặc 3) và con đường dự phòng',
+        'Bắt đầu tiếng Đức A1 (khóa học hoặc tự học đều đặn)',
+        'Đạt tiếng Đức A2',
+        'Đạt tiếng Đức B1 (có chứng chỉ)',
+        'Đạt tiếng Đức B2',
+        'Thi V-ACT (phương án dự phòng ở Việt Nam)',
+        'Tốt nghiệp THPT, lấy giấy chứng nhận tốt nghiệp + học bạ',
+        'Công chứng / dịch thuật hồ sơ theo yêu cầu APS',
+        'Nộp hồ sơ APS và nhận chứng chỉ APS',
+        'Đăng ký và thi TestAS (testas.de)',
+        'Lập danh sách 5–8 Studienkolleg / chương trình và hạn nộp',
+        'Tìm hiểu yêu cầu Vorpraktikum của các trường đã chọn',
+        'Nộp hồ sơ (uni-assist / trực tiếp trường)',
+        'Mở tài khoản phong tỏa (Sperrkonto) và bảo hiểm',
+        'Xin thị thực du học',
+        'Hoàn thiện portfolio (repo này + dự án robot/cơ điện tử) và CV tiếng Anh/Đức'
+      ];
+      var KEY = 'sl.de-roadmap.v1';
+      var done = SL.store.get(KEY, {});
+      var ul = document.getElementById('ck');
+      function render() {
+        ul.innerHTML = ITEMS.map(function (t, i) {
+          var on = !!done[i];
+          return '<li class="' + (on ? 'done' : '') + '"><label><input type="checkbox" data-i="' + i + '"' + (on ? ' checked' : '') + '><span>' + SL.esc(t) + '</span></label></li>';
+        }).join('');
+        var n = ITEMS.filter(function (_, i) { return done[i]; }).length;
+        document.getElementById('ck-count').textContent = n + '/' + ITEMS.length + ' việc';
+      }
+      ul.addEventListener('change', function (e) {
+        var i = e.target.getAttribute('data-i');
+        if (e.target.checked) done[i] = Date.now(); else delete done[i];
+        SL.store.set(KEY, done);
+        render();
+      });
+      render();
+    })();
+  </script>
+</body>
+</html>

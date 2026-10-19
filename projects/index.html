@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Bộ công cụ học tập & portfolio: ôn thi Vật lý/Toán/V-ACT, mô phỏng quỹ đạo, phòng thí nghiệm ảo, bảng điều khiển ôn thi, lộ trình du học Đức ngành hàng không.">
+  <title>Study Lab · Portfolio</title>
+  <link rel="stylesheet" href="shared/theme.css">
+  <script src="shared/common.js"></script>
+  <style>
+    .hero { padding: 28px 0 8px; }
+    .hero h1 { font-size: clamp(1.7rem, 4.5vw, 2.6rem); margin-bottom: 8px; }
+    .hero h1 span { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero p { max-width: 720px; color: var(--muted); font-size: 1.05rem; }
+    .projects { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    .proj { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+    .proj img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+    .proj .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .proj h3 { margin: 0; }
+    .proj p { margin: 0; color: var(--muted); font-size: 0.93rem; }
+    .proj .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .proj .foot { margin-top: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .stat .num-big { font-size: 1.9rem; font-weight: 800; color: var(--accent); line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .steps li { counter-increment: s; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 0.92rem; }
+    .steps li::before { content: counter(s); display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 800; margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="wrap">
+      <a class="brand" href="#"><span class="brand-dot" aria-hidden="true"></span>Study Lab</a>
+      <nav class="nav" aria-label="Điều hướng">
+        <a href="#du-an">Dự án</a><a href="#phuong-phap">Cách làm</a><a href="../index.html">🚀 Game Phi Thuyền</a>
+        <button type="button" id="theme-btn"></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap stack">
+    <section class="hero">
+      <h1>Học Vật lý bằng cách <span>xây công cụ</span></h1>
+      <p>Bộ công cụ học tập tôi dùng để ôn thi tốt nghiệp THPT & V-ACT và chuẩn bị cho ngành <b>Kỹ thuật Hàng không – Vũ trụ</b>: từ ngân hàng câu hỏi có lời giải, mô phỏng quỹ đạo vệ tinh, đến phòng thí nghiệm ảo. Mọi thứ chạy ngay trên trình duyệt, không cần cài đặt, và được kiểm thử tự động.</p>
+      <div class="grid grid-4" style="margin-top:16px">
+        <div class="card stat"><span class="num-big">173</span><span>câu hỏi có lời giải (Vật lý, Toán, V-ACT)</span></div>
+        <div class="card stat"><span class="num-big">140</span><span>đáp số được máy tính tính lại độc lập</span></div>
+        <div class="card stat"><span class="num-big">7</span><span>mô phỏng vật lý tương tác</span></div>
+        <div class="card stat"><span class="num-big">340+</span><span>phép kiểm thử tự động (Node + trình duyệt)</span></div>
+      </div>
+    </section>
+
+    <section id="du-an" class="stack">
+      <h2>Dự án</h2>
+      <div class="projects">
+        <article class="card proj">
+          <a href="02-orbit-lab/index.html"><img src="assets/thumbs/p2-orbit.jpg" alt="Orbit Lab: quỹ đạo elip quanh Trái Đất với các hình quạt định luật II Kepler" loading="lazy"></a>
+          <div class="body">
+            <h3>Orbit Lab</h3>
+            <p>Mô phỏng quỹ đạo vệ tinh (tích phân Verlet, sai số năng lượng ~1e-9), định luật Kepler, chuyển quỹ đạo Hohmann Trái Đất → Sao Hỏa, tên lửa nhiều tầng Tsiolkovsky, 9 bài tập có lời giải.</p>
+            <div class="tags"><span class="badge accent">Cơ học thiên thể</span><span class="badge">Canvas</span><span class="badge">Phương pháp số</span></div>
+            <div class="foot"><a class="btn sm primary" href="02-orbit-lab/index.html">Mở</a><a class="btn sm ghost" href="02-orbit-lab/README.md">README</a><span class="small muted">53 phép kiểm</span></div>
+          </div>
+        </article>
+        <article class="card proj">
+          <a href="04-phong-thi-nghiem-ao/index.html"><img src="assets/thumbs/p4-lab.jpg" alt="Phòng thí nghiệm ảo: hộp khí có pit-tông" loading="lazy"></a>
+          <div class="body">
+            <h3>Phòng thí nghiệm ảo Vật lý 12</h3>
+            <p>Khí lí tưởng từ va chạm phân tử thật (đo áp suất, phân bố Maxwell), phân rã phóng xạ ngẫu nhiên, định luật Lenz với nam châm kéo được, máy phát điện xoay chiều 3D.</p>
+            <div class="tags"><span class="badge accent">Vật lý 12</span><span class="badge">Mô phỏng hạt</span><span class="badge">Thống kê</span></div>
+            <div class="foot"><a class="btn sm primary" href="04-phong-thi-nghiem-ao/index.html">Mở</a><a class="btn sm ghost" href="04-phong-thi-nghiem-ao/README.md">README</a><span class="small muted">33 phép kiểm</span></div>
+          </div>
+        </article>
+        <article class="card proj">
+          <a href="01-on-thi-vat-ly-12/index.html"><img src="assets/thumbs/p1-vatly.jpg" alt="Ôn thi Vật lý 12: tổng quan tiến độ" loading="lazy"></a>
+          <div class="body">
+            <h3>Ôn thi Vật lý 12</h3>
+            <p>99 câu theo dạng đề THPT mới (trắc nghiệm, Đúng/Sai, trả lời ngắn), phân tích phương án nhiễu, lặp lại ngắt quãng, sổ câu sai, thi thử 50 phút chấm thang 2025.</p>
+            <div class="tags"><span class="badge accent">Ôn thi</span><span class="badge">Spaced repetition</span><span class="badge">KaTeX</span></div>
+            <div class="foot"><a class="btn sm primary" href="01-on-thi-vat-ly-12/index.html">Mở</a><a class="btn sm ghost" href="01-on-thi-vat-ly-12/README.md">README</a><span class="small muted">105 phép kiểm</span></div>
+          </div>
+        </article>
+        <article class="card proj">
+          <a href="06-on-thi-toan-vact/index.html"><img src="assets/thumbs/p6-toan.jpg" alt="Ôn thi Toán 12 và Tư duy V-ACT" loading="lazy"></a>
+          <div class="body">
+            <h3>Toán 12 & Tư duy V-ACT</h3>
+            <p>50 câu Toán 12 (đạo hàm, tích phân, Oxyz, thống kê, Bayes) và 24 câu tư duy V-ACT (logic, số liệu, suy luận khoa học), dùng chung engine với bộ Vật lý.</p>
+            <div class="tags"><span class="badge accent">Ôn thi</span><span class="badge">Toán</span><span class="badge">V-ACT</span></div>
+            <div class="foot"><a class="btn sm primary" href="06-on-thi-toan-vact/index.html">Mở</a><a class="btn sm ghost" href="06-on-thi-toan-vact/README.md">README</a><span class="small muted">125 phép kiểm</span></div>
+          </div>
+        </article>
+        <article class="card proj">
+          <a href="03-so-tay-cong-thuc/index.html"><img src="assets/thumbs/p3-congthuc.jpg" alt="Sổ tay công thức Vật lý 12" loading="lazy"></a>
+          <div class="body">
+            <h3>Sổ tay công thức Vật lý 12</h3>
+            <p>42 công thức kèm "bẫy hay gặp", tìm kiếm không dấu, chế độ che công thức để tự kiểm tra, in ra PDF A4 4 trang.</p>
+            <div class="tags"><span class="badge accent">Tra cứu</span><span class="badge">In ấn</span></div>
+            <div class="foot"><a class="btn sm primary" href="03-so-tay-cong-thuc/index.html">Mở</a><a class="btn sm ghost" href="03-so-tay-cong-thuc/README.md">README</a><span class="small muted">16 phép kiểm</span></div>
+          </div>
+        </article>
+        <article class="card proj">
+          <a href="05-bang-dieu-khien/index.html"><img src="assets/thumbs/p5-dash.jpg" alt="Bảng điều khiển ôn thi" loading="lazy"></a>
+          <div class="body">
+            <h3>Bảng điều khiển ôn thi</h3>
+            <p>Đếm ngược kỳ thi, kế hoạch tuần, Pomodoro tự ghi nhật ký, sổ lỗi sai có lịch ôn 1-3-7-14-30 ngày, tự đọc tiến độ từ các bộ ôn thi.</p>
+            <div class="tags"><span class="badge accent">Năng suất</span><span class="badge">localStorage</span></div>
+            <div class="foot"><a class="btn sm primary" href="05-bang-dieu-khien/index.html">Mở</a><a class="btn sm ghost" href="05-bang-dieu-khien/README.md">README</a><span class="small muted">16 phép kiểm</span></div>
+          </div>
+        </article>
+        <article class="card proj">
+          <a href="07-lo-trinh-du-hoc-duc/index.html"><img src="assets/thumbs/p7-duc.jpg" alt="Lộ trình du học Đức" loading="lazy"></a>
+          <div class="body">
+            <h3>Lộ trình du học Đức · Hàng không</h3>
+            <p>APS, TestAS, Studienkolleg, 3 con đường khả thi, mốc thời gian, danh sách trường, checklist — có nguồn và đánh dấu rõ chỗ cần xác minh.</p>
+            <div class="tags"><span class="badge accent">Định hướng</span><span class="badge">Nghiên cứu</span></div>
+            <div class="foot"><a class="btn sm primary" href="07-lo-trinh-du-hoc-duc/index.html">Mở</a><a class="btn sm ghost" href="07-lo-trinh-du-hoc-duc/README.md">README</a></div>
+          </div>
+        </article>
+        <article class="card proj">
+          <a href="../index.html"><img src="assets/thumbs/game.jpg" alt="Game Phi Thuyền" loading="lazy"></a>
+          <div class="body">
+            <h3>Phi Thuyền (game)</h3>
+            <p>Game bắn phi thuyền trên canvas với hệ thống kỹ năng, kinh nghiệm và nâng cấp — dự án lập trình web đầu tiên.</p>
+            <div class="tags"><span class="badge accent">Game</span><span class="badge">Canvas</span></div>
+            <div class="foot"><a class="btn sm primary" href="../index.html">Chơi</a><a class="btn sm ghost" href="08-review-game/REVIEW.md">Nhận xét code</a></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="phuong-phap" class="card stack">
+      <h2 style="margin:0">Cách mình làm: đúng trước, đẹp sau</h2>
+      <ol class="steps">
+        <li><b>Lõi tách khỏi giao diện.</b> Phần vật lý (<code>orbit.js</code>, <code>labs-core.js</code>) là JavaScript thuần chạy được trong Node để kiểm thử.</li>
+        <li><b>Kiểm với giá trị tham chiếu.</b> v₁ = 7,91 km/s, bán kính địa tĩnh 42 164 km, Hohmann Trái Đất → Sao Hỏa 259 ngày… đều được kiểm tự động.</li>
+        <li><b>Đáp án được tính lại độc lập.</b> Script đọc ngân hàng câu hỏi, tính lại từng đáp số và kiểm rằng không phương án nhiễu nào trùng đáp án đúng.</li>
+        <li><b>Kiểm thử trên trình duyệt thật.</b> Playwright mở từng trang, bấm như người dùng, chụp ảnh, kiểm tra điện thoại 375 px và console sạch lỗi.</li>
+        <li><b>Trung thực về giới hạn.</b> Mô hình đơn giản hóa và thông tin chưa chắc đều được ghi rõ là "cần xác minh".</li>
+      </ol>
+      <p class="small muted" style="margin:0">Công nghệ: HTML/CSS/JavaScript thuần (không framework, không bước build), Canvas 2D, KaTeX (đặt sẵn offline), Node.js + Playwright cho kiểm thử. Chạy offline bằng cách mở tệp; đưa lên GitHub Pages là dùng được.</p>
+    </section>
+  </main>
+  <script>SL.initThemeToggle(document.getElementById('theme-btn'));</script>
+</body>
+</html>
