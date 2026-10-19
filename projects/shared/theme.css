@@ -234,3 +234,16 @@ table.table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
 
 /* Thuộc tính hidden phải luôn thắng các lớp display:grid/flex */
 [hidden] { display: none !important; }
+
+/* Khi in luôn dùng bảng màu sáng, bất kể giao diện đang tối */
+@media print {
+  :root {
+    --bg: #ffffff !important; --bg-2: #ffffff !important;
+    --surface: #ffffff !important; --surface-2: #f5f6f8 !important;
+    --border: #c4c9d4 !important; --text: #000000 !important; --muted: #3b4252 !important;
+    --accent: #0f766e !important; --accent-soft: rgba(15, 118, 110, 0.1) !important;
+    --warn: #8a5a00 !important; --warn-soft: #f3f3f3 !important;
+    --ok: #166534 !important; --bad: #b42318 !important;
+    color-scheme: light !important;
+  }
+}

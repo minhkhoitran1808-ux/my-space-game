@@ -9,8 +9,8 @@
 |---|---|---|---|
 | P1 | Ôn thi Vật lý 12 | `projects/01-on-thi-vat-ly-12/` | ✅ Xong (đã tự kiểm tra) |
 | P2 | Orbit Lab | `projects/02-orbit-lab/` | ✅ Xong (đã tự kiểm tra) |
-| P3 | Sổ tay công thức Vật lý 12 | `projects/03-so-tay-cong-thuc/` | ⏳ Tiếp theo |
-| P4 | Phòng thí nghiệm ảo Vật lý 12 | `projects/04-phong-thi-nghiem-ao/` | ⬜ Chưa làm |
+| P3 | Sổ tay công thức Vật lý 12 | `projects/03-so-tay-cong-thuc/` | ✅ Xong (đã tự kiểm tra) |
+| P4 | Phòng thí nghiệm ảo Vật lý 12 | `projects/04-phong-thi-nghiem-ao/` | ⏳ Tiếp theo |
 | P5 | Bảng điều khiển ôn thi + sổ lỗi sai | `projects/05-bang-dieu-khien/` | ⬜ Chưa làm |
 | P6 | Gói Toán 12 + Tư duy V-ACT | `projects/06-on-thi-toan-vact/` | ⬜ Chưa làm |
 | P7 | Hub portfolio + lộ trình du học Đức | `projects/index.html`, `projects/07-lo-trinh-du-hoc-duc/` | ⬜ Chưa làm |
@@ -37,8 +37,13 @@
 - **Sửa trong vòng kiểm tra:** quạt Kepler bị xóa sau mỗi chu kì (→ vòng xoay 12 quạt); `hidden` bị `display:grid` đè (→ quy tắc chung trong theme.css); khung Hohmann/sandbox căn tỉ lệ khi canvas còn ẩn (→ căn trễ khi vẽ); điểm sáng hành tinh quá gắt.
 - **Còn tồn:** không có lực cản khí quyển, chỉ 2D (ghi trong README).
 
+### P3 · Sổ tay công thức Vật lý 12 — ✅ XONG
+- **Đã làm:** `formulas.js` (42 mục + hằng số), `index.html` (tìm không dấu, chế độ che công thức, in A4 4 trang).
+- **Tự kiểm tra:** `node tools/test-formulas.js` → 16/16; đã xem bản PDF in thật.
+- **Sửa trong vòng kiểm tra:** lỗi `${` trong template literal làm hỏng cả trang; tìm "bán rã" không ra (thêm từ khóa + tìm không dấu); công thức dạng chữ bị tràn (chuyển sang văn bản); bản in khi giao diện tối bị nền đen (ép bảng màu sáng khi in — áp dụng cho mọi trang).
+
 ## Việc tiếp theo
-1. P3 Sổ tay công thức Vật lý 12 (in được A4).
+1. P4 Phòng thí nghiệm ảo: khí lí tưởng, phóng xạ, máy phát điện xoay chiều.
 
 ## Cách chạy toàn bộ kiểm thử
 ```bash
@@ -47,4 +52,5 @@ node tools/verify-vatly12.js
 node tools/test-quiz.js projects/01-on-thi-vat-ly-12/index.html [thư-mục-ảnh]
 node tools/test-orbit.js
 node tools/test-orbit-ui.js [thư-mục-ảnh]
+node tools/test-formulas.js [thư-mục-ảnh]
 ```

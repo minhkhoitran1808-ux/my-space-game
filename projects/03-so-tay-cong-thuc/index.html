@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Sổ tay công thức Vật lý 12 (CT GDPT 2018): tra cứu nhanh, chế độ tự kiểm tra, in A4.">
+  <title>Sổ tay công thức Vật lý 12</title>
+  <link rel="stylesheet" href="../shared/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="../shared/theme.css">
+  <script src="../shared/common.js"></script>
+  <style>
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .toolbar input[type=search] { flex: 1; min-width: 200px; }
+    .chap { margin-top: 22px; }
+    .chap h2 { display: flex; align-items: center; gap: 8px; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+    .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+    .item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; break-inside: avoid; }
+    .item h3 { font-size: 0.98rem; margin: 0 0 4px; }
+    .item .f { overflow-x: auto; position: relative; min-height: 44px; }
+    .item .f.ft { display: flex; align-items: center; padding: 6px 0; font-size: 0.95rem; }
+    .item .n { font-size: 0.88rem; color: var(--muted); margin: 4px 0 0; }
+    .item .trap { font-size: 0.85rem; margin-top: 6px; padding: 4px 8px; border-radius: 6px; background: var(--warn-soft); }
+    .item .trap::before { content: "⚠ Bẫy: "; font-weight: 700; color: var(--warn); }
+    .quiz .item .f > * { filter: blur(7px); opacity: 0.5; transition: filter 0.2s, opacity 0.2s; cursor: pointer; user-select: none; }
+    .quiz .item.shown .f > * { filter: none; opacity: 1; }
+    .quiz .item .f::after { content: "Bấm để hiện công thức"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 0.82rem; color: var(--accent); pointer-events: none; }
+    .quiz .item.shown .f::after { display: none; }
+    .quiz .item .n, .quiz .item .trap { display: none; }
+    .quiz .item.shown .n, .quiz .item.shown .trap { display: block; }
+    .const { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 4px 18px; }
+    .const div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dashed var(--border); padding: 4px 0; font-size: 0.9rem; align-items: center; }
+    .const span:first-child { color: var(--muted); }
+    .hide { display: none !important; }
+    .print-title { display: none; }
+    @media print {
+      @page { size: A4; margin: 10mm; }
+      body { font-size: 10.5pt; }
+      main { padding: 0; }
+      .wrap { max-width: none; padding: 0; }
+      .print-title { display: block; font-size: 14pt; margin: 0 0 4px; }
+      .items { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 5px; }
+      .item .f.ft { font-size: 9.5pt; min-height: 0; }
+      .const { grid-template-columns: 1fr 1fr; }
+      .item { padding: 5px 8px; border-color: #bbb; }
+      .item h3 { font-size: 10pt; }
+      .item .n, .item .trap { font-size: 8.5pt; color: #333; }
+      .item .trap { background: #f4f4f4; }
+      .katex-display { margin: 2px 0; }
+      .chap { margin-top: 8px; break-inside: auto; }
+      .chap h2 { font-size: 12pt; margin-bottom: 4px; }
+      .card { padding: 6px 10px; }
+      .quiz .item .f > * { filter: none; opacity: 1; }
+      .quiz .item .f::after { display: none; }
+      .quiz .item .n, .quiz .item .trap { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="wrap">
+      <a class="brand" href="#"><span class="brand-dot" aria-hidden="true"></span>Sổ tay công thức Vật lý 12</a>
+      <nav class="nav" aria-label="Chương">
+        <a href="#nhiet">Nhiệt</a><a href="#khi">Khí</a><a href="#tu">Từ trường</a><a href="#hatnhan">Hạt nhân</a><a href="#hangso">Hằng số</a>
+        <a href="../index.html" title="Về trang tổng các dự án">⌂ Hub</a>
+        <button type="button" id="theme-btn"></button>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <h1 class="print-title">Sổ tay công thức Vật lý 12 — CT GDPT 2018</h1>
+    <div class="card no-print stack">
+      <div class="toolbar">
+        <input type="search" id="q" placeholder="Tìm: từ thông, chu kì bán rã, Boyle…" aria-label="Tìm công thức">
+        <label class="chip"><input type="checkbox" id="quiz"> Chế độ tự kiểm tra (che công thức)</label>
+        <button class="btn sm" id="reveal" hidden>Hiện tất cả</button>
+        <button class="btn sm primary" id="print">🖨 In / lưu PDF (A4)</button>
+      </div>
+      <p class="small muted" style="margin:0">Chế độ tự kiểm tra: nhìn tên công thức, tự viết ra giấy, rồi bấm vào ô để đối chiếu. Luyện câu hỏi theo chương ở <a href="../01-on-thi-vat-ly-12/index.html">Ôn thi Vật lý 12</a>.</p>
+    </div>
+    <div id="book"></div>
+    <section class="chap" id="hangso">
+      <h2>Hằng số & đổi đơn vị</h2>
+      <div class="card"><div class="const" id="consts"></div></div>
+      <h3 style="margin-top:14px">Số liệu tham khảo (đề thi thường cho sẵn)</h3>
+      <div class="card"><div class="const" id="refs"></div></div>
+    </section>
+    <p class="small muted" style="margin-top:18px">Bám theo yêu cầu cần đạt của Chương trình GDPT 2018 môn Vật lí lớp 12. Một số kí hiệu (ví dụ mật độ phân tử $\mu$ hay $n$) có thể khác nhau giữa các bộ sách — hãy dùng kí hiệu trong sách của bạn khi làm bài tự luận.</p>
+  </main>
+  <script src="../shared/vendor/katex/katex.min.js"></script>
+  <script src="../shared/vendor/katex/auto-render.min.js"></script>
+  <script src="formulas.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var B = window.FORMULA_BOOK, SL = window.SL;
+      SL.initThemeToggle(document.getElementById('theme-btn'));
+      // Bỏ dấu tiếng Việt để tìm "ban ra" cũng ra "bán rã"
+      function norm(t) { return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd'); }
+      var book = document.getElementById('book');
+      book.innerHTML = B.chapters.map(function (c) {
+        return '<section class="chap" id="' + c.id + '"><h2>' + c.title + ' <span class="badge">' + c.items.length + '</span></h2><div class="items">' +
+          c.items.map(function (it) {
+            return '<div class="item" data-text="' + SL.esc(norm(it.t + ' ' + it.n + ' ' + (it.trap || ''))) + '">' +
+              '<h3>' + SL.esc(it.t) + '</h3>' + (it.ft ? '<div class="f ft"><span>' + SL.fmt(it.ft) + '</span></div>' : '<div class="f">$$' + it.f + '$$</div>') +
+              '<p class="n">' + SL.fmt(it.n) + '</p>' + (it.trap ? '<div class="trap">' + SL.fmt(it.trap) + '</div>' : '') + '</div>';
+          }).join('') + '</div></section>';
+      }).join('');
+      var row = function (x) { return '<div><span>' + SL.esc(x[0]) + '</span><span>$' + x[1] + '$</span></div>'; };
+      document.getElementById('consts').innerHTML = B.constants.map(row).join('');
+      document.getElementById('refs').innerHTML = B.reference.map(row).join('');
+      SL.math(document.body);
+
+      var q = document.getElementById('q');
+      q.addEventListener('input', function () {
+        var t = norm(q.value.trim());
+        document.querySelectorAll('.item').forEach(function (el) {
+          el.classList.toggle('hide', !!t && el.getAttribute('data-text').indexOf(t) < 0);
+        });
+        document.querySelectorAll('#book .chap').forEach(function (ch) {
+          ch.classList.toggle('hide', !ch.querySelector('.item:not(.hide)'));
+        });
+      });
+      var quiz = document.getElementById('quiz'), reveal = document.getElementById('reveal');
+      quiz.addEventListener('change', function () {
+        book.classList.toggle('quiz', quiz.checked);
+        reveal.hidden = !quiz.checked;
+        document.querySelectorAll('.item.shown').forEach(function (el) { el.classList.remove('shown'); });
+      });
+      reveal.addEventListener('click', function () { document.querySelectorAll('.item').forEach(function (el) { el.classList.add('shown'); }); });
+      book.addEventListener('click', function (e) {
+        if (!book.classList.contains('quiz')) return;
+        var it = e.target.closest('.item');
+        if (it) it.classList.toggle('shown');
+      });
+      document.getElementById('print').addEventListener('click', function () { window.print(); });
+    })();
+  </script>
+</body>
+</html>
