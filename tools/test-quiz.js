@@ -77,7 +77,7 @@ async function shot(page, name) {
       // chỉ lấy trắc nghiệm
       for (const t of ['tf', 'short']) {
         const box = page.locator(`input[data-group="type"][value="${t}"]`);
-        if (await box.isChecked()) await box.uncheck();
+        if (await box.count() && await box.isChecked()) await box.uncheck();
       }
       await page.click('[data-act="start-practice"]');
       await page.waitForSelector('#qcard .choices');
@@ -137,6 +137,7 @@ async function shot(page, name) {
       const partial = await page.evaluate(id => {
         const b = window.QBANKS[id];
         const q = b.questions.find(x => x.type === 'tf');
+        if (!q) return 3;   // ngân hàng không có câu Đúng/Sai
         const a = q.statements.map(s => s.a); a[0] = !a[0];
         return window.QuizEngine.evaluate(q, a).n;
       }, bankId);

@@ -321,7 +321,11 @@
   /* ======================== Luyện tập tùy chọn ======================== */
   var practiceOpts = SL.store.get('sl.quiz.practiceOpts', null) || { chs: null, types: ['mcq', 'tf', 'short'], levels: [1, 2, 3, 4], n: 10, src: 'new' };
   function viewPractice() {
-    var chs = practiceOpts.chs || bank.chapters.map(function (c) { return c.id; });
+    // Lựa chọn đã lưu có thể thuộc ngân hàng khác → chỉ giữ chương của ngân hàng đang mở
+    var chs = (practiceOpts.chs || []).filter(function (c) { return chapterIdx[c] != null; });
+    if (!chs.length) chs = bank.chapters.map(function (c) { return c.id; });
+    var types = practiceOpts.types.filter(function (t) { return bank.questions.some(function (q) { return q.type === t; }); });
+    if (!types.length) types = ['mcq', 'tf', 'short'];
     var chip = function (group, val, label, on) {
       return '<label class="chip' + (on ? ' on' : '') + '"><input type="checkbox" data-group="' + group + '" value="' + val + '"' + (on ? ' checked' : '') + '> ' + label + '</label>';
     };
@@ -329,7 +333,8 @@
     h += '<div class="card stack"><div><b>Chương</b><div class="row" style="margin-top:6px">' +
       bank.chapters.map(function (c) { return chip('ch', c.id, esc(c.title), chs.indexOf(c.id) >= 0); }).join('') + '</div></div>';
     h += '<div><b>Dạng câu</b><div class="row" style="margin-top:6px">' +
-      ['mcq', 'tf', 'short'].map(function (t) { return chip('type', t, TYPE_LABEL[t], practiceOpts.types.indexOf(t) >= 0); }).join('') + '</div></div>';
+      ['mcq', 'tf', 'short'].filter(function (t) { return bank.questions.some(function (q) { return q.type === t; }); })
+        .map(function (t) { return chip('type', t, TYPE_LABEL[t], types.indexOf(t) >= 0); }).join('') + '</div></div>';
     h += '<div><b>Mức độ</b><div class="row" style="margin-top:6px">' +
       [1, 2, 3, 4].map(function (l) { return chip('level', l, LEVEL_LABEL[l], practiceOpts.levels.indexOf(l) >= 0); }).join('') + '</div></div>';
     h += '<div class="row"><label class="field"><span>Nguồn câu hỏi</span><select id="p-src">' +

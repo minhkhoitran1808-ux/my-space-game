@@ -12,8 +12,8 @@
 | P3 | Sổ tay công thức Vật lý 12 | `projects/03-so-tay-cong-thuc/` | ✅ Xong (đã tự kiểm tra) |
 | P4 | Phòng thí nghiệm ảo Vật lý 12 | `projects/04-phong-thi-nghiem-ao/` | ✅ Xong (đã tự kiểm tra) |
 | P5 | Bảng điều khiển ôn thi + sổ lỗi sai | `projects/05-bang-dieu-khien/` | ✅ Xong (đã tự kiểm tra) |
-| P6 | Gói Toán 12 + Tư duy V-ACT | `projects/06-on-thi-toan-vact/` | ⏳ Tiếp theo |
-| P7 | Hub portfolio + lộ trình du học Đức | `projects/index.html`, `projects/07-lo-trinh-du-hoc-duc/` | ⬜ Chưa làm |
+| P6 | Gói Toán 12 + Tư duy V-ACT | `projects/06-on-thi-toan-vact/` | ✅ Xong (đã tự kiểm tra) |
+| P7 | Hub portfolio + lộ trình du học Đức | `projects/index.html`, `projects/07-lo-trinh-du-hoc-duc/` | ⏳ Tiếp theo |
 | P8 | Review code game Phi Thuyền | `projects/08-review-game/` | ⬜ Chưa làm |
 
 ## Nhật ký
@@ -54,8 +54,13 @@
 - **Sửa trong vòng kiểm tra:** kỳ vọng sai trong test (ứng dụng tính đúng 67 %).
 - **Cần xác minh:** ngày thi 2027 (đang để giả định).
 
+### P6 · Toán 12 & Tư duy V-ACT — ✅ XONG
+- **Đã làm:** `banks/toan12.js` (50 câu, 5 chủ đề), `banks/vact.js` (24 câu, 4 dạng), trang dùng chung engine với ô chọn ngân hàng.
+- **Tự kiểm tra:** `node tools/verify-toan-vact.js` → 74/74; `validate-bank` → 0 lỗi; `test-quiz` → 51/51 (cả 2 ngân hàng). Chạy lại test P1 sau khi sửa engine → 29/29.
+- **Sửa trong vòng kiểm tra:** engine giữ lựa chọn chương của ngân hàng khác → 0 câu (sửa: lọc theo ngân hàng đang mở); test giả định có câu Đúng/Sai; validator báo nhầm "chọn D…"; lời giải va-l6 viết "lùi" thay vì "tiến thêm" 1 thứ.
+
 ## Việc tiếp theo
-1. P6 Gói Toán 12 + Tư duy V-ACT dùng engine P1 (≥ 40 câu Toán + ≥ 15 câu V-ACT, có script kiểm đáp án).
+1. P7 Trang hub `projects/index.html` + lộ trình du học Đức ngành hàng không (có nguồn, đánh dấu cần xác minh).
 
 ## Cách chạy toàn bộ kiểm thử
 ```bash
@@ -68,4 +73,6 @@ node tools/test-formulas.js [thư-mục-ảnh]
 node tools/test-labs.js
 node tools/test-labs-ui.js [thư-mục-ảnh]
 node tools/test-dash.js [thư-mục-ảnh]
+node tools/verify-toan-vact.js
+node tools/test-quiz.js projects/06-on-thi-toan-vact/index.html
 ```

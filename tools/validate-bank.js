@@ -18,6 +18,9 @@ if (!files.length) {
   process.exit(2);
 }
 const banks = loadBanks(files);
+// KaTeX in cảnh báo vô hại với chữ Việt trong \text{} — ẩn đi cho gọn
+const origWarn = console.warn;
+console.warn = (m, ...r) => { if (typeof m === 'string' && m.startsWith('No character metrics')) return; origWarn(m, ...r); };
 let errors = 0, warnings = 0, checkedMath = 0;
 const err = (id, msg) => { errors++; console.log(`  ✗ [${id}] ${msg}`); };
 const warn = (id, msg) => { warnings++; console.log(`  ! [${id}] ${msg}`); };
@@ -40,7 +43,7 @@ function checkText(id, field, s) {
     }
   }
   // Lời giải không được nhắc chữ cái phương án vì phương án bị xáo trộn
-  if (/(đáp án|phương án|chọn)\s+[ABCD]\b/i.test(s)) warn(id, `${field} nhắc tới chữ cái phương án`);
+  if (/([Đđ]áp án|[Pp]hương án|[Cc]họn)\s+[ABCD]\b/.test(s)) warn(id, `${field} nhắc tới chữ cái phương án`);
 }
 
 for (const [bid, bank] of Object.entries(banks)) {
