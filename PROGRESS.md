@@ -10,7 +10,7 @@
 | P1 | Ôn thi Vật lý 12 | `projects/01-on-thi-vat-ly-12/` | ✅ Xong (đã tự kiểm tra) |
 | P2 | Orbit Lab | `projects/02-orbit-lab/` | ✅ Xong (đã tự kiểm tra) |
 | P3 | Sổ tay công thức Vật lý 12 | `projects/03-so-tay-cong-thuc/` | ✅ Xong (đã tự kiểm tra) |
-| P4 | Phòng thí nghiệm ảo Vật lý 12 | `projects/04-phong-thi-nghiem-ao/` | ⏳ Tiếp theo |
+| P4 | Phòng thí nghiệm ảo Vật lý 12 | `projects/04-phong-thi-nghiem-ao/` | 🚧 Đang làm (lõi xong, thiếu `app.js`) |
 | P5 | Bảng điều khiển ôn thi + sổ lỗi sai | `projects/05-bang-dieu-khien/` | ⬜ Chưa làm |
 | P6 | Gói Toán 12 + Tư duy V-ACT | `projects/06-on-thi-toan-vact/` | ⬜ Chưa làm |
 | P7 | Hub portfolio + lộ trình du học Đức | `projects/index.html`, `projects/07-lo-trinh-du-hoc-duc/` | ⬜ Chưa làm |
@@ -42,8 +42,12 @@
 - **Tự kiểm tra:** `node tools/test-formulas.js` → 16/16; đã xem bản PDF in thật.
 - **Sửa trong vòng kiểm tra:** lỗi `${` trong template literal làm hỏng cả trang; tìm "bán rã" không ra (thêm từ khóa + tìm không dấu); công thức dạng chữ bị tràn (chuyển sang văn bản); bản in khi giao diện tối bị nền đen (ép bảng màu sáng khi in — áp dụng cho mọi trang).
 
+### P4 · Phòng thí nghiệm ảo — 🚧 ĐANG LÀM
+- **Đã có:** `labs-core.js` (khí 2D đĩa cứng + pit-tông + đo áp suất, phân rã phóng xạ, từ thông lưỡng cực, máy phát) — `node tools/test-labs.js` → 17/17; `index.html`, `style.css` (khung 4 tab); `SL.fitCanvas`, `SL.cssVar` thêm vào `shared/common.js`.
+- **Còn thiếu:** `app.js` (giao diện 4 thí nghiệm: vẽ canvas, đồ thị, câu hỏi khám phá), README, test giao diện. Trang hiện CHƯA dùng được.
+
 ## Việc tiếp theo
-1. P4 Phòng thí nghiệm ảo: khí lí tưởng, phóng xạ, máy phát điện xoay chiều.
+1. Viết `projects/04-phong-thi-nghiem-ao/app.js`, test giao diện, README.
 
 ## Cách chạy toàn bộ kiểm thử
 ```bash
@@ -53,4 +57,5 @@ node tools/test-quiz.js projects/01-on-thi-vat-ly-12/index.html [thư-mục-ản
 node tools/test-orbit.js
 node tools/test-orbit-ui.js [thư-mục-ảnh]
 node tools/test-formulas.js [thư-mục-ảnh]
+node tools/test-labs.js
 ```

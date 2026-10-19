@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Phòng thí nghiệm ảo Vật lý 12: khí lí tưởng, phân rã phóng xạ, định luật Lenz, máy phát điện xoay chiều.">
+  <title>Phòng thí nghiệm ảo Vật lý 12</title>
+  <link rel="stylesheet" href="../shared/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="../shared/theme.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="../shared/common.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="wrap">
+      <a class="brand" href="#gas"><span class="brand-dot" aria-hidden="true"></span>Phòng thí nghiệm ảo</a>
+      <nav class="nav" aria-label="Thí nghiệm">
+        <a href="#gas" data-tab="gas">Khí lí tưởng</a>
+        <a href="#decay" data-tab="decay">Phóng xạ</a>
+        <a href="#lenz" data-tab="lenz">Định luật Lenz</a>
+        <a href="#gen" data-tab="gen">Máy phát điện</a>
+        <a href="../index.html" title="Về trang tổng các dự án">⌂ Hub</a>
+        <button type="button" id="theme-btn"></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- ===================== KHÍ LÍ TƯỞNG ===================== -->
+    <section class="tab" id="tab-gas">
+      <h1>Khí lí tưởng: từ va chạm phân tử đến định luật chất khí</h1>
+      <div class="lab">
+        <div class="card flat stage"><canvas id="cv-gas" aria-label="Hộp khí có pit-tông"></canvas></div>
+        <aside class="panel card stack">
+          <label class="field"><span>Số phân tử N</span>
+            <select id="gas-n"><option>50</option><option>100</option><option selected>200</option><option>300</option></select></label>
+          <label class="chip"><input type="checkbox" id="gas-thermo" checked> Giữ nhiệt độ không đổi (bộ ổn nhiệt)</label>
+          <label class="field"><span>Nhiệt độ đặt T = <b id="gas-T-val">1,00</b></span><input type="range" id="gas-T" min="0.25" max="3" step="0.05" value="1"></label>
+          <label class="field"><span>Vị trí pit-tông → diện tích S = <b id="gas-S-val">1,00</b></span><input type="range" id="gas-S" min="0.4" max="1.6" step="0.05" value="1"></label>
+          <div class="row"><button class="btn primary" id="gas-rec">● Ghi điểm đo</button><button class="btn sm ghost" id="gas-clear">Xóa bảng</button><button class="btn sm" id="gas-pause">⏸</button></div>
+          <table class="table readout" id="gas-read"></table>
+        </aside>
+      </div>
+      <div class="grid grid-2" style="margin-top:14px">
+        <div class="card">
+          <div class="row"><b>Đồ thị điểm đo</b><span class="spacer"></span>
+            <select id="gas-axes" aria-label="Chọn trục đồ thị"><option value="pS">p theo S (đẳng nhiệt)</option><option value="pinvS">p theo 1/S</option><option value="pT">p theo T (đẳng tích)</option></select></div>
+          <canvas id="cv-gas-plot" class="plot"></canvas>
+          <div class="table-wrap"><table class="table small" id="gas-table"></table></div>
+        </div>
+        <div class="card">
+          <b>Phân bố tốc độ phân tử</b>
+          <canvas id="cv-gas-hist" class="plot"></canvas>
+          <p class="small muted" style="margin:6px 0 0">Cột: số phân tử theo tốc độ (đo trực tiếp). Đường cong: phân bố Maxwell–Boltzmann lý thuyết ở nhiệt độ đo được. Bỏ chọn "Giữ nhiệt độ", cho mọi phân tử cùng tốc độ bằng nút dưới đây rồi xem va chạm làm phân bố tự "trải ra".</p>
+          <button class="btn sm" id="gas-same">Cho mọi phân tử cùng tốc độ</button>
+        </div>
+      </div>
+      <div class="card explain" id="gas-explain"></div>
+    </section>
+
+    <!-- ===================== PHÓNG XẠ ===================== -->
+    <section class="tab" id="tab-decay" hidden>
+      <h1>Phân rã phóng xạ: ngẫu nhiên từng hạt, quy luật cho số đông</h1>
+      <div class="lab">
+        <div class="card flat stage light"><canvas id="cv-decay" aria-label="Lưới hạt nhân"></canvas></div>
+        <aside class="panel card stack">
+          <label class="field"><span>Chất phóng xạ</span><select id="dc-iso"></select></label>
+          <label class="field"><span>Số hạt nhân ban đầu N₀</span>
+            <select id="dc-n"><option>100</option><option selected>400</option><option>1600</option><option>10000</option></select></label>
+          <label class="field"><span>Tốc độ: <b id="dc-speed-val"></b></span><input type="range" id="dc-speed" min="0.05" max="1" step="0.05" value="0.25"></label>
+          <div class="row"><button class="btn primary" id="dc-run">▶ Bắt đầu</button><button class="btn" id="dc-reset">↺ Đặt lại</button></div>
+          <table class="table readout" id="dc-read"></table>
+        </aside>
+      </div>
+      <div class="grid grid-2" style="margin-top:14px">
+        <div class="card"><b>Số hạt nhân còn lại theo thời gian</b><canvas id="cv-decay-plot" class="plot"></canvas>
+          <p class="small muted" style="margin:6px 0 0">Bậc thang: kết quả mô phỏng. Đường mượt: $N = N_0\cdot2^{-t/T}$. Vạch đứt: các mốc $T, 2T, 3T$.</p></div>
+        <div class="card stack"><b>Đo chu kì bán rã 20 lần</b>
+          <p class="small muted" style="margin:0">Mỗi lần: lấy N₀ hạt, đo thời gian đến khi còn một nửa. Với N₀ nhỏ, kết quả dao động mạnh; N₀ lớn thì sát giá trị thật.</p>
+          <div class="row"><button class="btn sm" data-rep="20">N₀ = 20</button><button class="btn sm" data-rep="100">N₀ = 100</button><button class="btn sm" data-rep="1000">N₀ = 1000</button></div>
+          <canvas id="cv-rep" class="plot short"></canvas><p class="small" id="rep-out"></p></div>
+      </div>
+      <div class="card explain" id="decay-explain"></div>
+    </section>
+
+    <!-- ===================== LENZ ===================== -->
+    <section class="tab" id="tab-lenz" hidden>
+      <h1>Nam châm và vòng dây: định luật Faraday – Lenz</h1>
+      <div class="lab">
+        <div class="card flat stage light"><canvas id="cv-lenz" aria-label="Nam châm và vòng dây"></canvas></div>
+        <aside class="panel card stack">
+          <p class="small muted" style="margin:0"><b>Kéo nam châm</b> qua lại (chuột hoặc ngón tay), hoặc bật dao động tự động.</p>
+          <div class="row"><button class="btn" id="lz-flip">⇄ Đảo cực nam châm</button><label class="chip"><input type="checkbox" id="lz-auto"> Dao động tự động</label></div>
+          <label class="field"><span>Số vòng dây N = <b id="lz-n-val">1</b></span><input type="range" id="lz-n" min="1" max="10" step="1" value="1"></label>
+          <div class="callout small" id="lz-say" aria-live="polite"></div>
+        </aside>
+      </div>
+      <div class="card" style="margin-top:14px"><b>Từ thông Φ và suất điện động cảm ứng e theo thời gian</b><canvas id="cv-lenz-plot" class="plot"></canvas></div>
+      <div class="card explain" id="lenz-explain"></div>
+    </section>
+
+    <!-- ===================== MÁY PHÁT ===================== -->
+    <section class="tab" id="tab-gen" hidden>
+      <h1>Máy phát điện xoay chiều</h1>
+      <div class="lab">
+        <div class="card flat stage light"><canvas id="cv-gen" aria-label="Khung dây quay trong từ trường"></canvas></div>
+        <aside class="panel card stack">
+          <label class="field"><span>Số vòng N = <b id="g-N-val"></b></span><input type="range" id="g-N" min="10" max="500" step="10" value="100"></label>
+          <label class="field"><span>Cảm ứng từ B = <b id="g-B-val"></b> T</span><input type="range" id="g-B" min="0.05" max="1" step="0.05" value="0.1"></label>
+          <label class="field"><span>Diện tích khung S = <b id="g-S-val"></b> cm²</span><input type="range" id="g-S" min="50" max="1000" step="50" value="400"></label>
+          <label class="field"><span>Tốc độ quay n = <b id="g-n-val"></b> vòng/s</span><input type="range" id="g-n" min="0.1" max="3" step="0.1" value="0.5"></label>
+          <label class="field"><span>Điện trở tải R = <b id="g-R-val"></b> Ω</span><input type="range" id="g-R" min="1" max="100" step="1" value="20"></label>
+          <button class="btn sm" id="g-50">Đặt n = 50 vòng/s (điện lưới 50 Hz, quá nhanh để nhìn)</button>
+          <table class="table readout" id="g-read"></table>
+        </aside>
+      </div>
+      <div class="card" style="margin-top:14px"><b>Dao động ký: từ thông Φ và suất điện động e</b><canvas id="cv-gen-plot" class="plot"></canvas></div>
+      <div class="card explain" id="gen-explain"></div>
+    </section>
+  </main>
+
+  <script src="../shared/vendor/katex/katex.min.js"></script>
+  <script src="../shared/vendor/katex/auto-render.min.js"></script>
+  <script src="labs-core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

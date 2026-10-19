@@ -152,6 +152,22 @@
     return a;
   };
 
+  /* ---------- Canvas sắc nét theo mật độ điểm ảnh ----------
+     Trả về false nếu canvas đang ẩn (chưa có kích thước). */
+  SL.fitCanvas = function (cv) {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var r = cv.getBoundingClientRect();
+    if (!r.width || !r.height) return false;
+    var w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    cv._dpr = dpr;
+    return true;
+  };
+  SL.cssVar = function (name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  };
+
   /* ---------- Thông báo nhỏ ---------- */
   var toastTimer = null;
   SL.toast = function (msg, ms) {
