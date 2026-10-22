@@ -1,0 +1,37 @@
+{
+	"waves": [
+		{
+			"reward_bonus": 20,
+			"groups": [
+				{ "enemy": "res://resources/enemies/basic_enemy.tres", "count": 6, "interval": 1.0 }
+			]
+		},
+		{
+			"reward_bonus": 25,
+			"groups": [
+				{ "enemy": "res://resources/enemies/basic_enemy.tres", "count": 10, "interval": 0.8 }
+			]
+		},
+		{
+			"reward_bonus": 30,
+			"groups": [
+				{ "enemy": "res://resources/enemies/basic_enemy.tres", "count": 8, "interval": 0.7, "health_multiplier": 1.4 },
+				{ "enemy": "res://resources/enemies/basic_enemy.tres", "count": 6, "interval": 0.4, "delay": 2.0, "speed_multiplier": 1.5 }
+			]
+		},
+		{
+			"reward_bonus": 40,
+			"groups": [
+				{ "enemy": "res://resources/enemies/basic_enemy.tres", "count": 12, "interval": 0.6, "health_multiplier": 1.8 },
+				{ "enemy": "res://resources/enemies/basic_enemy.tres", "count": 10, "interval": 0.35, "delay": 2.5, "health_multiplier": 1.2, "speed_multiplier": 1.6 }
+			]
+		},
+		{
+			"reward_bonus": 0,
+			"groups": [
+				{ "enemy": "res://resources/enemies/basic_enemy.tres", "count": 15, "interval": 0.5, "health_multiplier": 2.5 },
+				{ "enemy": "res://resources/enemies/basic_enemy.tres", "count": 3, "interval": 1.5, "delay": 3.0, "health_multiplier": 8.0, "speed_multiplier": 0.6 }
+			]
+		}
+	]
+}

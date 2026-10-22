@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="TowerData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/TowerData.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/Tower.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"basic"
+display_name = "Tháp cơ bản"
+cost = 50
+damage = 20.0
+fire_rate = 1.5
+attack_range = 160.0
+color = Color(0.3, 0.6, 1, 1)
+scene = ExtResource("2_scene")
