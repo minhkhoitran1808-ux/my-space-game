@@ -2,10 +2,13 @@ class_name WaveManager
 extends Node
 ## Quản lý việc spawn địch theo từng wave.
 ##
-## Dữ liệu wave đọc từ file JSON (mặc định res://data/waves.json) để chỉnh độ khó
-## mà không phải sửa code. Mỗi wave gồm nhiều "group", mỗi group là một loạt địch
+## Dữ liệu wave đọc từ file JSON (mỗi màn một file trong res://data/waves/) để chỉnh
+## độ khó mà không phải sửa code. Mỗi wave gồm nhiều "group", mỗi group là một loạt địch
 ## cùng loại được spawn cách nhau "interval" giây. Loại địch ghi bằng "id"
 ## (khớp EnemyData.id của các file .tres trong enemies_folder).
+##
+## Bản đồ có nhiều làn: group có "path": <số thứ tự làn, từ 0> thì địch đi làn đó,
+## không ghi thì địch lần lượt chia đều vào các làn.
 ##
 ## WaveManager lắng nghe signal của từng Enemy để:
 ##   - cộng vàng (died) / trừ mạng (reached_end) qua GameManager
@@ -25,11 +28,12 @@ signal wave_called_early(wave_number: int, bonus: int)
 signal all_waves_completed
 signal enemy_spawned(enemy: Enemy)
 
-@export_file("*.json") var waves_file: String = "res://data/waves.json"
 ## Thư mục chứa các file EnemyData (.tres). Được quét tự động khi khởi động.
 @export_dir var enemies_folder: String = "res://resources/enemies"
-## Path2D mà địch sẽ đi theo (địch được add làm con của node này).
-@export var enemy_path: Path2D
+
+var waves_file: String = ""
+## Các làn đường (Path2D); địch được add làm con của làn nó đi.
+var paths: Array[Path2D] = []
 
 ## Khoảng cách (pixel trên đường đi) giữa các địch con sinh ra khi địch mẹ chết.
 const DEATH_SPAWN_SPACING := 14.0
@@ -41,12 +45,14 @@ var _enemy_types: Dictionary = {} # StringName id -> EnemyData
 var _waves: Array = []
 var _current_wave_index := -1
 ## Hàng đợi spawn của wave hiện tại. Mỗi phần tử:
-## { data: EnemyData, delay: float, health_multiplier: float, speed_multiplier: float }
+## { data, delay, health_multiplier, speed_multiplier, path_index }
 var _spawn_queue: Array[Dictionary] = []
 ## Số địch còn sống của từng wave đang diễn ra: wave_index -> int.
 var _alive_by_wave: Dictionary = {}
 ## Wave đang spawn (-1 = không có wave nào đang spawn).
 var _spawning_wave_index := -1
+## Bộ đếm để chia đều địch vào các làn khi group không ghi "path".
+var _next_path_index := 0
 var _spawn_timer: Timer
 
 
@@ -58,6 +64,12 @@ func _ready() -> void:
 	_spawn_timer.timeout.connect(_process_spawn_queue)
 	add_child(_spawn_timer)
 	_load_enemy_types()
+
+
+## Main gọi sau khi nạp bản đồ: gán file wave + các làn đường.
+func setup(p_waves_file: String, p_paths: Array[Path2D]) -> void:
+	waves_file = p_waves_file
+	paths = p_paths
 	_load_waves()
 
 
@@ -197,6 +209,9 @@ func validate_waves() -> PackedStringArray:
 						% [group_where, group.get("enemy", ""), ", ".join(_enemy_types.keys())])
 			if int(group.get("count", 1)) <= 0:
 				errors.append("%s: \"count\" phải > 0." % group_where)
+			if group.has("path") and (int(group.path) < 0 or int(group.path) >= paths.size()):
+				errors.append("%s: \"path\" = %d nhưng bản đồ chỉ có %d làn (0 - %d)." \
+						% [group_where, int(group.path), paths.size(), paths.size() - 1])
 	return errors
 
 
@@ -218,12 +233,19 @@ func _build_spawn_queue(wave: Dictionary) -> void:
 		var interval := float(group.get("interval", 1.0))
 		var delay := float(group.get("delay", 0.0))
 		for i in count:
+			var path_index: int
+			if group.has("path"):
+				path_index = clampi(int(group.path), 0, paths.size() - 1)
+			else:
+				path_index = _next_path_index
+				_next_path_index = (_next_path_index + 1) % paths.size()
 			_spawn_queue.append({
 				"data": enemy_data,
 				# Con đầu tiên của group chờ "delay", các con sau chờ "interval".
 				"delay": delay if i == 0 else interval,
 				"health_multiplier": float(group.get("health_multiplier", 1.0)),
 				"speed_multiplier": float(group.get("speed_multiplier", 1.0)),
+				"path_index": path_index,
 			})
 
 
@@ -238,7 +260,8 @@ func _process_spawn_queue() -> void:
 			next.delay = 0.0 # Lần gọi tiếp theo (khi Timer hết giờ) sẽ spawn ngay.
 			return
 		var entry: Dictionary = _spawn_queue.pop_front()
-		_spawn_enemy(entry.data, entry.health_multiplier, entry.speed_multiplier, 0.0, _spawning_wave_index)
+		_spawn_enemy(entry.data, entry.health_multiplier, entry.speed_multiplier, 0.0,
+				_spawning_wave_index, paths[entry.path_index])
 
 	if not is_spawning():
 		return
@@ -248,17 +271,19 @@ func _process_spawn_queue() -> void:
 	_check_wave_completed(finished_wave)
 
 
-## wave_index < 0 nghĩa là "wave hiện tại".
+## wave_index < 0 nghĩa là "wave hiện tại"; path = null nghĩa là làn đầu tiên.
 func _spawn_enemy(enemy_data: EnemyData, health_multiplier: float, speed_multiplier: float,
-		start_progress: float = 0.0, wave_index: int = -1) -> Enemy:
+		start_progress: float = 0.0, wave_index: int = -1, path: Path2D = null) -> Enemy:
 	if wave_index < 0:
 		wave_index = maxi(_current_wave_index, 0)
+	if path == null:
+		path = paths[0]
 	var enemy := enemy_data.scene.instantiate() as Enemy
 	enemy.setup(enemy_data, health_multiplier, speed_multiplier)
 	enemy.wave_index = wave_index
 	enemy.died.connect(_on_enemy_died)
 	enemy.reached_end.connect(_on_enemy_reached_end)
-	enemy_path.add_child(enemy)
+	path.add_child(enemy)
 	enemy.progress = start_progress
 	_alive_by_wave[wave_index] = _alive_by_wave.get(wave_index, 0) + 1
 	enemy_spawned.emit(enemy)
@@ -271,7 +296,7 @@ func _on_enemy_died(enemy: Enemy, reward: int) -> void:
 	if child_data and child_data.scene:
 		for i in enemy.data.spawn_on_death_count:
 			_spawn_enemy(child_data, enemy.health_multiplier, 1.0,
-					maxf(enemy.progress - i * DEATH_SPAWN_SPACING, 0.0), enemy.wave_index)
+					maxf(enemy.progress - i * DEATH_SPAWN_SPACING, 0.0), enemy.wave_index, enemy.get_parent())
 
 	_alive_by_wave[enemy.wave_index] -= 1
 	GameManager.add_gold(reward)

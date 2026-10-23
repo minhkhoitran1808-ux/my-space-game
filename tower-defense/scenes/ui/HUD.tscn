@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/HUD.gd" id="1_hud"]
 [ext_resource type="PackedScene" path="res://scenes/ui/TowerInfoPanel.tscn" id="2_info_panel"]
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="3_pause_menu"]
+[ext_resource type="Script" path="res://scripts/ui/StarRating.gd" id="4_star_rating"]
 
 [node name="HUD" type="Control"]
 layout_mode = 3
@@ -172,23 +173,23 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -180.0
-offset_top = -100.0
-offset_right = 180.0
-offset_bottom = 100.0
+offset_left = -190.0
+offset_top = -150.0
+offset_right = 190.0
+offset_bottom = 150.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Margin" type="MarginContainer" parent="GameOverPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 24
+theme_override_constants/margin_left = 28
 theme_override_constants/margin_top = 24
-theme_override_constants/margin_right = 24
+theme_override_constants/margin_right = 28
 theme_override_constants/margin_bottom = 24
 
 [node name="VBox" type="VBoxContainer" parent="GameOverPanel/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 12
 alignment = 1
 
 [node name="ResultLabel" type="Label" parent="GameOverPanel/Margin/VBox"]
@@ -198,8 +199,38 @@ theme_override_font_sizes/font_size = 40
 text = "CHIẾN THẮNG!"
 horizontal_alignment = 1
 
-[node name="RestartButton" type="Button" parent="GameOverPanel/Margin/VBox"]
+[node name="ResultStars" type="Control" parent="GameOverPanel/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(108, 36)
+layout_mode = 2
+script = ExtResource("4_star_rating")
+star_size = 36.0
+
+[node name="ResultDetail" type="Label" parent="GameOverPanel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.75)
+theme_override_font_sizes/font_size = 15
+text = "Còn 20/20 máu"
+horizontal_alignment = 1
+
+[node name="NextLevelButton" type="Button" parent="GameOverPanel/Margin/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
+focus_mode = 0
+text = "Màn tiếp theo"
+
+[node name="RestartButton" type="Button" parent="GameOverPanel/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+focus_mode = 0
 text = "Chơi lại"
+
+[node name="LevelSelectButton" type="Button" parent="GameOverPanel/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+focus_mode = 0
+text = "Chọn màn"

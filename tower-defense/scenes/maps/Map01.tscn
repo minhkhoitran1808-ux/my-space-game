@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/main/GameMap.gd" id="1_map"]
+
+[sub_resource type="Curve2D" id="Curve2D_lane0"]
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, -40, 160, 0, 0, 0, 0, 224, 160, 0, 0, 0, 0, 224, 544, 0, 0, 0, 0, 608, 544, 0, 0, 0, 0, 608, 224, 0, 0, 0, 0, 992, 224, 0, 0, 0, 0, 992, 480, 0, 0, 0, 0, 1248, 480),
+"tilts": PackedFloat32Array(0, 0, 0, 0, 0, 0, 0, 0)
+}
+point_count = 8
+
+[node name="Map01" type="Node2D"]
+script = ExtResource("1_map")
+
+[node name="Paths" type="Node2D" parent="."]
+
+[node name="Lane1" type="Path2D" parent="Paths"]
+curve = SubResource("Curve2D_lane0")

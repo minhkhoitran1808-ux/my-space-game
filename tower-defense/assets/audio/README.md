@@ -1,0 +1,23 @@
+# Âm thanh
+
+Thả file âm thanh (`.ogg`, `.wav` hoặc `.mp3`) vào thư mục này với đúng tên dưới đây,
+game sẽ tự phát. Thiếu file nào thì sự kiện đó im lặng, không báo lỗi.
+
+| Tên file (không đuôi) | Khi nào phát |
+|---|---|
+| `shoot_archer` | Cung thủ bắn |
+| `shoot_cannon` | Pháo bắn |
+| `shoot_frost` | Tháp Băng bắn |
+| `shoot_mage` | Tháp Phép bắn |
+| `explosion` | Đạn nổ lan chạm đất |
+| `enemy_death` | Địch chết |
+| `base_hit` | Địch chạm nhà chính |
+| `build` | Xây tháp |
+| `upgrade` | Nâng cấp tháp |
+| `sell` | Bán tháp |
+| `wave_start` | Bắt đầu wave |
+| `wave_complete` | Hết wave |
+| `victory` | Thắng màn |
+| `defeat` | Thua màn |
+
+Ví dụ: `assets/audio/enemy_death.wav`. Danh sách này cũng nằm trong `AudioManager.SOUND_NAMES`.

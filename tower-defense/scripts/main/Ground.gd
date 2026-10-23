@@ -1,11 +1,12 @@
 extends Node2D
 ## Nền tạm của bản đồ (thay cho TileMapLayer khi chưa có asset).
 ##
-## Vẽ cỏ dạng ô cờ, đường đi theo Curve2D của Path2D, điểm xuất phát và nhà chính.
-## Khi có tileset thật, có thể thay node này bằng TileMapLayer mà không ảnh hưởng
-## các hệ thống khác (chỉ cần giữ đúng GameConfig.CELL_SIZE).
+## Vẽ cỏ dạng ô cờ, đường đi theo Curve2D của mọi làn (Path2D) trên bản đồ, và nhà chính
+## ở cuối làn đầu tiên. Khi có tileset thật, có thể thay node này bằng TileMapLayer mà
+## không ảnh hưởng các hệ thống khác (chỉ cần giữ đúng GameConfig.CELL_SIZE).
 
-@export var enemy_path: Path2D
+## Các làn đường cần vẽ (Main gọi setup() sau khi nạp bản đồ).
+var paths: Array[Path2D] = []
 
 @export_group("Màu sắc")
 @export var background_color := Color(0.12, 0.14, 0.16)
@@ -16,7 +17,8 @@ extends Node2D
 @export var base_color := Color(0.3, 0.55, 0.9)
 
 
-func _ready() -> void:
+func setup(p_paths: Array[Path2D]) -> void:
+	paths = p_paths
 	queue_redraw()
 
 
@@ -24,9 +26,14 @@ func _draw() -> void:
 	# Vẽ tràn ra ngoài màn hình một chút để khi rung màn hình không lộ mép.
 	draw_rect(get_viewport_rect().grow(32.0), background_color)
 	_draw_grass()
-	if enemy_path and enemy_path.curve and enemy_path.curve.point_count >= 2:
-		_draw_path()
-		_draw_base()
+	if paths.is_empty():
+		return
+	# Vẽ viền của mọi làn trước rồi mới vẽ mặt đường, để chỗ các làn nhập nhau liền mạch.
+	for path in paths:
+		_draw_path_layer(path, GameConfig.PATH_WIDTH + 8.0, path_border_color)
+	for path in paths:
+		_draw_path_layer(path, GameConfig.PATH_WIDTH, path_color)
+	_draw_base()
 
 
 func _draw_grass() -> void:
@@ -40,27 +47,20 @@ func _draw_grass() -> void:
 			draw_rect(Rect2(x * cell, y * cell, cell, cell), color)
 
 
-func _draw_path() -> void:
-	var curve := enemy_path.curve
+## Vẽ một lớp của làn đường; hình tròn ở mỗi điểm giúp bo tròn góc cua.
+func _draw_path_layer(path: Path2D, width: float, color: Color) -> void:
+	var curve := path.curve
 	var points := curve.get_baked_points()
 	for i in points.size():
-		points[i] = enemy_path.to_global(points[i])
-
-	# Vẽ viền trước rồi mới vẽ mặt đường; hình tròn ở mỗi điểm giúp bo tròn góc cua.
-	var width := GameConfig.PATH_WIDTH
-	_draw_path_layer(curve, points, width + 8.0, path_border_color)
-	_draw_path_layer(curve, points, width, path_color)
-
-
-func _draw_path_layer(curve: Curve2D, points: PackedVector2Array, width: float, color: Color) -> void:
+		points[i] = path.to_global(points[i])
 	draw_polyline(points, color, width)
 	for i in curve.point_count:
-		draw_circle(enemy_path.to_global(curve.get_point_position(i)), width * 0.5, color)
+		draw_circle(path.to_global(curve.get_point_position(i)), width * 0.5, color)
 
 
 func _draw_base() -> void:
-	var curve := enemy_path.curve
-	var base_pos := enemy_path.to_global(curve.get_point_position(curve.point_count - 1))
+	var path := paths[0]
+	var base_pos := path.to_global(path.curve.get_point_position(path.curve.point_count - 1))
 	var size := Vector2(56, 56)
 	draw_rect(Rect2(base_pos - size * 0.5, size), base_color)
 	draw_rect(Rect2(base_pos - size * 0.5, size), base_color.darkened(0.5), false, 3.0)

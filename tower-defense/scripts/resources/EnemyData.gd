@@ -4,12 +4,12 @@ extends Resource
 ##
 ## Muốn thêm loại địch mới: tạo file .tres mới trong res://resources/enemies/
 ## (chuột phải > New Resource > EnemyData) rồi chỉnh chỉ số trong Inspector.
-## WaveManager tự quét thư mục này, nên trong waves.json chỉ cần ghi "id".
+## WaveManager tự quét thư mục này, nên trong file wave chỉ cần ghi "id".
 
 ## Hình dạng vẽ tạm khi chưa có sprite.
 enum Shape { CIRCLE, SQUARE, TRIANGLE, DIAMOND }
 
-## Mã định danh, dùng trong data/waves.json. Phải duy nhất.
+## Mã định danh, dùng trong các file data/waves/*.json. Phải duy nhất.
 @export var id: StringName = &"basic"
 @export var display_name: String = "Địch"
 

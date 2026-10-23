@@ -4,9 +4,14 @@ extends Node2D
 ## Các hệ thống (WaveManager, BuildManager, SelectionManager, FxManager, HUD) không biết nhau;
 ## Main kết nối signal của chúng. Nhờ vậy có thể thay/thêm hệ thống mà ít phải sửa code cũ.
 ##
+## Khi vào trận, Main lấy màn đang chọn (GameManager.get_current_level()), nạp scene bản đồ
+## vào node "Map" rồi đưa các làn đường cho Ground / BuildManager / WaveManager.
+##
 ## Phím tắt chung (Main nhận SAU CÙNG, chỉ khi không hệ thống nào khác dùng phím đó):
 ##   Space: bắt đầu / gọi sớm wave   F: đổi tốc độ   P / Esc: tạm dừng
 
+@onready var ground: Node2D = $Ground
+@onready var map_root: Node2D = $Map
 @onready var wave_manager: WaveManager = $WaveManager
 @onready var build_manager: BuildManager = $BuildManager
 @onready var selection_manager: SelectionManager = $SelectionManager
@@ -15,20 +20,27 @@ extends Node2D
 @onready var tower_info_panel: TowerInfoPanel = hud.tower_info_panel
 @onready var pause_menu: PauseMenu = hud.pause_menu
 
+## Màn đang chơi và bản đồ đã nạp.
+var level: LevelData
+var map: GameMap
+
 
 func _ready() -> void:
-	GameManager.reset(wave_manager.get_total_waves())
+	_load_level(GameManager.get_current_level())
+	GameManager.reset(wave_manager.get_total_waves(), level.starting_gold, level.starting_lives)
 
 	# HUD -> hệ thống
 	hud.setup_tower_buttons(build_manager.available_towers)
 	hud.start_wave_pressed.connect(_start_next_wave)
 	hud.tower_selected.connect(build_manager.select_tower)
-	hud.restart_pressed.connect(_restart)
+	hud.restart_pressed.connect(GameManager.restart_level)
+	hud.next_level_pressed.connect(_go_to_next_level)
+	hud.level_select_pressed.connect(GameManager.go_to_level_select)
 	hud.speed_pressed.connect(GameManager.cycle_game_speed)
 	hud.pause_pressed.connect(set_paused.bind(true))
 	pause_menu.resume_requested.connect(set_paused.bind(false))
-	pause_menu.restart_requested.connect(_restart)
-	pause_menu.quit_requested.connect(get_tree().quit)
+	pause_menu.restart_requested.connect(GameManager.restart_level)
+	pause_menu.level_select_requested.connect(GameManager.go_to_level_select)
 
 	# Xây tháp
 	build_manager.build_mode_changed.connect(_on_build_mode_changed)
@@ -62,6 +74,18 @@ func _ready() -> void:
 	if not build_manager.available_towers.is_empty():
 		build_manager.select_tower(build_manager.available_towers[0])
 	_refresh_wave_button()
+	hud.show_message("%s - %d wave" % [level.display_name, wave_manager.get_total_waves()], Color(0.6, 0.85, 1.0))
+
+
+## Nạp bản đồ của màn và giao các làn đường cho những hệ thống cần chúng.
+func _load_level(p_level: LevelData) -> void:
+	level = p_level
+	map = level.map_scene.instantiate() as GameMap
+	map_root.add_child(map)
+	var paths := map.get_paths()
+	ground.setup(paths)
+	build_manager.paths = paths
+	wave_manager.setup(level.waves_file, paths)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -92,9 +116,10 @@ func _start_next_wave() -> void:
 	wave_manager.start_next_wave()
 
 
-func _restart() -> void:
-	get_tree().paused = false
-	get_tree().reload_current_scene()
+func _go_to_next_level() -> void:
+	var next := GameManager.get_next_level()
+	if next:
+		GameManager.start_level(next)
 
 
 func _refresh_wave_button() -> void:
@@ -161,9 +186,13 @@ func _on_game_state_changed(state: GameManager.GameState) -> void:
 	if state == GameManager.GameState.PLAYING:
 		return
 	var victory := state == GameManager.GameState.VICTORY
+	var stars := GameManager.calculate_stars()
+	if victory:
+		SaveManager.record_result(level.id, stars)
 	build_manager.cancel_build()
 	selection_manager.deselect()
 	pause_menu.hide()
 	get_tree().paused = true
-	hud.show_game_over(victory)
+	hud.show_game_over(victory, stars, GameManager.lives, GameManager.starting_lives,
+			victory and GameManager.get_next_level() != null)
 	AudioManager.play(&"victory" if victory else &"defeat")

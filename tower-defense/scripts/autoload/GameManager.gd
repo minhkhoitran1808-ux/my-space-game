@@ -5,6 +5,9 @@ extends Node
 ## wave hiện tại và trạng thái game. Các hệ thống khác KHÔNG sửa biến trực tiếp
 ## mà gọi hàm (spend_gold, add_gold, lose_lives...) và lắng nghe signal để cập nhật.
 ##
+## Ngoài ra giữ màn chơi đang chọn và là nơi DUY NHẤT đổi scene
+## (start_level, go_to_level_select...), để luồng màn hình nằm gọn một chỗ.
+##
 ## Lưu ý: không đặt class_name vì tên Autoload "GameManager" đã là tên toàn cục.
 
 ## Phát ra mỗi khi số vàng thay đổi.
@@ -24,6 +27,14 @@ const STARTING_GOLD := 200
 const STARTING_LIVES := 20
 ## Các mức tốc độ người chơi có thể chọn (phím F / nút trên HUD).
 const GAME_SPEEDS: Array[float] = [1.0, 2.0, 3.0]
+## Tỉ lệ máu còn lại tối thiểu để đạt 3 sao / 2 sao (qua màn là có ít nhất 1 sao).
+const THREE_STAR_LIVES_RATIO := 0.8
+const TWO_STAR_LIVES_RATIO := 0.4
+
+const LEVEL_CATALOG: LevelCatalog = preload("res://resources/levels/catalog.tres")
+const MAIN_MENU_SCENE := "res://scenes/menus/MainMenu.tscn"
+const LEVEL_SELECT_SCENE := "res://scenes/menus/LevelSelect.tscn"
+const GAME_SCENE := "res://scenes/main/Main.tscn"
 
 var gold: int = STARTING_GOLD: set = _set_gold
 var lives: int = STARTING_LIVES: set = _set_lives
@@ -31,12 +42,20 @@ var current_wave: int = 0
 var total_waves: int = 0
 var state: GameState = GameState.PLAYING: set = _set_state
 var game_speed: float = 1.0
+var starting_lives: int = STARTING_LIVES
+## Màn đang chơi. Null = chưa chọn (vd chạy thẳng Main.tscn bằng F6) => dùng màn đầu tiên.
+var current_level: LevelData = null
+
+## Test hook: true thì các hàm chuyển cảnh chỉ ghi lại scene được yêu cầu, không đổi thật.
+var block_scene_changes := false
+var last_requested_scene: String = ""
 
 
 ## Đưa mọi chỉ số về giá trị ban đầu. Gọi khi bắt đầu (hoặc chơi lại) một ván.
-func reset(wave_count: int = 0) -> void:
-	gold = STARTING_GOLD
-	lives = STARTING_LIVES
+func reset(wave_count: int = 0, p_starting_gold: int = STARTING_GOLD, p_starting_lives: int = STARTING_LIVES) -> void:
+	starting_lives = p_starting_lives
+	gold = p_starting_gold
+	lives = p_starting_lives
 	current_wave = 0
 	total_waves = wave_count
 	wave_changed.emit(current_wave, total_waves)
@@ -89,6 +108,57 @@ func set_current_wave(wave_number: int) -> void:
 func win() -> void:
 	if is_playing():
 		state = GameState.VICTORY
+
+
+## Số sao đạt được dựa trên số máu còn lại (0 nếu chưa thắng).
+func calculate_stars() -> int:
+	if state != GameState.VICTORY:
+		return 0
+	var ratio := float(lives) / maxf(starting_lives, 1.0)
+	if ratio >= THREE_STAR_LIVES_RATIO:
+		return 3
+	if ratio >= TWO_STAR_LIVES_RATIO:
+		return 2
+	return 1
+
+
+# --- Màn chơi + chuyển cảnh ------------------------------------------------------
+
+func get_current_level() -> LevelData:
+	if current_level == null:
+		current_level = LEVEL_CATALOG.levels[0]
+	return current_level
+
+
+func get_next_level() -> LevelData:
+	return LEVEL_CATALOG.get_next_level(get_current_level())
+
+
+func start_level(level: LevelData) -> void:
+	current_level = level
+	_change_scene(GAME_SCENE)
+
+
+func restart_level() -> void:
+	start_level(get_current_level())
+
+
+func go_to_level_select() -> void:
+	_change_scene(LEVEL_SELECT_SCENE)
+
+
+func go_to_main_menu() -> void:
+	_change_scene(MAIN_MENU_SCENE)
+
+
+func _change_scene(path: String) -> void:
+	last_requested_scene = path
+	if block_scene_changes:
+		return
+	# Rời trận thì bỏ pause và trả tốc độ về x1.
+	get_tree().paused = false
+	set_game_speed(1.0)
+	get_tree().change_scene_to_file(path)
 
 
 # --- Tốc độ game ---------------------------------------------------------------

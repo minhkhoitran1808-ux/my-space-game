@@ -6,39 +6,48 @@ extends Node
 ## --fixed-fps 60 giúp mô phỏng chạy nhanh hết mức nhưng vẫn đúng như 60 FPS.
 ## Kết thúc với exit code 0 nếu tất cả đều đạt, 1 nếu có lỗi.
 ##
-## Gồm 3 phần, mỗi phần dùng một bản Main mới:
+## Gồm các phần (mỗi phần dùng một bản Main mới):
 ##   1. Kiểm tra từng hệ thống (kháng sát thương, làm chậm, đặt tháp, dữ liệu wave,
 ##      nâng cấp / bán, chọn tháp bằng chuột và phím tắt...).
 ##      Nhịp trận: tốc độ game, tạm dừng, xem trước wave, gọi wave sớm, hiệu ứng, âm thanh.
-##   2. Bot đặt tháp theo kế hoạch, nâng cấp khi dư tiền, và phải THẮNG đủ mọi wave.
-##   3. Không đặt tháp nào thì phải THUA (đảm bảo game không quá dễ).
+##      Luồng màn: menu, chọn màn, khoá / mở màn, lưu sao.
+##   2. Với MỖI màn: bot tự chọn ô có độ phủ đường đi tốt nhất, nâng cấp khi dư tiền,
+##      và phải THẮNG. Bot không cần biết trước bản đồ nên áp dụng được cho màn mới.
+##   3. Với MỖI màn: không đặt tháp nào thì phải THUA (đảm bảo game không quá dễ).
+##
+## Test dùng file save riêng và chặn việc đổi scene thật (GameManager.block_scene_changes).
 
 const MAIN_SCENE := preload("res://scenes/main/Main.tscn")
+const LEVEL_SELECT_SCENE := preload("res://scenes/menus/LevelSelect.tscn")
+const MAIN_MENU_SCENE := preload("res://scenes/menus/MainMenu.tscn")
+const TEST_SAVE_PATH := "user://smoke_test_save.cfg"
 ## Giới hạn số frame cho mỗi lượt chơi để test không bao giờ treo.
-const MAX_FRAMES_PER_RUN := 60 * 60 * 30
+const MAX_FRAMES_PER_RUN := 60 * 60 * 40
 
-## Kế hoạch xây của bot: [chỉ số tháp trong available_towers, ô lưới].
-## 0 = Cung thủ, 1 = Pháo, 2 = Băng, 3 = Phép.
-const BOT_BUILD_ORDER := [
-	[0, Vector2i(4, 7)], [0, Vector2i(8, 7)], [0, Vector2i(10, 4)],
-	[2, Vector2i(8, 4)], [1, Vector2i(4, 4)], [3, Vector2i(10, 7)],
-	[1, Vector2i(14, 4)], [3, Vector2i(16, 6)], [0, Vector2i(2, 3)],
-	[2, Vector2i(14, 6)], [3, Vector2i(6, 7)], [1, Vector2i(12, 4)],
-	[3, Vector2i(2, 7)], [0, Vector2i(10, 2)], [1, Vector2i(16, 8)],
-	[3, Vector2i(12, 2)], [3, Vector2i(6, 4)], [1, Vector2i(6, 9)],
-]
+## Thứ tự loại tháp bot mua (0 = Cung thủ, 1 = Pháo, 2 = Băng, 3 = Phép), lặp lại khi hết.
+const BOT_TOWER_ROTATION := [0, 0, 2, 1, 3, 0, 1, 3, 2, 3, 1, 3]
+## Bot xây tối đa chừng này tháp, sau đó dồn tiền nâng cấp.
+const BOT_MAX_TOWERS := 18
 
 var _failures := PackedStringArray()
 
 
 func _ready() -> void:
 	print("=== SMOKE TEST ===")
+	GameManager.block_scene_changes = true
+	SaveManager.save_path = TEST_SAVE_PATH
+	SaveManager.reset_progress()
+
 	await _test_systems()
 	await _test_tower_management()
 	await _test_match_flow()
-	await _test_bot_playthrough()
-	await _test_defeat_without_towers()
+	await _test_level_flow()
+	for level in GameManager.LEVEL_CATALOG.levels:
+		await _test_bot_playthrough(level)
+	for level in GameManager.LEVEL_CATALOG.levels:
+		await _test_defeat_without_towers(level)
 
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE_PATH))
 	if _failures.is_empty():
 		print("=== SMOKE TEST PASSED ===")
 		get_tree().quit(0)
@@ -56,10 +65,10 @@ func _test_systems() -> void:
 	var main := await _new_main()
 	var build: BuildManager = main.build_manager
 	var waves: WaveManager = main.wave_manager
-	var path: Path2D = main.get_node("Enemies/EnemyPath")
+	var path: Path2D = main.map.get_paths()[0]
 
 	# Dữ liệu wave
-	_check(waves.validate_waves().is_empty(), "waves.json hợp lệ: %s" % [waves.validate_waves()])
+	_check(waves.validate_waves().is_empty(), "file wave màn 1 hợp lệ: %s" % [waves.validate_waves()])
 	_check(waves.get_total_waves() == 10, "có 10 wave (thực tế %d)" % waves.get_total_waves())
 	for id in [&"basic", &"fast", &"armored", &"swarm", &"boss"]:
 		_check(waves.get_enemy_type(id) != null, "có loại địch '%s'" % id)
@@ -233,30 +242,87 @@ func _test_match_flow() -> void:
 	await _free_main(main)
 
 
-# --- Phần 2: bot chơi hết game --------------------------------------------------
+# --- Phần 1d: luồng màn (menu, chọn màn, khoá / mở, sao) ----------------------
 
-func _test_bot_playthrough() -> void:
-	print("[2] Bot chơi hết các wave")
+func _test_level_flow() -> void:
+	print("[1d] Luồng màn")
+	var catalog := GameManager.LEVEL_CATALOG
+	_check(catalog.levels.size() == 3, "có 3 màn chơi")
+
+	var select := LEVEL_SELECT_SCENE.instantiate()
+	add_child(select)
+	await get_tree().process_frame
+	_check(select.play_buttons.size() == 3, "màn chọn màn có 3 thẻ")
+	_check(not select.play_buttons[0].disabled and select.play_buttons[1].disabled and select.play_buttons[2].disabled,
+			"lúc đầu chỉ mở màn 1")
+	select.play_buttons[0].pressed.emit()
+	_check(GameManager.current_level == catalog.levels[0] and GameManager.last_requested_scene == GameManager.GAME_SCENE,
+			"bấm Chơi màn 1 => vào trận màn 1")
+	select.queue_free()
+
+	# Qua màn 1 với 2 sao => mở màn 2, sao chỉ tăng không giảm.
+	SaveManager.record_result(catalog.levels[0].id, 2)
+	SaveManager.record_result(catalog.levels[0].id, 1)
+	_check(SaveManager.get_stars(catalog.levels[0].id) == 2, "giữ số sao cao nhất")
+	select = LEVEL_SELECT_SCENE.instantiate()
+	add_child(select)
+	await get_tree().process_frame
+	_check(not select.play_buttons[1].disabled and select.play_buttons[2].disabled, "qua màn 1 thì mở màn 2")
+	select.queue_free()
+
+	var menu := MAIN_MENU_SCENE.instantiate()
+	add_child(menu)
+	await get_tree().process_frame
+	_check(menu.stars_label.text.contains("2 / 9"), "menu chính hiện tổng sao (%s)" % menu.stars_label.text)
+	menu.play_button.pressed.emit()
+	_check(GameManager.last_requested_scene == GameManager.LEVEL_SELECT_SCENE, "nút Chơi ở menu => màn chọn màn")
+	menu.queue_free()
+
+	# Sao theo máu còn lại.
+	GameManager.reset(10, 200, 20)
+	GameManager.lives = 17
+	GameManager.win()
+	_check(GameManager.calculate_stars() == 3, "còn 17/20 máu = 3 sao")
+	GameManager.reset(10, 200, 20)
+	GameManager.lives = 9
+	GameManager.win()
+	_check(GameManager.calculate_stars() == 2, "còn 9/20 máu = 2 sao")
+
+	SaveManager.reset_progress()
+	GameManager.current_level = null
+	await get_tree().process_frame
+
+
+# --- Phần 2: bot chơi hết từng màn ----------------------------------------------
+
+func _test_bot_playthrough(level: LevelData) -> void:
+	print("[2] Bot chơi màn \"%s\"" % level.display_name)
+	GameManager.current_level = level
 	var main := await _new_main()
 	var build: BuildManager = main.build_manager
 	var waves: WaveManager = main.wave_manager
-	var next_build := 0
+	_check(waves.validate_waves().is_empty(), "%s: file wave hợp lệ %s" % [level.display_name, waves.validate_waves()])
+	_check(GameManager.gold == level.starting_gold, "%s: vàng ban đầu = %d" % [level.display_name, level.starting_gold])
+
+	# Đếm địch trên từng làn để chắc bản đồ nhiều làn được dùng đủ.
+	var spawns_per_lane: Dictionary = {}
+	waves.enemy_spawned.connect(func(enemy: Enemy) -> void:
+		spawns_per_lane[enemy.get_parent()] = spawns_per_lane.get(enemy.get_parent(), 0) + 1)
+
+	var samples := _path_samples(main.map.get_paths())
+	var towers_built := 0
 	var upgrades := 0
 	var frames := 0
-
 	while GameManager.is_playing() and frames < MAX_FRAMES_PER_RUN:
-		# Mua tháp theo kế hoạch khi đủ tiền.
-		while next_build < BOT_BUILD_ORDER.size():
-			var order: Array = BOT_BUILD_ORDER[next_build]
-			var tower_data: TowerData = build.available_towers[order[0]]
-			if not GameManager.can_afford(tower_data.cost):
-				break
-			build.select_tower(tower_data) if build.selected_tower_data != tower_data else null
-			_check(build.try_place_tower(order[1]) != null, "bot đặt %s tại %s" % [tower_data.display_name, order[1]])
-			next_build += 1
-
-		# Xây hết kế hoạch rồi thì dùng tiền thừa nâng cấp tháp có giá nâng cấp rẻ nhất.
-		if next_build >= BOT_BUILD_ORDER.size():
+		if towers_built < BOT_MAX_TOWERS:
+			var tower_data: TowerData = build.available_towers[BOT_TOWER_ROTATION[towers_built % BOT_TOWER_ROTATION.size()]]
+			if GameManager.can_afford(tower_data.cost):
+				var cell := _bot_best_cell(build, tower_data, samples)
+				if cell.x >= 0:
+					build.select_tower(tower_data) if build.selected_tower_data != tower_data else null
+					build.try_place_tower(cell)
+					towers_built += 1
+		else:
 			var cheapest: Tower = null
 			for tower in build.get_towers():
 				if tower.can_upgrade() and (cheapest == null or tower.get_upgrade_cost() < cheapest.get_upgrade_cost()):
@@ -267,28 +333,68 @@ func _test_bot_playthrough() -> void:
 
 		# Bot chơi "bình thường": chỉ gọi wave mới khi wave trước đã xong hẳn.
 		if waves.can_start_next_wave() and not waves.is_wave_in_progress():
-			if waves.get_current_wave_number() > 0:
-				print("    sau wave %2d: máu=%2d vàng=%4d tháp=%d" \
-						% [waves.get_current_wave_number(), GameManager.lives, GameManager.gold, next_build])
 			waves.start_next_wave()
 		await get_tree().process_frame
 		frames += 1
 
-	print("    kết thúc: %s, máu còn %d, %d tháp, %d lần nâng cấp" \
-			% [GameManager.GameState.keys()[GameManager.state], GameManager.lives, next_build, upgrades])
-	var total_kills := 0
-	for tower in build.get_towers():
-		total_kills += tower.kills
-	_check(total_kills > 100, "tháp ghi nhận số địch hạ (%d)" % total_kills)
-	_check(GameManager.state == GameManager.GameState.VICTORY, "bot thắng cả %d wave" % waves.get_total_waves())
-	_check(main.hud.game_over_panel.visible, "hiện bảng kết thúc khi thắng")
+	var won := GameManager.state == GameManager.GameState.VICTORY
+	print("    %s ở wave %d/%d, máu %d/%d, %d tháp, %d nâng cấp, %d sao" % ["THẮNG" if won else "THUA",
+			waves.get_current_wave_number(), waves.get_total_waves(), GameManager.lives, level.starting_lives,
+			towers_built, upgrades, GameManager.calculate_stars()])
+	_check(won, "%s: bot thắng cả %d wave" % [level.display_name, waves.get_total_waves()])
+	_check(spawns_per_lane.size() == main.map.get_paths().size(), "%s: địch đi đủ %d làn" % [level.display_name, main.map.get_paths().size()])
+	if won:
+		var has_next := GameManager.LEVEL_CATALOG.get_next_level(level) != null
+		_check(main.hud.game_over_panel.visible and main.hud.result_stars.visible, "%s: bảng thắng có sao" % level.display_name)
+		_check(main.hud.next_level_button.visible == has_next, "%s: nút Màn tiếp theo đúng" % level.display_name)
+		_check(SaveManager.get_stars(level.id) == GameManager.calculate_stars(), "%s: đã lưu số sao" % level.display_name)
+	if level == GameManager.LEVEL_CATALOG.levels[0]:
+		var total_kills := 0
+		for tower in build.get_towers():
+			total_kills += tower.kills
+		_check(total_kills > 100, "tháp ghi nhận số địch hạ (%d)" % total_kills)
 	await _free_main(main)
+
+
+## Các điểm mẫu dọc mọi làn (chỉ phần nằm trong màn hình), dùng để chấm điểm ô xây.
+func _path_samples(paths: Array[Path2D]) -> PackedVector2Array:
+	var samples := PackedVector2Array()
+	for path in paths:
+		var baked := path.curve.get_baked_points()
+		for i in range(0, baked.size(), 3):
+			var point := path.to_global(baked[i])
+			if point.x >= 0.0:
+				samples.append(point)
+	return samples
+
+
+## Ô hợp lệ phủ được nhiều đoạn đường nhất trong tầm bắn của loại tháp này.
+func _bot_best_cell(build: BuildManager, tower_data: TowerData, samples: PackedVector2Array) -> Vector2i:
+	var best := Vector2i(-1, -1)
+	var best_score := 0
+	var range_squared := tower_data.attack_range * tower_data.attack_range
+	var area := GameConfig.BUILD_AREA
+	for y in range(int(area.position.y) / GameConfig.CELL_SIZE, int(area.end.y) / GameConfig.CELL_SIZE):
+		for x in range(int(area.position.x) / GameConfig.CELL_SIZE, int(area.end.x) / GameConfig.CELL_SIZE):
+			var cell := Vector2i(x, y)
+			if build.get_placement_error(cell, tower_data) != "":
+				continue
+			var center := GameConfig.cell_to_world(cell)
+			var score := 0
+			for point in samples:
+				if center.distance_squared_to(point) <= range_squared:
+					score += 1
+			if score > best_score:
+				best_score = score
+				best = cell
+	return best
 
 
 # --- Phần 3: không xây gì thì phải thua -----------------------------------------
 
-func _test_defeat_without_towers() -> void:
-	print("[3] Không đặt tháp thì phải thua")
+func _test_defeat_without_towers(level: LevelData) -> void:
+	print("[3] Không đặt tháp ở màn \"%s\"" % level.display_name)
+	GameManager.current_level = level
 	var main := await _new_main()
 	var waves: WaveManager = main.wave_manager
 	var frames := 0
@@ -298,7 +404,8 @@ func _test_defeat_without_towers() -> void:
 		await get_tree().process_frame
 		frames += 1
 	print("    thua ở wave %d" % waves.get_current_wave_number())
-	_check(GameManager.state == GameManager.GameState.DEFEAT, "không xây tháp thì thua")
+	_check(GameManager.state == GameManager.GameState.DEFEAT, "%s: không xây tháp thì thua" % level.display_name)
+	_check(main.hud.game_over_panel.visible and not main.hud.next_level_button.visible, "%s: bảng thua không có nút màn sau" % level.display_name)
 	await _free_main(main)
 
 

@@ -64,12 +64,12 @@ layout_mode = 2
 focus_mode = 0
 text = "Chơi lại"
 
-[node name="QuitButton" type="Button" parent="Center/Panel/Margin/VBox"]
+[node name="LevelSelectButton" type="Button" parent="Center/Panel/Margin/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 focus_mode = 0
-text = "Thoát game"
+text = "Về màn chọn màn"
 
 [node name="Hint" type="Label" parent="Center/Panel/Margin/VBox"]
 layout_mode = 2

@@ -10,6 +10,8 @@ extends Control
 signal start_wave_pressed
 signal tower_selected(tower_data: TowerData)
 signal restart_pressed
+signal next_level_pressed
+signal level_select_pressed
 signal speed_pressed
 signal pause_pressed
 
@@ -27,7 +29,11 @@ const MESSAGE_DURATION := 1.6
 @onready var message_label: Label = %MessageLabel
 @onready var game_over_panel: PanelContainer = %GameOverPanel
 @onready var result_label: Label = %ResultLabel
+@onready var result_stars: StarRating = %ResultStars
+@onready var result_detail: Label = %ResultDetail
+@onready var next_level_button: Button = %NextLevelButton
 @onready var restart_button: Button = %RestartButton
+@onready var level_select_button: Button = %LevelSelectButton
 @onready var tower_info_panel: TowerInfoPanel = %TowerInfoPanel
 
 var _buttons_by_tower: Dictionary = {} # TowerData -> Button
@@ -41,6 +47,8 @@ func _ready() -> void:
 	GameManager.game_speed_changed.connect(update_speed)
 	start_wave_button.pressed.connect(start_wave_pressed.emit)
 	restart_button.pressed.connect(restart_pressed.emit)
+	next_level_button.pressed.connect(next_level_pressed.emit)
+	level_select_button.pressed.connect(level_select_pressed.emit)
 	speed_button.pressed.connect(speed_pressed.emit)
 	pause_button.pressed.connect(pause_pressed.emit)
 
@@ -122,9 +130,14 @@ func show_message(text: String, color: Color = Color(1.0, 0.45, 0.45)) -> void:
 	_message_tween.tween_property(message_label, "modulate:a", 0.0, 0.5)
 
 
-func show_game_over(victory: bool) -> void:
+## Bảng kết thúc màn: kết quả, số sao, máu còn lại và các nút điều hướng.
+func show_game_over(victory: bool, stars: int, lives: int, max_lives: int, has_next_level: bool) -> void:
 	result_label.text = "CHIẾN THẮNG!" if victory else "THẤT BẠI!"
 	result_label.modulate = Color(0.5, 1.0, 0.5) if victory else Color(1.0, 0.4, 0.4)
+	result_stars.visible = victory
+	result_stars.stars = stars
+	result_detail.text = "Còn %d/%d máu" % [lives, max_lives] if victory else "Nhà chính đã thất thủ ở wave %d" % GameManager.current_wave
+	next_level_button.visible = has_next_level
 	game_over_panel.show()
 
 

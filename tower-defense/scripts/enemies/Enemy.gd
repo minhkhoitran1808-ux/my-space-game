@@ -3,7 +3,7 @@ extends PathFollow2D
 ## Địch: chạy dọc theo Path2D cha, nhận sát thương có tính kháng, dính hiệu ứng.
 ##
 ## PathFollow2D bắt buộc phải là con TRỰC TIẾP của Path2D, vì vậy WaveManager
-## spawn địch vào node Enemies/EnemyPath. Mọi chỉ số đọc từ EnemyData.
+## spawn địch vào các làn (Path2D) của bản đồ. Mọi chỉ số đọc từ EnemyData.
 ## Địch không tự cộng vàng / trừ máu nhà chính mà chỉ phát signal,
 ## WaveManager sẽ lắng nghe và báo cho GameManager.
 

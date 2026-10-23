@@ -20,12 +20,13 @@ signal placement_failed(reason: String)
 @export var tower_container: Node2D
 ## Node chứa đạn do tháp bắn ra (vẽ phía trên địch).
 @export var projectile_container: Node2D
-@export var enemy_path: Path2D
 ## Danh sách tháp người chơi được xây (thứ tự = phím tắt 1, 2, 3...).
 @export var available_towers: Array[TowerData] = []
 
 ## Loại tháp đang chuẩn bị xây (null = không ở chế độ xây).
 var selected_tower_data: TowerData = null
+## Các làn đường của bản đồ (không được xây đè lên). Main gán sau khi nạp bản đồ.
+var paths: Array[Path2D] = []
 
 var _occupied_cells: Dictionary = {} # Vector2i -> Tower
 var _hover_cell := Vector2i(-1, -1)
@@ -119,11 +120,11 @@ func sell_tower(tower: Tower) -> int:
 
 
 func _is_on_path(world_pos: Vector2) -> bool:
-	if enemy_path == null or enemy_path.curve == null:
-		return false
-	var local_pos := enemy_path.to_local(world_pos)
-	var closest := enemy_path.curve.get_closest_point(local_pos)
-	return local_pos.distance_to(closest) < GameConfig.PATH_CLEARANCE
+	for path in paths:
+		var local_pos := path.to_local(world_pos)
+		if local_pos.distance_to(path.curve.get_closest_point(local_pos)) < GameConfig.PATH_CLEARANCE:
+			return true
+	return false
 
 
 # --- Input ----------------------------------------------------------------------
