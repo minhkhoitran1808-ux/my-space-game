@@ -17,6 +17,8 @@ mở project và bấm Play là chơi được ngay.
 | Chuột trái | Đặt tháp (bóng xanh = đặt được, đỏ = không) / chọn tháp đã xây |
 | Chuột phải / `Esc` | Huỷ xây / bỏ chọn tháp |
 | `U` / `X` / `T` | Nâng cấp / bán / đổi cách chọn mục tiêu của tháp đang chọn |
+| `Q` | Kỹ năng **Thiên thạch**: chuột trái chọn vùng (chuột phải / Esc để huỷ) |
+| `E` | Kỹ năng **Băng giá**: làm chậm 90% toàn bộ địch trong 3 giây |
 | `Space` | Bắt đầu wave, hoặc **gọi sớm** wave sau (thưởng thêm vàng) |
 | `F` | Tốc độ x1 / x2 / x3 |
 | `P` (hoặc `Esc` khi không chọn gì) | Tạm dừng |
@@ -32,16 +34,26 @@ mở project và bấm Play là chơi được ngay.
 | Ngã ba sông | 2 làn nhập làm một | 10 | 260 |
 | Đường rắn | 1 làn rất dài, 2 Boss | 12 | 300 |
 
+**Chế độ vô tận:** qua một màn sẽ mở chế độ vô tận của màn đó (nút ở màn chọn màn).
+Wave được sinh tự động và mạnh dần, cứ 10 wave có Boss; kỷ lục wave cao nhất được lưu lại.
+
+**2 kỹ năng chủ động** (có thời gian hồi):
+
+| Kỹ năng | Phím | Hồi | Tác dụng |
+|---|---|---|---|
+| Thiên thạch | Q | 35s | Chọn vùng: 120 sát thương chuẩn (bỏ qua giáp) + thiêu đốt |
+| Băng giá | E | 50s | Làm chậm 90% toàn bộ địch trong 3 giây |
+
 **4 loại tháp**, mỗi loại 3 cấp:
 
 | Tháp | Giá | Kiểu bắn | Sát thương | Đặc điểm |
 |---|---|---|---|---|
 | Cung thủ | 50 | Đạn nhanh | Vật lý | Rẻ, bắn nhanh |
-| Pháo | 90 | Đạn chậm | Vật lý | **Nổ lan**, khắc chế Bầy chuột |
+| Pháo | 90 | Đạn chậm | Vật lý | **Nổ lan**, khắc chế Bầy chuột. **Không bắn được địch bay** |
 | Băng | 70 | Tia | Phép | **Làm chậm** các địch quanh mục tiêu |
 | Phép | 120 | Tia | Phép | Sát thương cao + **thiêu đốt**, khắc chế Bọc thép |
 
-**5 loại địch:**
+**6 loại địch:**
 
 | Địch | Hình | Đặc điểm |
 |---|---|---|
@@ -49,6 +61,7 @@ mở project và bấm Play là chơi được ngay.
 | Trinh sát | Tam giác vàng | Rất nhanh, kháng phép 50% |
 | Bọc thép | Vuông xám | Giáp 60%, trừ 2 máu nhà |
 | Bầy chuột | Tròn tím nhỏ | Yếu nhưng rất đông |
+| Dơi lửa | Có cánh, cam | **Bay** thẳng tới nhà chính, bỏ qua đường đi; Pháo không bắn được |
 | Chúa quỷ (Boss) | Kim cương đỏ sẫm | Rất trâu, kháng chậm 50%, trừ 10 máu, chết thì **sinh 8 Bầy chuột** |
 
 ## Kiến trúc
@@ -59,7 +72,8 @@ tower-defense/
 ├── assets/audio/               # thả file âm thanh vào đây (xem README trong thư mục)
 ├── data/waves/level_XX.json    # wave của từng màn
 ├── resources/
-│   ├── effects/                # StatusEffectData: làm chậm, thiêu đốt (3 cấp)
+│   ├── abilities/              # AbilityData: Thiên thạch, Băng giá
+│   ├── effects/                # StatusEffectData: làm chậm, thiêu đốt (3 cấp), đóng băng
 │   ├── enemies/                # EnemyData: 5 loại địch
 │   ├── levels/                 # LevelData từng màn + catalog.tres (thứ tự màn)
 │   ├── towers/                 # TowerData: 4 tháp × 3 cấp (chuỗi next_level)
@@ -73,7 +87,7 @@ tower-defense/
 ├── scripts/
 │   ├── autoload/               # GameManager, AudioManager, SaveManager
 │   ├── combat/                 # DamageInfo, Combat, Projectile, StatusEffectHandler
-│   ├── managers/               # WaveManager, BuildManager, SelectionManager
+│   ├── managers/               # WaveManager, WaveGenerator, BuildManager, SelectionManager, AbilityManager
 │   ├── fx/FxManager.gd         # số sát thương, vụ nổ, rung màn hình
 │   ├── main/                   # Main, Ground, GameMap
 │   ├── menus/, ui/, resources/, enemies/, towers/, core/
@@ -92,7 +106,8 @@ Main                  ← Main.gd: nạp màn + nối signal giữa các hệ th
 ├── FxManager         ← hiệu ứng (chỉ lắng nghe signal)
 ├── BuildManager      ← xây / nâng cấp / bán, ô nào có tháp
 ├── SelectionManager  ← click chọn tháp, phím U/X/T
-├── WaveManager       ← đọc wave, spawn địch, đếm địch theo từng wave
+├── AbilityManager    ← kỹ năng chủ động: hồi chiêu, ngắm vùng, phím Q/E
+├── WaveManager       ← đọc wave (hoặc sinh wave vô tận), spawn địch, đếm địch theo từng wave
 └── UI/HUD            ← thanh trên/dưới, bảng thông tin tháp, menu tạm dừng, bảng kết thúc
 ```
 
@@ -113,6 +128,13 @@ WaveManager tự quét thư mục, trong file wave chỉ cần ghi `"enemy": "<i
 **Thêm loại tháp:** nhân bản bộ 3 file cấp của một tháp trong `resources/towers/`, sửa chỉ số
 (trường `next_level` nối cấp 1 → 2 → 3, `cost` của cấp 2/3 là giá nâng cấp), rồi thêm file cấp 1
 vào *Available Towers* của node `BuildManager` trong `Main.tscn`.
+
+**Thêm kỹ năng:** tạo `AbilityData` trong `resources/abilities/` (phím tắt, hồi chiêu, bán kính,
+sát thương, hiệu ứng), rồi thêm vào mảng *Abilities* của node `AbilityManager` trong `Main.tscn`.
+
+**Địch bay:** bật `is_flying` trong `EnemyData`. Địch bay đi theo các Path2D trong node `AirPaths`
+của bản đồ; nếu bản đồ không có node này, một làn thẳng từ đầu làn 1 tới nhà chính được tạo tự động.
+Tháp có `can_hit_air = false` (như Pháo) không nhắm và không nổ lan trúng địch bay.
 
 **Thêm màn chơi:**
 1. Tạo bản đồ: nhân bản `scenes/maps/Map01.tscn`, kéo các điểm của Path2D trong node `Paths`
@@ -155,6 +177,7 @@ Chạy khoảng 25 giây. Gồm:
 - Kiểm tra từng hệ thống: kháng sát thương, hiệu ứng, Boss sinh con, đặt / nâng cấp / bán / chọn
   tháp bằng chuột và phím, tốc độ, tạm dừng, gọi wave sớm, khoá / mở màn, sao.
 - Với **mỗi màn**: một bot tự chọn ô có độ phủ đường đi tốt nhất phải **thắng**, và không xây
-  tháp thì phải **thua**. Bot hiện thắng cả 3 màn với 2 sao (còn 12 / 10 / 8 máu); 3 sao là thử thách.
+  tháp thì phải **thua**. Bot hiện thắng cả 3 màn với 2 sao (còn 10 / 10 / 8 máu); 3 sao là thử thách.
+Ở chế độ vô tận (đo riêng), bot nâng cấp tối đa trụ được tới khoảng wave 31–40.
 
 Exit code 0 = đạt. Test dùng file save riêng nên không ảnh hưởng tiến độ thật.
