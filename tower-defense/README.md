@@ -70,6 +70,23 @@ Wave được sinh tự động và mạnh dần, cứ 10 wave có Boss; kỷ l�
 | Dơi lửa | Có cánh, cam | **Bay** thẳng tới nhà chính, bỏ qua đường đi; Pháo không bắn được |
 | Chúa quỷ (Boss) | Kim cương đỏ sẫm | Rất trâu, kháng chậm 50%, trừ 10 máu, chết thì **sinh 8 Bầy chuột** |
 
+## Giao diện trong trận (HUD)
+
+- Scene: `scenes/ui/HUD.tscn`, script `scripts/ui/HUD.gd`; cập nhật hoàn toàn theo signal của
+  `GameManager` (vàng, máu, wave, tốc độ), không cập nhật mỗi frame.
+- **Theme riêng của HUD:** `resources/ui/hud_theme.tres` (chỉ gắn vào HUD nên không ảnh hưởng menu).
+  Bảng màu theo token: nền `#0B101D`, panel `#182238`, vàng `#FFC72C`, máu `#E63946`, wave `#4EA8DE`,
+  thành công `#38B000`, khoá `#5C677D`, viền focus `#00F5D4`.
+  - Biến thể nút: `Button` (mặc định), `PrimaryButton` (xanh), `GoldButton` (gọi sớm), `RetryButton` (cam),
+    `DockButton` (thanh dưới). Mỗi biến thể có đủ trạng thái Normal / Hover / Pressed / Disabled (+ Focus).
+  - Biến thể panel / chữ: `HudBar`, `StatChip`, `ModalPanel`, `StatValue`, `StatCaption`, `MutedLabel`, `HudTitle`, `LivesBar`.
+  - Sửa nhanh trong Godot (mở file theme), hoặc đổi bảng `TOKENS` trong `tools/gen_hud_theme.py`
+    rồi chạy `python3 tools/gen_hud_theme.py` để sinh lại toàn bộ.
+- Icon (tim, đồng xu, wave, cúp, đầu lâu...) vẽ bằng code: `scripts/ui/HudIcon.gd`.
+- Hiệu ứng dùng chung (hover phóng to, lún khi nhấn, rung khi bấm nút khoá, nảy số, nhấp nháy): `scripts/ui/UiFx.gd`.
+- Font **Be Vietnam Pro** (SemiBold / ExtraBold) trong `assets/fonts/`, giấy phép SIL Open Font License
+  (`assets/fonts/OFL.txt`) – được phép đóng gói kèm game.
+
 ## Kiến trúc
 
 ```
