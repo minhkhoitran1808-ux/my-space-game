@@ -602,6 +602,48 @@ func _test_enemy_feedback() -> void:
 	enemy.died.connect(func(_e: Enemy, _r: int) -> void: died[0] = true)
 	enemy.take_damage(DamageInfo.new(99999.0, DamageInfo.Type.TRUE))
 	_check(died[0] and not enemy.is_alive(), "hết máu: vẫn phát died")
+
+	# Cài đặt hiển thị / hỗ trợ (đổi qua chính menu Cài đặt như người chơi).
+	var settings: SettingsMenu = main.hud.settings_menu
+	settings.open()
+	settings.hit_flash_option.item_selected.emit(VisualSettings.HitFlash.OFF)
+	_check(int(SaveManager.get_setting("hit_flash")) == VisualSettings.HitFlash.OFF, "menu Cài đặt lưu tuỳ chọn nháy")
+	var target := _spawn_test_enemy(path, waves.get_enemy_type(&"armored"))
+	await get_tree().process_frame
+	target.take_damage(DamageInfo.new(10.0, DamageInfo.Type.TRUE))
+	_check(target.hit_feedback.flash_amount == 0.0, "tắt nháy: trúng đòn không nháy")
+	settings.hit_flash_option.item_selected.emit(VisualSettings.HitFlash.REDUCED)
+	for i in 30:
+		await get_tree().process_frame
+	target.take_damage(DamageInfo.new(10.0, DamageInfo.Type.TRUE))
+	_check(target.hit_feedback.flash_amount > 0.0 and target.hit_feedback.flash_amount <= 0.35, "nháy nhẹ: tối đa 35%")
+
+	settings.reduced_motion_check.toggled.emit(true)
+	for i in 30:
+		await get_tree().process_frame
+	target.take_damage(DamageInfo.new(10.0, DamageInfo.Type.TRUE))
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(target.hit_feedback.body_scale == Vector2.ONE, "giảm chuyển động: không giật")
+	_check(is_equal_approx(target.health_bar.trail_ratio, target.health_bar.ratio), "giảm chuyển động: không có vệt rút dần")
+
+	settings.health_bar_option.item_selected.emit(VisualSettings.HealthBarMode.ALWAYS)
+	var fresh := _spawn_test_enemy(path, waves.get_enemy_type(&"basic"))
+	for i in 6:
+		await get_tree().process_frame
+	_check(fresh.health_bar.visible, "thanh máu 'Luôn hiện': hiện cả khi đầy máu")
+	settings.health_bar_option.item_selected.emit(VisualSettings.HealthBarMode.OFF)
+	for i in 12:
+		await get_tree().process_frame
+	_check(not target.health_bar.visible and boss.health_bar.visible, "thanh máu 'Tắt': ẩn (trừ Boss)")
+
+	settings.colorblind_check.toggled.emit(true)
+	_check(HealthBar.color_for_ratio(0.9) == HealthBar.COLOR_HIGH_COLORBLIND \
+			and HealthBar.color_for_ratio(0.1) == HealthBar.COLOR_LOW_COLORBLIND, "bảng màu mù màu: xanh dương / cam")
+	settings.close()
+	for key in ["hit_flash", "health_bar_mode", "reduced_motion", "colorblind"]:
+		SaveManager.set_setting(key, SaveManager.DEFAULT_SETTINGS[key])
+	_check(not VisualSettings.reduced_motion and VisualSettings.hit_flash == VisualSettings.HitFlash.ON, "trả cài đặt về mặc định")
 	await _free_main(main)
 
 

@@ -10,6 +10,7 @@ extends Node
 ##   nhấp nháy an toàn WCAG 2.3.1). Đòn trong khoảng chặn vẫn trừ máu và cập nhật thanh máu.
 ## - Đang giật thì không giật lại từ đầu.
 ## - Sát thương theo thời gian (thiêu đốt) không gây nháy / giật.
+## - Cài đặt "Nháy khi trúng đòn" (đầy đủ / nhẹ / tắt) và "Giảm chuyển động" (tắt giật).
 ## _process chỉ chạy trong ~0.33s sau mỗi lần nháy rồi tự tắt.
 
 ## Phát ra khi flash_amount / body_scale đổi (Enemy nối vào queue_redraw).
@@ -48,7 +49,7 @@ func track(enemy: Enemy) -> void:
 func play() -> void:
 	if _flash_age >= FLASH_MIN_INTERVAL:
 		_flash_age = 0.0
-	if _squash_age >= SQUASH_IN_TIME + SQUASH_OUT_TIME:
+	if _squash_age >= SQUASH_IN_TIME + SQUASH_OUT_TIME and not VisualSettings.reduced_motion:
 		_squash_age = 0.0
 	_update_values()
 	set_process(true)
@@ -79,7 +80,7 @@ func _update_values() -> void:
 
 	# Nháy: 1 -> 0, ease-out (tắt nhanh lúc đầu, dịu ở cuối).
 	var t := clampf(_flash_age / FLASH_TIME, 0.0, 1.0)
-	flash_amount = (1.0 - t) * (1.0 - t)
+	flash_amount = (1.0 - t) * (1.0 - t) * VisualSettings.hit_flash_strength()
 
 	# Giật: 1 -> nén (ease-out) -> 1 (ease-out).
 	if _squash_age < SQUASH_IN_TIME:

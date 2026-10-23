@@ -32,6 +32,8 @@ static func setup_button(button: BaseButton) -> void:
 
 ## Phóng to rồi thu về (dùng khi số liệu thay đổi).
 static func pulse(control: Control, peak: float = 1.18, duration: float = 0.25) -> void:
+	if VisualSettings.reduced_motion:
+		return
 	_keep_pivot_centered(control)
 	var tween := _restart_tween(control, &"pulse")
 	control.scale = Vector2.ONE * peak
@@ -50,6 +52,8 @@ static func flash(control: CanvasItem, color: Color, duration: float = 0.5, time
 
 ## Rung ngang 100ms (dùng khi bấm vào nút đang khoá).
 static func shake(control: Control, strength: float = 5.0) -> void:
+	if VisualSettings.reduced_motion:
+		return
 	# Đang rung dở thì giữ vị trí gốc cũ, tránh nút bị trôi khi bấm liên tục.
 	var running: Tween = control.get_meta(&"ui_fx_tween_shake", null)
 	var origin: float = control.get_meta(&"ui_fx_shake_origin") if running and running.is_running() \

@@ -21,6 +21,11 @@ const DEFAULT_SETTINGS := {
 	"damage_numbers": true,
 	"screen_shake": true,
 	"fullscreen": false,
+	# Hiển thị / hỗ trợ người chơi (xem VisualSettings).
+	"reduced_motion": false,
+	"hit_flash": VisualSettings.HitFlash.ON,
+	"health_bar_mode": VisualSettings.HealthBarMode.DAMAGED_ONLY,
+	"colorblind": false,
 }
 
 ## Đổi được (vd test dùng file riêng để không ghi đè tiến độ thật).
@@ -121,6 +126,7 @@ func apply_settings() -> void:
 ## Cài đặt nào cần tác động trực tiếp lên engine thì xử lý ở đây; những cài đặt khác
 ## (số sát thương, rung màn hình) do hệ thống liên quan tự đọc qua get_setting().
 func _apply_setting(key: String, value: Variant) -> void:
+	VisualSettings.apply(key, value)
 	match key:
 		"master_volume":
 			AudioServer.set_bus_volume_db(0, linear_to_db(maxf(float(value), 0.0001)))

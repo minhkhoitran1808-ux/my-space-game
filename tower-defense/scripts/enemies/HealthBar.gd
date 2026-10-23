@@ -13,12 +13,18 @@ extends Node2D
 ## - Là node riêng nên KHÔNG bị nén/giãn theo hiệu ứng trúng đòn của thân địch,
 ##   và z_index cao để luôn nằm trên mọi địch khác.
 ##
+## Tôn trọng cài đặt hiển thị: chế độ thanh máu (khi bị thương / luôn hiện / tắt),
+## bảng màu cho người mù màu, giảm chuyển động (vệt sát thương biến mất ngay).
+##
 ## Hiệu năng: chỉ vẽ lại khi máu đổi; _process chỉ chạy trong lúc đang fade / rút vệt
 ## (tự tắt khi xong), nên hàng trăm thanh máu đứng yên gần như không tốn gì.
 
 const COLOR_HIGH := Color("4ADE50")
 const COLOR_MID := Color("FACC15")
 const COLOR_LOW := Color("EF4444")
+## Bảng màu cho người mù màu đỏ - lục: xanh dương / vàng / cam đậm.
+const COLOR_HIGH_COLORBLIND := Color("3B82F6")
+const COLOR_LOW_COLORBLIND := Color("F97316")
 const COLOR_TRAIL := Color(1.0, 1.0, 1.0, 0.85)
 const COLOR_BACKGROUND := Color(0.102, 0.102, 0.102, 0.8)
 const COLOR_BORDER := Color(0.0, 0.0, 0.0, 0.9)
@@ -59,7 +65,8 @@ var _alpha := 0.0
 
 func _ready() -> void:
 	set_process(false)
-	_apply_alpha(1.0 if always_visible else 0.0)
+	_apply_alpha(_target_alpha())
+	SaveManager.settings_changed.connect(_on_settings_changed)
 
 
 ## Gắn thanh máu vào một địch: tự tính kích thước / vị trí theo EnemyData
@@ -79,7 +86,7 @@ func track(enemy: Enemy) -> void:
 	position = Vector2(0.0, -roundf(body_top + GAP_ABOVE_BODY + bar_size.y))
 	enemy.health_changed.connect(set_health)
 	set_health(enemy.health, enemy.max_health, false)
-	_apply_alpha(1.0 if always_visible else 0.0)
+	_apply_alpha(_target_alpha())
 
 
 ## Cập nhật máu. animate = false: nhảy thẳng tới giá trị mới (không vệt, không fade).
@@ -90,7 +97,7 @@ func set_health(current: float, maximum: float, animate := true) -> void:
 		trail_ratio = maxf(trail_ratio, ratio)
 		_trail_hold = TRAIL_HOLD_TIME
 	ratio = new_ratio
-	if not animate:
+	if not animate or VisualSettings.reduced_motion:
 		trail_ratio = ratio
 	trail_ratio = maxf(trail_ratio, ratio)
 	queue_redraw()
@@ -102,17 +109,33 @@ func is_shown() -> bool:
 	return _target_alpha() > 0.0
 
 
-## Màu phần ruột theo tỉ lệ máu (đổi theo ngưỡng).
+## Màu phần ruột theo tỉ lệ máu (đổi theo ngưỡng, theo bảng màu đang chọn).
 static func color_for_ratio(value: float) -> Color:
 	if value <= THRESHOLD_LOW:
-		return COLOR_LOW
+		return COLOR_LOW_COLORBLIND if VisualSettings.colorblind else COLOR_LOW
 	if value <= THRESHOLD_MID:
 		return COLOR_MID
-	return COLOR_HIGH
+	return COLOR_HIGH_COLORBLIND if VisualSettings.colorblind else COLOR_HIGH
 
 
 func _target_alpha() -> float:
-	return 1.0 if always_visible or ratio < 1.0 else 0.0
+	if always_visible:
+		return 1.0 # Boss: luôn hiện, kể cả khi tắt thanh máu địch thường.
+	match VisualSettings.health_bar_mode:
+		VisualSettings.HealthBarMode.ALWAYS:
+			return 1.0
+		VisualSettings.HealthBarMode.OFF:
+			return 0.0
+		_:
+			return 1.0 if ratio < 1.0 else 0.0
+
+
+func _on_settings_changed(key: String, _value: Variant) -> void:
+	if key in ["health_bar_mode", "colorblind", "reduced_motion"]:
+		if VisualSettings.reduced_motion:
+			trail_ratio = ratio
+		queue_redraw()
+		_wake()
 
 
 ## Bật _process nếu còn việc phải làm (fade hoặc rút vệt).

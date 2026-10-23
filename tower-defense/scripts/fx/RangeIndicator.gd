@@ -10,6 +10,9 @@ extends Node2D
 ## nằm ở node con "_stroke" có z_index = 1 nên luôn nổi trên địch / đạn. Nhờ vậy fill
 ## không làm mờ địch mà ranh giới thì không bao giờ bị che.
 ##
+## Giảm chuyển động (VisualSettings.reduced_motion): bỏ phóng to khi xuất hiện, bỏ nhịp sáng
+## và bỏ xoay viền đứt nét; trạng thái vẫn phân biệt bằng màu + kiểu nét như thường.
+##
 ## Chỉ vẽ lại khi có thay đổi (đổi trạng thái / bán kính / đang chạy animation),
 ## không vẽ lại mỗi frame khi đứng yên.
 
@@ -75,8 +78,10 @@ func show_ring(new_state: State, new_radius: float) -> void:
 		visible = true
 		_kill(_appear_tween)
 		_appear_tween = create_tween().set_parallel()
-		_appear_tween.tween_property(self, "scale", Vector2.ONE, APPEAR_TIME).from(Vector2.ONE * 0.85) \
-				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		scale = Vector2.ONE
+		if not VisualSettings.reduced_motion:
+			_appear_tween.tween_property(self, "scale", Vector2.ONE, APPEAR_TIME).from(Vector2.ONE * 0.85) \
+					.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		_appear_tween.tween_property(self, "modulate:a", 1.0, APPEAR_TIME).from(0.0)
 
 
@@ -115,11 +120,11 @@ func set_state(new_state: State, animate: bool = true) -> void:
 	# Pulse rất nhẹ chỉ cho SELECTED; viền đứt nét thì xoay chậm.
 	_kill(_pulse_tween)
 	_pulse = 1.0
-	if new_state == State.SELECTED:
+	if new_state == State.SELECTED and not VisualSettings.reduced_motion:
 		_pulse_tween = create_tween().set_loops()
 		_pulse_tween.tween_method(_set_pulse, 1.0, 0.75, PULSE_PERIOD * 0.5).set_trans(Tween.TRANS_SINE)
 		_pulse_tween.tween_method(_set_pulse, 0.75, 1.0, PULSE_PERIOD * 0.5).set_trans(Tween.TRANS_SINE)
-	set_process(_to_style.dashed)
+	set_process(_to_style.dashed and not VisualSettings.reduced_motion)
 	_redraw()
 
 

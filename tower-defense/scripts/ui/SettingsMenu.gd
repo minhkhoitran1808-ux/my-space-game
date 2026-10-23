@@ -1,6 +1,7 @@
 class_name SettingsMenu
 extends Control
-## Bảng cài đặt: âm lượng, số sát thương, rung màn hình, toàn màn hình, xem lại hướng dẫn.
+## Bảng cài đặt: âm lượng, số sát thương, rung màn hình, toàn màn hình, xem lại hướng dẫn,
+## và nhóm hiển thị / hỗ trợ (nháy khi trúng đòn, thanh máu, giảm chuyển động, màu mù màu).
 ## Dùng chung cho menu chính và menu tạm dừng. Mọi thay đổi được lưu ngay qua SaveManager.
 ## Chạy cả khi game đang pause (process_mode = ALWAYS trong scene).
 
@@ -11,6 +12,10 @@ signal closed
 @onready var damage_numbers_check: CheckBox = %DamageNumbersCheck
 @onready var screen_shake_check: CheckBox = %ScreenShakeCheck
 @onready var fullscreen_check: CheckBox = %FullscreenCheck
+@onready var hit_flash_option: OptionButton = %HitFlashOption
+@onready var health_bar_option: OptionButton = %HealthBarOption
+@onready var reduced_motion_check: CheckBox = %ReducedMotionCheck
+@onready var colorblind_check: CheckBox = %ColorblindCheck
 @onready var tutorial_button: Button = %TutorialButton
 @onready var close_button: Button = %CloseButton
 
@@ -20,6 +25,14 @@ func _ready() -> void:
 	damage_numbers_check.toggled.connect(func(on: bool) -> void: SaveManager.set_setting("damage_numbers", on))
 	screen_shake_check.toggled.connect(func(on: bool) -> void: SaveManager.set_setting("screen_shake", on))
 	fullscreen_check.toggled.connect(func(on: bool) -> void: SaveManager.set_setting("fullscreen", on))
+	for item in VisualSettings.HIT_FLASH_NAMES:
+		hit_flash_option.add_item(item)
+	for item in VisualSettings.HEALTH_BAR_NAMES:
+		health_bar_option.add_item(item)
+	hit_flash_option.item_selected.connect(func(index: int) -> void: SaveManager.set_setting("hit_flash", index))
+	health_bar_option.item_selected.connect(func(index: int) -> void: SaveManager.set_setting("health_bar_mode", index))
+	reduced_motion_check.toggled.connect(func(on: bool) -> void: SaveManager.set_setting("reduced_motion", on))
+	colorblind_check.toggled.connect(func(on: bool) -> void: SaveManager.set_setting("colorblind", on))
 	tutorial_button.pressed.connect(_on_tutorial_reset)
 	close_button.pressed.connect(close)
 	hide()
@@ -32,6 +45,10 @@ func open() -> void:
 	damage_numbers_check.set_pressed_no_signal(SaveManager.get_setting("damage_numbers"))
 	screen_shake_check.set_pressed_no_signal(SaveManager.get_setting("screen_shake"))
 	fullscreen_check.set_pressed_no_signal(SaveManager.get_setting("fullscreen"))
+	hit_flash_option.select(int(SaveManager.get_setting("hit_flash")))
+	health_bar_option.select(int(SaveManager.get_setting("health_bar_mode")))
+	reduced_motion_check.set_pressed_no_signal(SaveManager.get_setting("reduced_motion"))
+	colorblind_check.set_pressed_no_signal(SaveManager.get_setting("colorblind"))
 	tutorial_button.disabled = not SaveManager.get_flag(TutorialManager.DONE_FLAG)
 	show()
 

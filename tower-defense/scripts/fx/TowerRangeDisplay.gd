@@ -144,16 +144,17 @@ func _on_tower_upgraded(tower: Tower) -> void:
 ## Đặt thành công: tháp "đáp đất" (squash), sóng vòng lan tới đúng tầm bắn, bụi, "-giá".
 ## Chỉ là trình diễn: tiền đã trừ và tháp đã hoạt động ngay từ trước, không khoá input.
 func _on_tower_placed(tower: Tower) -> void:
-	var squash := tower.create_tween()
-	squash.tween_property(tower, "scale", SQUASH_SCALE, 0.06)
-	squash.tween_property(tower, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
-	_add_effect({"kind": "shockwave", "position": tower.position, "radius": tower.data.attack_range,
-			"life": SHOCKWAVE_TIME})
-	for i in 10:
-		var direction := Vector2.from_angle(TAU * i / 10.0 + randf_range(-0.25, 0.25))
-		_add_effect({"kind": "dust", "position": tower.position + direction * 16.0,
-				"velocity": direction * randf_range(40.0, 90.0), "life": DUST_TIME})
+	# Giảm chuyển động: bỏ squash, sóng lan và bụi; chỉ giữ chữ "-giá".
+	if not VisualSettings.reduced_motion:
+		var squash := tower.create_tween()
+		squash.tween_property(tower, "scale", SQUASH_SCALE, 0.06)
+		squash.tween_property(tower, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_add_effect({"kind": "shockwave", "position": tower.position, "radius": tower.data.attack_range,
+				"life": SHOCKWAVE_TIME})
+		for i in 10:
+			var direction := Vector2.from_angle(TAU * i / 10.0 + randf_range(-0.25, 0.25))
+			_add_effect({"kind": "dust", "position": tower.position + direction * 16.0,
+					"velocity": direction * randf_range(40.0, 90.0), "life": DUST_TIME})
 	_add_effect({"kind": "text", "position": tower.position + Vector2(0, -34), "text": "-%d" % tower.data.cost,
 			"color": Color("#FFC72C"), "life": COST_TIME, "size": 16})
 
@@ -167,9 +168,10 @@ func _on_placement_failed(reason: String) -> void:
 		return
 	if _shake_tween and _shake_tween.is_valid():
 		_shake_tween.kill()
-	_shake_tween = create_tween()
-	for offset in [SHAKE_PIXELS, -SHAKE_PIXELS, SHAKE_PIXELS, -SHAKE_PIXELS, SHAKE_PIXELS * 0.5, 0.0]:
-		_shake_tween.tween_method(_set_ghost_offset, _ghost_offset, offset, SHAKE_TIME / 6.0)
+	if not VisualSettings.reduced_motion:
+		_shake_tween = create_tween()
+		for offset in [SHAKE_PIXELS, -SHAKE_PIXELS, SHAKE_PIXELS, -SHAKE_PIXELS, SHAKE_PIXELS * 0.5, 0.0]:
+			_shake_tween.tween_method(_set_ghost_offset, _ghost_offset, offset, SHAKE_TIME / 6.0)
 	_add_effect({"kind": "text", "position": GameConfig.cell_to_world(_hover_cell) + Vector2(0, -44),
 			"text": reason, "color": Color.WHITE, "life": REASON_TIME, "size": 15})
 

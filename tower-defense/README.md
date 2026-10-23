@@ -123,6 +123,19 @@ không đụng tới máu, tốc độ hay việc chết / chạm nhà.
   Tối đa 3 lần nháy / giây mỗi địch; thiêu đốt (sát thương theo thời gian) không nháy; Boss giật nhẹ hơn.
 - Hiệu năng: cả hai chỉ chạy `_process` trong lúc có hiệu ứng rồi tự tắt; thanh máu chỉ vẽ lại khi máu đổi.
 
+## Cài đặt hiển thị và hỗ trợ người chơi
+
+Menu Cài đặt có nhóm "Hiển thị & hỗ trợ", lưu trong `user://save.cfg` và áp dụng ngay (kể cả giữa trận):
+
+| Cài đặt | Giá trị | Ảnh hưởng |
+|---|---|---|
+| Nháy khi địch trúng đòn | Đầy đủ / Nhẹ (35%) / Tắt | `HitFeedback` |
+| Thanh máu địch | Khi bị thương / Luôn hiện / Tắt (Boss luôn hiện) | `HealthBar` |
+| Giảm chuyển động | bật / tắt | tắt giật thân địch, vệt máu rút dần, rung màn hình, xoay / nhịp vòng tầm bắn, rung ghost, squash + sóng lan khi đặt tháp, nảy / rung nút HUD |
+| Màu cho người mù màu | bật / tắt | thanh máu xanh dương / vàng / cam thay cho xanh lá / vàng / đỏ |
+
+Giá trị được giữ ở biến static trong `scripts/core/VisualSettings.gd` (SaveManager cập nhật), nên hiệu ứng chạy mỗi frame đọc thẳng mà không tra file.
+
 ## Kiến trúc
 
 ```

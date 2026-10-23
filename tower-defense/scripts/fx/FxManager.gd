@@ -100,7 +100,7 @@ func play_ability(ability: AbilityData, cast_position: Vector2) -> void:
 
 ## Rung màn hình (cộng dồn, tự giảm dần).
 func shake(strength: float) -> void:
-	if screen_shake:
+	if screen_shake and not VisualSettings.reduced_motion:
 		_shake_strength = minf(_shake_strength + strength, 16.0)
 
 
