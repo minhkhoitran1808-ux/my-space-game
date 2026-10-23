@@ -56,11 +56,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 
-[node name="TowerButtons" type="HBoxContainer" parent="TopBar/Margin/HBox"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/separation = 8
-
 [node name="StartWaveButton" type="Button" parent="TopBar/Margin/HBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(240, 0)
@@ -68,19 +63,45 @@ layout_mode = 2
 focus_mode = 0
 text = "Bắt đầu Wave 1"
 
-[node name="HintLabel" type="Label" parent="."]
+[node name="BottomBar" type="PanelContainer" parent="."]
 layout_mode = 1
-anchors_preset = 2
+anchors_preset = 12
 anchor_top = 1.0
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 12.0
-offset_top = -26.0
-offset_right = 900.0
-offset_bottom = -4.0
+offset_top = -80.0
+grow_horizontal = 2
 grow_vertical = 0
-theme_override_colors/font_color = Color(1, 1, 1, 0.75)
-theme_override_font_sizes/font_size = 14
-text = "Chuột trái: đặt tháp  |  Chuột phải / Esc: huỷ  |  1-9: chọn tháp  |  Space: bắt đầu wave  |  Click tháp: xem tầm bắn"
+
+[node name="Margin" type="MarginContainer" parent="BottomBar"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 8
+
+[node name="HBox" type="HBoxContainer" parent="BottomBar/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TowerButtons" type="HBoxContainer" parent="BottomBar/Margin/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Spacer" type="Control" parent="BottomBar/Margin/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="HintLabel" type="Label" parent="BottomBar/Margin/HBox"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(1, 1, 1, 0.7)
+theme_override_font_sizes/font_size = 13
+text = "Chuột trái: đặt tháp  ·  Chuột phải / Esc: huỷ
+Space: bắt đầu wave  ·  Click tháp: xem tầm bắn"
+horizontal_alignment = 2
 
 [node name="MessageLabel" type="Label" parent="."]
 unique_name_in_owner = true
@@ -91,9 +112,9 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -320.0
-offset_top = -72.0
+offset_top = -124.0
 offset_right = 320.0
-offset_bottom = -40.0
+offset_bottom = -92.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)

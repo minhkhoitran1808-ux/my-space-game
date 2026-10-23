@@ -1,9 +1,10 @@
 class_name Tower
 extends Node2D
-## Tháp cơ bản: tự chọn mục tiêu trong tầm và gây sát thương tức thời (hitscan).
+## Tháp: tự chọn mục tiêu trong tầm rồi tấn công theo TowerData.
 ##
-## Chưa có đạn bay: mỗi phát bắn trừ máu ngay và vẽ một tia sáng ngắn để thấy được.
-## Sau này muốn có đạn, chỉ cần thay nội dung hàm _shoot().
+## - HITSCAN: trúng ngay, vẽ một tia sáng ngắn.
+## - PROJECTILE: bắn ra một Projectile bay đuổi theo mục tiêu.
+## Cả hai kiểu đều dùng Combat.apply_hit() nên nổ lan / hiệu ứng hoạt động giống nhau.
 
 ## Phát ra mỗi lần bắn.
 signal fired(target: Enemy, damage: float)
@@ -16,6 +17,7 @@ enum TargetMode {
 	STRONGEST, ## Địch còn nhiều máu nhất.
 }
 
+const DEFAULT_PROJECTILE := preload("res://scenes/projectiles/Projectile.tscn")
 const BASE_SIZE := 44.0
 const BARREL_LENGTH := 24.0
 const SHOT_VISUAL_TIME := 0.08
@@ -26,6 +28,8 @@ const AIM_SPEED := 15.0
 
 ## Mục tiêu hiện tại (null nếu không có địch trong tầm).
 var target: Enemy = null
+## Node chứa đạn bắn ra (BuildManager gán). Để trống thì dùng node cha của tháp.
+var projectile_container: Node = null
 ## Bật để vẽ vòng tròn tầm bắn (khi người chơi chọn tháp).
 var show_range := false:
 	set(value):
@@ -90,10 +94,26 @@ func _score_target(enemy: Enemy) -> float:
 
 func _shoot(enemy: Enemy) -> void:
 	_cooldown = 1.0 / data.fire_rate
-	_shot_timer = SHOT_VISUAL_TIME
-	_last_shot_position = enemy.global_position
+	var info := DamageInfo.new(data.damage, data.damage_type, self)
+	info.effects = data.on_hit_effects
 	fired.emit(enemy, data.damage)
-	enemy.take_damage(data.damage)
+
+	match data.attack_type:
+		TowerData.AttackType.PROJECTILE:
+			_spawn_projectile(enemy, info)
+		_:
+			_shot_timer = SHOT_VISUAL_TIME
+			_last_shot_position = enemy.global_position
+			Combat.apply_hit(enemy, enemy.global_position, info, data.splash_radius, get_tree())
+
+
+func _spawn_projectile(enemy: Enemy, info: DamageInfo) -> void:
+	var scene := data.projectile_scene if data.projectile_scene else DEFAULT_PROJECTILE
+	var projectile := scene.instantiate() as Projectile
+	projectile.setup(enemy, info, data.projectile_speed, data.splash_radius, data.color.lightened(0.3))
+	var container := projectile_container if projectile_container else get_parent()
+	container.add_child(projectile)
+	projectile.global_position = global_position + Vector2.from_angle(_aim_angle) * BARREL_LENGTH
 
 
 # --- Hiển thị tạm (chưa có sprite) ---------------------------------------------
@@ -103,15 +123,19 @@ func _draw() -> void:
 		draw_circle(Vector2.ZERO, data.attack_range, Color(data.color, 0.08))
 		draw_arc(Vector2.ZERO, data.attack_range, 0.0, TAU, 64, Color(data.color, 0.6), 2.0)
 
-	# Đế tháp + thân + nòng súng.
+	# Đế tháp + thân + nòng súng (nòng to hơn với tháp nổ lan).
 	var half := BASE_SIZE * 0.5
 	draw_rect(Rect2(-half, -half, BASE_SIZE, BASE_SIZE), Color(0.25, 0.27, 0.32))
 	draw_rect(Rect2(-half, -half, BASE_SIZE, BASE_SIZE), Color(0.1, 0.1, 0.12), false, 2.0)
 	draw_circle(Vector2.ZERO, 14.0, data.color)
 	var barrel_tip := Vector2.from_angle(_aim_angle) * BARREL_LENGTH
-	draw_line(Vector2.ZERO, barrel_tip, data.color.darkened(0.3), 7.0)
+	var barrel_width := 11.0 if data.splash_radius > 0.0 else 7.0
+	draw_line(Vector2.ZERO, barrel_tip, data.color.darkened(0.3), barrel_width)
 
-	# Tia bắn tức thời.
+	# Tia bắn tức thời (chỉ với HITSCAN).
 	if _shot_timer > 0.0:
 		var alpha := _shot_timer / SHOT_VISUAL_TIME
-		draw_line(barrel_tip, to_local(_last_shot_position), Color(1.0, 0.95, 0.5, alpha), 3.0)
+		var beam_end := to_local(_last_shot_position)
+		draw_line(barrel_tip, beam_end, Color(data.color.lightened(0.5), alpha), 3.0)
+		if data.splash_radius > 0.0:
+			draw_arc(beam_end, data.splash_radius, 0.0, TAU, 24, Color(data.color, alpha * 0.8), 2.0)

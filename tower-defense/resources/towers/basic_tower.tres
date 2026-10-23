@@ -5,11 +5,14 @@
 
 [resource]
 script = ExtResource("1_data")
-id = &"basic"
-display_name = "Tháp cơ bản"
+id = &"archer"
+display_name = "Cung thủ"
 cost = 50
-damage = 20.0
-fire_rate = 1.5
+attack_type = 1
+damage_type = 0
+damage = 18.0
+fire_rate = 1.6
 attack_range = 160.0
+projectile_speed = 650.0
 color = Color(0.3, 0.6, 1, 1)
 scene = ExtResource("2_scene")

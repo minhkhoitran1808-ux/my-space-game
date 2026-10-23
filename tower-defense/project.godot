@@ -13,7 +13,7 @@ config_version=5
 config/name="Tower Defense"
 config/description="Tower Defense 2D - khung project Godot 4"
 run/main_scene="res://scenes/main/Main.tscn"
-config/features=PackedStringArray("4.3", "GL Compatibility")
+config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [autoload]
 

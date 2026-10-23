@@ -49,7 +49,10 @@ func setup_tower_buttons(towers: Array[TowerData]) -> void:
 	for i in towers.size():
 		var tower_data := towers[i]
 		var button := Button.new()
-		button.text = "[%d] %s - %dg" % [i + 1, tower_data.display_name, tower_data.cost]
+		button.text = "[%d] %s\n%d vàng" % [i + 1, tower_data.display_name, tower_data.cost]
+		button.icon = _make_color_icon(tower_data.color)
+		button.custom_minimum_size = Vector2(150, 0)
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.toggle_mode = true
 		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(tower_selected.emit.bind(tower_data))
@@ -89,6 +92,17 @@ func show_game_over(victory: bool) -> void:
 	result_label.text = "CHIẾN THẮNG!" if victory else "THẤT BẠI!"
 	result_label.modulate = Color(0.5, 1.0, 0.5) if victory else Color(1.0, 0.4, 0.4)
 	game_over_panel.show()
+
+
+## Tạo icon tròn đơn sắc cho nút tháp (tạm thời, thay bằng sprite khi có asset).
+func _make_color_icon(color: Color, size: int = 22) -> Texture2D:
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var center := Vector2(size, size) * 0.5
+	for y in size:
+		for x in size:
+			if Vector2(x + 0.5, y + 0.5).distance_to(center) <= size * 0.5 - 1.0:
+				image.set_pixel(x, y, color)
+	return ImageTexture.create_from_image(image)
 
 
 func _update_tower_buttons() -> void:

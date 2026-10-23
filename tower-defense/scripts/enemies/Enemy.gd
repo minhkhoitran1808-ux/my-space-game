@@ -1,6 +1,6 @@
 class_name Enemy
 extends PathFollow2D
-## Địch cơ bản: chạy dọc theo Path2D cha.
+## Địch: chạy dọc theo Path2D cha, nhận sát thương có tính kháng, dính hiệu ứng.
 ##
 ## PathFollow2D bắt buộc phải là con TRỰC TIẾP của Path2D, vì vậy WaveManager
 ## spawn địch vào node Enemies/EnemyPath. Mọi chỉ số đọc từ EnemyData.
@@ -13,29 +13,39 @@ signal died(enemy: Enemy, reward: int)
 signal reached_end(enemy: Enemy, damage: int)
 ## Phát ra mỗi khi máu thay đổi.
 signal health_changed(current: float, maximum: float)
+## Phát ra mỗi lần trúng đòn, với lượng sát thương THỰC (sau kháng).
+signal damaged(enemy: Enemy, amount: float, info: DamageInfo)
 
 ## Tên group để tháp tìm mục tiêu.
 const GROUP := &"enemies"
-const HEALTH_BAR_SIZE := Vector2(34, 5)
+const HEALTH_BAR_HEIGHT := 5.0
 const HIT_FLASH_TIME := 0.1
 
 @export var data: EnemyData
 
 var max_health: float = 0.0
 var health: float = 0.0
-var speed: float = 0.0
+## Tốc độ gốc (chưa tính làm chậm).
+var base_speed: float = 0.0
+## Hệ số máu của wave, để địch con sinh ra khi chết cũng mạnh tương ứng.
+var health_multiplier: float = 1.0
+## Node gây đòn cuối cùng (dùng cho thống kê của tháp).
+var last_damage_source: Node = null
 
 var _is_dead := false
 var _path_length := 0.0
 var _hit_flash := 0.0
 
+@onready var status_effects: StatusEffectHandler = $StatusEffects
+
 
 ## Gán dữ liệu trước khi add_child(). Hệ số nhân cho phép wave sau mạnh hơn.
-func setup(enemy_data: EnemyData, health_multiplier: float = 1.0, speed_multiplier: float = 1.0) -> void:
+func setup(enemy_data: EnemyData, p_health_multiplier: float = 1.0, speed_multiplier: float = 1.0) -> void:
 	data = enemy_data
-	max_health = data.max_health * health_multiplier
+	health_multiplier = p_health_multiplier
+	max_health = data.max_health * p_health_multiplier
 	health = max_health
-	speed = data.speed * speed_multiplier
+	base_speed = data.speed * speed_multiplier
 
 
 func _ready() -> void:
@@ -45,6 +55,7 @@ func _ready() -> void:
 	loop = false
 	rotates = false
 	add_to_group(GROUP)
+	status_effects.effects_changed.connect(queue_redraw)
 
 	var path := get_parent() as Path2D
 	assert(path != null and path.curve != null, "Enemy phải là con trực tiếp của một Path2D có Curve2D.")
@@ -55,7 +66,7 @@ func _process(delta: float) -> void:
 	if _is_dead:
 		return
 
-	progress += speed * delta
+	progress += get_current_speed() * delta
 	if progress >= _path_length - 0.01:
 		_reach_end()
 		return
@@ -65,20 +76,34 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 
+## Tốc độ thực tế (đã tính làm chậm).
+func get_current_speed() -> float:
+	return base_speed * status_effects.get_speed_multiplier()
+
+
 ## Còn sống và còn trong scene (queue_free chỉ xoá vào cuối frame).
 func is_alive() -> bool:
 	return not _is_dead and is_inside_tree()
 
 
-func take_damage(amount: float) -> void:
+## Nhận một đòn đánh. Trả về lượng sát thương thực sự gây ra (sau kháng).
+func take_damage(info: DamageInfo) -> float:
 	if _is_dead:
-		return
+		return 0.0
+
+	var amount := info.amount * (1.0 - data.get_resistance(info.type))
 	health = maxf(health - amount, 0.0)
+	last_damage_source = info.source
 	_hit_flash = HIT_FLASH_TIME
+	for effect in info.effects:
+		status_effects.apply(effect, info.source)
+
 	health_changed.emit(health, max_health)
+	damaged.emit(self, amount, info)
 	queue_redraw()
 	if health <= 0.0:
 		_die()
+	return amount
 
 
 func _die() -> void:
@@ -96,14 +121,38 @@ func _reach_end() -> void:
 # --- Hiển thị tạm (chưa có sprite) ---------------------------------------------
 
 func _draw() -> void:
+	var r := data.radius
 	var body_color := data.color.lerp(Color.WHITE, _hit_flash / HIT_FLASH_TIME)
-	draw_circle(Vector2.ZERO, data.radius, body_color)
-	draw_arc(Vector2.ZERO, data.radius, 0.0, TAU, 32, data.color.darkened(0.5), 2.0)
+	var outline := data.color.darkened(0.5)
+
+	# Vòng sáng hiệu ứng (làm chậm = xanh, thiêu đốt = cam...).
+	var ring := r + 4.0
+	for tint in status_effects.get_tints():
+		draw_arc(Vector2.ZERO, ring, 0.0, TAU, 24, tint, 3.0)
+		ring += 4.0
+
+	match data.shape:
+		EnemyData.Shape.SQUARE:
+			draw_rect(Rect2(-r, -r, r * 2.0, r * 2.0), body_color)
+			draw_rect(Rect2(-r, -r, r * 2.0, r * 2.0), outline, false, 2.0)
+		EnemyData.Shape.TRIANGLE:
+			var tri := PackedVector2Array([Vector2(0, -r), Vector2(r, r * 0.8), Vector2(-r, r * 0.8)])
+			draw_colored_polygon(tri, body_color)
+			tri.append(tri[0])
+			draw_polyline(tri, outline, 2.0)
+		EnemyData.Shape.DIAMOND:
+			var dia := PackedVector2Array([Vector2(0, -r), Vector2(r, 0), Vector2(0, r), Vector2(-r, 0)])
+			draw_colored_polygon(dia, body_color)
+			dia.append(dia[0])
+			draw_polyline(dia, outline, 2.0)
+		_:
+			draw_circle(Vector2.ZERO, r, body_color)
+			draw_arc(Vector2.ZERO, r, 0.0, TAU, 32, outline, 2.0)
 
 	# Thanh máu (chỉ hiện khi đã bị bắn).
 	if health < max_health:
-		var bar_pos := Vector2(-HEALTH_BAR_SIZE.x * 0.5, -data.radius - 10.0)
+		var bar_size := Vector2(maxf(r * 2.4, 24.0), HEALTH_BAR_HEIGHT)
+		var bar_pos := Vector2(-bar_size.x * 0.5, -r - 10.0)
 		var ratio := health / max_health
-		draw_rect(Rect2(bar_pos, HEALTH_BAR_SIZE), Color(0, 0, 0, 0.7))
-		draw_rect(Rect2(bar_pos, Vector2(HEALTH_BAR_SIZE.x * ratio, HEALTH_BAR_SIZE.y)),
-				Color.RED.lerp(Color.GREEN, ratio))
+		draw_rect(Rect2(bar_pos, bar_size), Color(0, 0, 0, 0.7))
+		draw_rect(Rect2(bar_pos, Vector2(bar_size.x * ratio, bar_size.y)), Color.RED.lerp(Color.GREEN, ratio))

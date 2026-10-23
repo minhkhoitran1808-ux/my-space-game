@@ -18,7 +18,7 @@ signal state_changed(state: GameState)
 
 enum GameState { PLAYING, VICTORY, DEFEAT }
 
-const STARTING_GOLD := 150
+const STARTING_GOLD := 200
 const STARTING_LIVES := 20
 
 var gold: int = STARTING_GOLD: set = _set_gold

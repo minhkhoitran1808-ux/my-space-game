@@ -16,6 +16,8 @@ signal tower_placed(tower: Tower)
 signal placement_failed(reason: String)
 
 @export var tower_container: Node2D
+## Node chứa đạn do tháp bắn ra (vẽ phía trên địch).
+@export var projectile_container: Node2D
 @export var enemy_path: Path2D
 ## Danh sách tháp người chơi được xây (thứ tự = phím tắt 1, 2, 3...).
 @export var available_towers: Array[TowerData] = []
@@ -69,6 +71,7 @@ func try_place_tower(cell: Vector2i) -> Tower:
 
 	var tower := tower_data.scene.instantiate() as Tower
 	tower.data = tower_data
+	tower.projectile_container = projectile_container
 	tower.position = GameConfig.cell_to_world(cell)
 	tower_container.add_child(tower)
 	_occupied_cells[cell] = tower

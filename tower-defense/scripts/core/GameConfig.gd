@@ -6,8 +6,8 @@ extends RefCounted
 
 ## Kích thước một ô lưới (pixel). Mỗi tháp chiếm đúng 1 ô.
 const CELL_SIZE := 64
-## Vùng được phép xây tháp (chừa hàng trên cùng cho thanh UI).
-const BUILD_AREA := Rect2(0, 64, 1280, 640)
+## Vùng được phép xây tháp (chừa hàng trên cùng và dải dưới cùng cho thanh UI).
+const BUILD_AREA := Rect2(0, 64, 1280, 576)
 ## Bề rộng đường đi khi vẽ.
 const PATH_WIDTH := 48.0
 ## Tâm ô cách đường đi nhỏ hơn khoảng này thì không được xây.

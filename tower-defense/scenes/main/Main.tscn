@@ -1,10 +1,13 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/main/Main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/main/Ground.gd" id="2_ground"]
 [ext_resource type="Script" path="res://scripts/managers/BuildManager.gd" id="3_build"]
 [ext_resource type="Script" path="res://scripts/resources/TowerData.gd" id="4_tower_data"]
 [ext_resource type="Resource" path="res://resources/towers/basic_tower.tres" id="5_basic_tower"]
+[ext_resource type="Resource" path="res://resources/towers/cannon_tower.tres" id="8_cannon_tower"]
+[ext_resource type="Resource" path="res://resources/towers/frost_tower.tres" id="9_frost_tower"]
+[ext_resource type="Resource" path="res://resources/towers/mage_tower.tres" id="10_mage_tower"]
 [ext_resource type="Script" path="res://scripts/managers/WaveManager.gd" id="6_wave"]
 [ext_resource type="PackedScene" path="res://scenes/ui/HUD.tscn" id="7_hud"]
 
@@ -29,11 +32,14 @@ enemy_path = NodePath("../Enemies/EnemyPath")
 [node name="EnemyPath" type="Path2D" parent="Enemies"]
 curve = SubResource("Curve2D_path")
 
-[node name="BuildManager" type="Node2D" parent="." node_paths=PackedStringArray("tower_container", "enemy_path")]
+[node name="Projectiles" type="Node2D" parent="."]
+
+[node name="BuildManager" type="Node2D" parent="." node_paths=PackedStringArray("tower_container", "projectile_container", "enemy_path")]
 script = ExtResource("3_build")
 tower_container = NodePath("../Towers")
+projectile_container = NodePath("../Projectiles")
 enemy_path = NodePath("../Enemies/EnemyPath")
-available_towers = Array[ExtResource("4_tower_data")]([ExtResource("5_basic_tower")])
+available_towers = Array[ExtResource("4_tower_data")]([ExtResource("5_basic_tower"), ExtResource("8_cannon_tower"), ExtResource("9_frost_tower"), ExtResource("10_mage_tower")])
 
 [node name="WaveManager" type="Node" parent="." node_paths=PackedStringArray("enemy_path")]
 script = ExtResource("6_wave")
