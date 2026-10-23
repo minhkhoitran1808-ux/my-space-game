@@ -636,6 +636,9 @@ func _test_terrain_and_unlocks() -> void:
 	var banner_button: Button = main.hud._buttons_by_tower[banner]
 	_check(build.selected_tower_data != banner and banner_button.disabled and banner_button.text.contains("Khoá"),
 			"tháp chưa mở: không chọn được, nút bị khoá")
+	_press_key(KEY_5)
+	_check(build.selected_tower_data != banner and main.hud.message_label.text.contains("Đường rắn"),
+			"phím 5 với tháp khoá: báo màn mở khoá (%s)" % main.hud.message_label.text)
 	_check(not main.hud._buttons_by_tower[build.available_towers[0]].disabled, "tháp cũ luôn mở")
 	await _free_main(main)
 
