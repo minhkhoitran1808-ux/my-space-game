@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="TowerData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/TowerData.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/Tower.tscn" id="2_scene"]
+[ext_resource type="Script" path="res://scripts/resources/StatusEffectData.gd" id="3_effect_script"]
+[ext_resource type="Resource" path="res://resources/effects/stun_short.tres" id="4_effect"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"cannon"
+display_name = "Pháo"
+description = "Đạn chậm nhưng nổ lan, rất mạnh với Bầy chuột đi đông."
+color = Color(0.95, 0.55, 0.2, 1)
+can_hit_air = false
+cost = 260
+level = 4
+branch_name = "Pháo chùm"
+weakness_text = "Sát thương mỗi địch thấp"
+attack_type = 1
+damage_type = 0
+damage = 45.0
+fire_rate = 1.4
+attack_range = 170.0
+splash_radius = 110.0
+armor_pen = 0.5
+projectile_speed = 360.0
+on_hit_effects = Array[ExtResource("3_effect_script")]([ExtResource("4_effect")])
+scene = ExtResource("2_scene")

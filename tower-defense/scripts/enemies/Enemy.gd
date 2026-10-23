@@ -97,6 +97,12 @@ func get_current_speed() -> float:
 	return base_speed * status_effects.get_speed_multiplier()
 
 
+## Quãng đường còn lại tới nhà chính (pixel). Dùng để nhắm "Đầu đoàn" đúng cả khi các làn
+## dài ngắn khác nhau.
+func remaining_distance() -> float:
+	return maxf(_path_length - progress, 0.0)
+
+
 ## Còn sống và còn trong scene (queue_free chỉ xoá vào cuối frame).
 func is_alive() -> bool:
 	return not _is_dead and is_inside_tree()
@@ -107,8 +113,10 @@ func take_damage(info: DamageInfo) -> float:
 	if _is_dead:
 		return 0.0
 
+	# Sau kháng mỗi đòn vẫn gây ít nhất 1 sát thương (giáp cao không làm đòn yếu "vô dụng" hẳn).
 	# Không tính phần sát thương "thừa" vượt quá máu còn lại.
-	var amount := minf(info.amount * (1.0 - data.get_resistance(info.type)), health)
+	var raw := info.amount * (1.0 - data.get_resistance(info.type, info.armor_pen))
+	var amount := minf(maxf(raw, minf(1.0, info.amount)), health)
 	health -= amount
 	last_damage_source = info.source
 	# Báo cho nguồn gây sát thương (thường là Tower) để cộng thống kê.

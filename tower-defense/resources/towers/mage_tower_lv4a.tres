@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="TowerData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/TowerData.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/Tower.tscn" id="2_scene"]
+[ext_resource type="Script" path="res://scripts/resources/StatusEffectData.gd" id="3_effect_script"]
+[ext_resource type="Resource" path="res://resources/effects/burn_3.tres" id="4_effect"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"mage"
+display_name = "Phép"
+description = "Sát thương phép cao kèm thiêu đốt, xuyên giáp Bọc thép."
+color = Color(0.75, 0.4, 1, 1)
+cost = 350
+level = 4
+branch_name = "Tiên tri"
+weakness_text = "Bắn chậm, không nổ lan"
+attack_type = 0
+damage_type = 1
+damage = 260.0
+fire_rate = 0.5
+attack_range = 260.0
+on_hit_effects = Array[ExtResource("3_effect_script")]([ExtResource("4_effect")])
+scene = ExtResource("2_scene")

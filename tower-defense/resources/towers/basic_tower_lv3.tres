@@ -1,7 +1,9 @@
-[gd_resource type="Resource" script_class="TowerData" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="TowerData" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/resources/TowerData.gd" id="1_data"]
 [ext_resource type="PackedScene" path="res://scenes/towers/Tower.tscn" id="2_scene"]
+[ext_resource type="Resource" path="res://resources/towers/basic_tower_lv4a.tres" id="7_branch_a"]
+[ext_resource type="Resource" path="res://resources/towers/basic_tower_lv4b.tres" id="8_branch_b"]
 
 [resource]
 script = ExtResource("1_data")
@@ -17,4 +19,5 @@ fire_rate = 2.1
 attack_range = 190.0
 projectile_speed = 650.0
 color = Color(0.3, 0.6, 1, 1)
+branches = Array[Resource]([ExtResource("7_branch_a"), ExtResource("8_branch_b")])
 scene = ExtResource("2_scene")

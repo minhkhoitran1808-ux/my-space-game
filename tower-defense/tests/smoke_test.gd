@@ -43,6 +43,7 @@ func _ready() -> void:
 
 	await _test_systems()
 	await _test_tower_management()
+	await _test_tower_mechanics()
 	await _test_match_flow()
 	await _test_level_flow()
 	await _test_abilities_and_flying()
@@ -90,7 +91,7 @@ func _test_systems() -> void:
 
 	# Luật đặt tháp
 	var archer: TowerData = build.available_towers[0]
-	_check(build.available_towers.size() == 4, "có 4 loại tháp")
+	_check(build.available_towers.size() == 6, "có 6 loại tháp")
 	_check(build.get_placement_error(Vector2i(3, 2), archer) != "", "không xây được trên đường")
 	_check(build.get_placement_error(Vector2i(5, 0), archer) != "", "không xây được ở thanh UI trên")
 	_check(build.get_placement_error(Vector2i(5, 10), archer) != "", "không xây được ở thanh UI dưới")
@@ -148,7 +149,9 @@ func _test_tower_management() -> void:
 	var cell := Vector2i(4, 4)
 	var tower := build.try_place_tower(cell)
 	_check(tower != null and tower.get_level() == 1, "xây được tháp cấp 1")
-	_check(tower.get_sell_value() == 35, "giá bán = 70%% giá xây (%d)" % tower.get_sell_value())
+	_check(tower.get_sell_value() == 50 and tower.is_refundable_in_full(), "vừa xây (chưa sang wave mới): bán hoàn 100%% = hoàn tác (%d)" % tower.get_sell_value())
+	GameManager.set_current_wave(GameManager.current_wave + 1) # Giả lập một wave mới bắt đầu.
+	_check(tower.get_sell_value() == 35, "sang wave mới: giá bán = 70%% giá xây (%d)" % tower.get_sell_value())
 
 	# Click chuột vào tháp khi đang ở chế độ xây => chọn tháp, thoát chế độ xây.
 	_click(GameConfig.cell_to_world(cell), MOUSE_BUTTON_LEFT)
@@ -166,16 +169,25 @@ func _test_tower_management() -> void:
 	_check(tower.data.damage > 18.0, "cấp 2 mạnh hơn cấp 1")
 	_press_key(KEY_T)
 	_check(tower.target_mode == Tower.TargetMode.LAST, "phím T đổi cách chọn mục tiêu")
+	_check(tower.get_sell_value() == 35 + 60, "nâng cấp trong wave này: phần mới hoàn 100%%, phần cũ 70%% (%d)" % tower.get_sell_value())
 	build.upgrade_tower(tower)
-	_check(tower.get_level() == 3 and not tower.can_upgrade(), "nâng tối đa cấp 3")
+	_check(tower.get_level() == 3 and tower.can_upgrade() and tower.data.branches.size() == 2, "cấp 3: rẽ 2 nhánh cấp 4")
+	panel.show_tower(tower)
+	_check(panel.branch_b_button.visible and panel.upgrade_button.text.contains("Xạ thủ") and panel.branch_b_button.text.contains("Liên xạ"),
+			"bảng tháp hiện 2 nút nhánh")
+	_press_key(KEY_U, true) # Shift+U = nhánh B
+	await get_tree().process_frame
+	_check(tower.get_level() == 4 and tower.data.branch_name == "Liên xạ" and not tower.can_upgrade(), "Shift+U: lên nhánh B (Liên xạ), hết nâng cấp")
 	_check(not build.upgrade_tower(tower), "không nâng quá cấp tối đa")
-	_check(tower.get_sell_value() == int((50 + 60 + 100) * 0.7), "giá bán tính cả tiền nâng cấp (%d)" % tower.get_sell_value())
+	GameManager.set_current_wave(GameManager.current_wave + 1)
+	var invested := 50 + 60 + 100 + 145
+	_check(tower.get_sell_value() == int(invested * 0.7), "giá bán tính cả tiền nâng cấp (%d)" % tower.get_sell_value())
 
 	# Bán: hoàn tiền, giải phóng ô, tự bỏ chọn.
 	gold_before = GameManager.gold
 	var refund := build.sell_tower(tower)
 	await get_tree().process_frame
-	_check(GameManager.gold == gold_before + refund and refund == 147, "bán tháp hoàn 147 vàng")
+	_check(GameManager.gold == gold_before + refund and refund == int(invested * 0.7), "bán tháp hoàn %d vàng" % refund)
 	_check(build.get_tower_at(cell) == null, "bán xong ô trống lại")
 	_check(not selection.has_selection() and not panel.visible, "bán xong thì bỏ chọn, ẩn bảng")
 	build.select_tower(build.available_towers[1])
@@ -191,6 +203,106 @@ func _test_tower_management() -> void:
 	# Tooltip nút xây có mô tả + chỉ số.
 	var tooltip := TowerStats.tooltip(build.available_towers[2])
 	_check(tooltip.contains("Làm chậm") and tooltip.contains("Tầm bắn"), "tooltip có hiệu ứng và chỉ số")
+	await _free_main(main)
+
+
+# --- Phần 1o: cơ chế tháp mới (xuyên giáp, nhắm, Cờ hiệu, Mỏ vàng, nhánh, sóng toả) -----
+
+func _test_tower_mechanics() -> void:
+	print("[1o] Cơ chế tháp")
+	var main := await _new_main()
+	var build: BuildManager = main.build_manager
+	var waves: WaveManager = main.wave_manager
+	var path: Path2D = main.map.get_paths()[0]
+	GameManager.add_gold(5000)
+	var archer_data: TowerData = build.available_towers[0]
+	var banner_data: TowerData = build.available_towers[4]
+	var mine_data: TowerData = build.available_towers[5]
+	_check(banner_data.id == &"banner" and mine_data.id == &"mine" and main.hud._buttons_by_tower.size() == 6, "có Cờ hiệu, Mỏ vàng và 6 nút tháp")
+
+	# Xuyên giáp + sát thương tối thiểu.
+	var armored := _spawn_test_enemy(path, waves.get_enemy_type(&"armored"))
+	var hit := DamageInfo.new(28.0, DamageInfo.Type.PHYSICAL)
+	hit.armor_pen = 0.5
+	_check(is_equal_approx(armored.take_damage(hit), 28.0 * (1.0 - 0.6 * 0.5)), "xuyên giáp 50%%: 28 => 19.6 lên giáp 60%%")
+	_check(is_equal_approx(armored.take_damage(DamageInfo.new(1.0, DamageInfo.Type.PHYSICAL)), 1.0), "mỗi đòn gây ít nhất 1 sát thương")
+	_check(waves.get_enemy_type(&"basic") != null and build.available_towers[1].armor_pen == 0.5, "Pháo xuyên giáp 50%")
+
+	# Nhắm: Đầu đoàn theo quãng đường CÒN LẠI; Yếu nhất / Mạnh nhất theo máu.
+	_choose(build, archer_data)
+	var archer := build.try_place_tower(Vector2i(4, 4))
+	var near_base := _spawn_test_enemy(path, waves.get_enemy_type(&"basic"))
+	var far_away := _spawn_test_enemy(path, waves.get_enemy_type(&"armored"))
+	near_base.progress = 600.0
+	far_away.progress = 200.0
+	archer.target_mode = Tower.TargetMode.FIRST
+	_check(archer._score_target(near_base) > archer._score_target(far_away), "Đầu đoàn: ưu tiên con còn ít đường hơn")
+	archer.target_mode = Tower.TargetMode.WEAKEST
+	_check(archer._score_target(near_base) > archer._score_target(far_away), "Yếu nhất: ưu tiên con ít máu hơn")
+	archer.target_mode = Tower.TargetMode.STRONGEST
+	_check(archer._score_target(far_away) > archer._score_target(near_base), "Mạnh nhất: ưu tiên con nhiều máu hơn")
+	for enemy in [armored, near_base, far_away]:
+		enemy.queue_free()
+
+	# Cờ hiệu: buff tháp trong hào quang, không cộng dồn, bán thì mất buff.
+	_choose(build, banner_data)
+	var banner := build.try_place_tower(Vector2i(5, 4))
+	_check(banner != null and not banner.data.is_attacker(), "Cờ hiệu không tự bắn")
+	_check(is_equal_approx(archer.get_damage_multiplier(), 1.2), "tháp cạnh Cờ hiệu: +20%% sát thương (%.2f)" % archer.get_damage_multiplier())
+	var banner2 := build.try_place_tower(Vector2i(5, 5))
+	_check(is_equal_approx(archer.get_damage_multiplier(), 1.2), "2 Cờ hiệu không cộng dồn")
+	build.upgrade_tower(banner2)
+	_check(is_equal_approx(archer.get_damage_multiplier(), 1.25), "lấy Cờ hiệu mạnh nhất (cấp 2: +25%%)")
+	_check(is_equal_approx(banner.get_damage_multiplier(), 1.0), "Cờ hiệu không tự buff nhau")
+	build.sell_tower(banner)
+	build.sell_tower(banner2)
+	await get_tree().process_frame
+	_check(is_equal_approx(archer.get_damage_multiplier(), 1.0), "bán hết Cờ hiệu: mất buff")
+
+	# Mỏ vàng: +vàng mỗi wave; bán chỉ hoàn 50%.
+	_choose(build, mine_data)
+	var mine := build.try_place_tower(Vector2i(6, 4))
+	var gold_before := GameManager.gold
+	main._on_wave_completed(1, 0)
+	_check(GameManager.gold == gold_before + 20 and main.tracker.gold_from_mines == 20, "hết wave: Mỏ vàng +20 vàng")
+	GameManager.set_current_wave(GameManager.current_wave + 1)
+	_check(mine.get_sell_value() == int(125 * 0.5), "Mỏ vàng bán hoàn 50%% (%d)" % mine.get_sell_value())
+
+	# Nhánh cấp 4 + xem trước tầm bắn theo nhánh.
+	build.upgrade_tower(archer)
+	build.upgrade_tower(archer)
+	main.selection_manager.select(archer)
+	main.tower_info_panel.upgrade_hovered.emit(true, 0)
+	var preview: RangeIndicator = main.range_display.get_upgrade_ring()
+	_check(preview.is_shown() and is_equal_approx(preview.radius, archer_data.next_level.next_level.branches[0].attack_range), "rê chuột nhánh A: xem trước tầm 260")
+	main.tower_info_panel.upgrade_hovered.emit(true, 1)
+	_check(is_equal_approx(preview.radius, 180.0), "rê chuột nhánh B: xem trước tầm 180")
+	main.tower_info_panel.upgrade_requested.emit(0)
+	_check(archer.data.branch_name == "Xạ thủ" and archer.target_mode == Tower.TargetMode.STRONGEST, "lên Xạ thủ: tự đổi sang nhắm Mạnh nhất")
+	for i in 20: # Vòng tầm bắn nở tới bán kính mới trong 0.2s.
+		await get_tree().process_frame
+	_check(is_equal_approx(archer.get_range(), 260.0) and is_equal_approx(main.range_display.get_selection_ring().radius, 260.0),
+			"vòng tầm bắn theo nhánh mới (%.0f)" % main.range_display.get_selection_ring().radius)
+	main.selection_manager.deselect()
+
+	# Sóng toả (Băng nhánh B): trúng mọi địch trong tầm cùng lúc.
+	var frost_data: TowerData = build.available_towers[2]
+	_choose(build, frost_data)
+	var frost := build.try_place_tower(Vector2i(4, 5))
+	build.upgrade_tower(frost)
+	build.upgrade_tower(frost)
+	build.upgrade_tower(frost, 1)
+	_check(frost.data.attack_type == TowerData.AttackType.PULSE, "Băng nhánh B là sóng toả")
+	var victims: Array[Enemy] = []
+	for p in [380.0, 410.0, 440.0]:
+		var victim := _spawn_test_enemy(path, waves.get_enemy_type(&"basic"))
+		victim.progress = p
+		victims.append(victim)
+	await get_tree().process_frame
+	var in_range := victims.filter(func(enemy: Enemy) -> bool: return frost.is_in_range(enemy))
+	frost._shoot(victims[0])
+	_check(in_range.size() >= 2 and in_range.all(func(enemy: Enemy) -> bool:
+			return enemy.health < enemy.max_health and enemy.status_effects.has_effect(&"slow")), "sóng toả: %d địch trong tầm đều trúng + chậm" % in_range.size())
 	await _free_main(main)
 
 
@@ -1317,10 +1429,17 @@ func _move_mouse(position: Vector2) -> void:
 	get_viewport().push_input(event, true)
 
 
-func _press_key(keycode: Key) -> void:
+## Chọn loại tháp để xây (select_tower là bật / tắt nên chỉ gọi khi chưa chọn đúng loại).
+func _choose(build: BuildManager, tower_data: TowerData) -> void:
+	if build.selected_tower_data != tower_data:
+		build.select_tower(tower_data)
+
+
+func _press_key(keycode: Key, shift: bool = false) -> void:
 	var event := InputEventKey.new()
 	event.keycode = keycode
 	event.pressed = true
+	event.shift_pressed = shift
 	get_viewport().push_input(event, true)
 
 

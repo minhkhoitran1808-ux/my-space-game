@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="TowerData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/TowerData.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/Tower.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"mine"
+display_name = "Mỏ vàng"
+description = "Không bắn. Thêm vàng mỗi khi hết một wave; xây sớm mới có lời."
+color = Color(0.7, 0.55, 0.25, 1)
+damage = 0.0
+fire_rate = 0.0
+attack_range = 0.0
+sell_ratio = 0.5
+cost = 150
+gold_per_wave = 55
+level = 3
+scene = ExtResource("2_scene")

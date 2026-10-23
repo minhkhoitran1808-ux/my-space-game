@@ -63,11 +63,11 @@ enum Shape { CIRCLE, SQUARE, TRIANGLE, DIAMOND, BAT, CROSS }
 @export var scene: PackedScene
 
 
-## Tỉ lệ sát thương bị giảm theo loại sát thương.
-func get_resistance(damage_type: DamageInfo.Type) -> float:
+## Tỉ lệ sát thương bị giảm theo loại sát thương (armor_pen: phần giáp vật lý bị bỏ qua).
+func get_resistance(damage_type: DamageInfo.Type, armor_pen: float = 0.0) -> float:
 	match damage_type:
 		DamageInfo.Type.PHYSICAL:
-			return armor
+			return armor * (1.0 - armor_pen)
 		DamageInfo.Type.MAGIC:
 			return magic_resist
 		_:

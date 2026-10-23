@@ -185,6 +185,11 @@ func _on_projectile_impacted(impact_position: Vector2, splash_radius: float) -> 
 	AudioManager.play(&"explosion")
 
 
+## Chữ nổi lên rồi mờ dần tại một vị trí (vd "+20" trên Mỏ vàng).
+func show_text(at: Vector2, text: String, color: Color, size: int = 16) -> void:
+	_add_text(at, text, color, size)
+
+
 func _add_text(at: Vector2, text: String, color: Color, size: int) -> void:
 	_texts.append({
 		"position": at,

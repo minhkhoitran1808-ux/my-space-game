@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="Script" path="res://scripts/main/Main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/main/Ground.gd" id="2_ground"]
@@ -10,6 +10,8 @@
 [ext_resource type="Resource" path="res://resources/towers/cannon_tower.tres" id="8_cannon_tower"]
 [ext_resource type="Resource" path="res://resources/towers/frost_tower.tres" id="9_frost_tower"]
 [ext_resource type="Resource" path="res://resources/towers/mage_tower.tres" id="10_mage_tower"]
+[ext_resource type="Resource" path="res://resources/towers/banner_tower.tres" id="21_banner_tower"]
+[ext_resource type="Resource" path="res://resources/towers/mine_tower.tres" id="22_mine_tower"]
 [ext_resource type="Script" path="res://scripts/managers/SelectionManager.gd" id="11_selection"]
 [ext_resource type="Script" path="res://scripts/fx/FxManager.gd" id="12_fx"]
 [ext_resource type="Script" path="res://scripts/managers/AbilityManager.gd" id="13_ability"]
@@ -46,7 +48,7 @@ camera = NodePath("../Camera2D")
 script = ExtResource("3_build")
 tower_container = NodePath("../Towers")
 projectile_container = NodePath("../Projectiles")
-available_towers = Array[ExtResource("4_tower_data")]([ExtResource("5_basic_tower"), ExtResource("8_cannon_tower"), ExtResource("9_frost_tower"), ExtResource("10_mage_tower")])
+available_towers = Array[ExtResource("4_tower_data")]([ExtResource("5_basic_tower"), ExtResource("8_cannon_tower"), ExtResource("9_frost_tower"), ExtResource("10_mage_tower"), ExtResource("21_banner_tower"), ExtResource("22_mine_tower")])
 
 [node name="SelectionManager" type="Node" parent="." node_paths=PackedStringArray("build_manager")]
 script = ExtResource("11_selection")

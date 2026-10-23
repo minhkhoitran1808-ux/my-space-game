@@ -18,6 +18,8 @@ var towers_built := 0
 var upgrades := 0
 var towers_sold := 0
 var abilities_used := 0
+## Vàng nhận từ Mỏ vàng trong ván.
+var gold_from_mines := 0
 ## Các loại tháp đã từng xây trong ván (id -> true).
 var tower_types: Dictionary = {}
 ## Boss nhanh nhất bị hạ (giây kể từ lúc xuất hiện; INF = chưa hạ Boss nào).
@@ -64,6 +66,7 @@ func build_result(victory: bool, stars: int) -> Dictionary:
 		"upgrades": upgrades,
 		"towers_sold": towers_sold,
 		"abilities_used": abilities_used,
+		"gold_from_mines": gold_from_mines,
 		"fastest_boss_kill": fastest_boss_kill,
 		"duration": elapsed,
 	}

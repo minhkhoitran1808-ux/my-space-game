@@ -22,6 +22,8 @@ var effects: Array[StatusEffectData] = []
 var is_periodic: bool = false
 ## false = đòn đánh mặt đất, nổ lan không trúng địch bay.
 var hits_air: bool = true
+## Bỏ qua bao nhiêu phần giáp vật lý (0..1).
+var armor_pen: float = 0.0
 
 
 func _init(p_amount: float = 0.0, p_type: Type = Type.PHYSICAL, p_source: Node = null) -> void:

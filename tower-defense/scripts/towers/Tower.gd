@@ -1,11 +1,16 @@
 class_name Tower
 extends Node2D
 ## Tháp: tự chọn mục tiêu trong tầm rồi tấn công theo TowerData.
-## Nâng cấp = đổi sang TowerData cấp tiếp theo (data.next_level).
+## Nâng cấp = đổi sang TowerData của cấp sau (data.get_upgrade(nhánh)); cấp 3 rẽ 2 nhánh.
 ##
 ## - HITSCAN: trúng ngay, vẽ một tia sáng ngắn.
 ## - PROJECTILE: bắn ra một Projectile bay đuổi theo mục tiêu.
-## Cả hai kiểu đều dùng Combat.apply_hit() nên nổ lan / hiệu ứng hoạt động giống nhau.
+## - PULSE: sóng toả quanh tháp, trúng mọi địch trong tầm.
+## Mọi kiểu đều dùng Combat.apply_hit() nên nổ lan / hiệu ứng hoạt động giống nhau.
+##
+## Tháp không bắn: Cờ hiệu (buff sát thương tháp xung quanh) và Mỏ vàng (vàng mỗi wave).
+## Buff của Cờ hiệu được cache trong _damage_multiplier; BuildManager gọi refresh_buff()
+## khi có tháp được xây / nâng cấp / bán.
 
 ## Phát ra mỗi lần bắn.
 signal fired(target: Enemy, damage: float)
@@ -20,6 +25,7 @@ enum TargetMode {
 	LAST, ## Địch đi sau cùng.
 	CLOSEST, ## Địch gần tháp nhất.
 	STRONGEST, ## Địch còn nhiều máu nhất.
+	WEAKEST, ## Địch còn ít máu nhất (dọn địch sắp chết).
 }
 
 const DEFAULT_PROJECTILE := preload("res://scenes/projectiles/Projectile.tscn")
@@ -28,6 +34,8 @@ const BARREL_LENGTH := 24.0
 const SHOT_VISUAL_TIME := 0.08
 const AIM_SPEED := 15.0
 const UPGRADE_FX_TIME := 0.5
+## Nhóm chứa mọi tháp đang đứng trên bản đồ (Cờ hiệu dò tháp xung quanh qua nhóm này).
+const GROUP := &"towers"
 
 @export var data: TowerData
 @export var target_mode: TargetMode = TargetMode.FIRST
@@ -48,6 +56,13 @@ var skin: ItemDef = null:
 	set(value):
 		skin = value
 		queue_redraw()
+## "Hoàn tác": số vàng đã tiêu cho tháp này kể từ khi wave hiện tại bắt đầu (recent_spend)
+## và wave đó (recent_wave). Phần này bán được hoàn 100%; phần tiêu từ trước hoàn theo sell_ratio.
+## Nhờ vậy xây nhầm có thể bán lại nguyên giá, nhưng nâng cấp muộn không "rửa" được tiền cũ.
+var recent_spend: int = 0
+var recent_wave: int = -1
+## Hệ số tầm bắn của ô đang đứng (ô đồi > 1). Mọi chỗ đọc tầm bắn dùng get_range().
+var range_multiplier := 1.0
 ## Thống kê hiển thị trong bảng thông tin.
 var kills: int = 0
 var damage_dealt: float = 0.0
@@ -57,12 +72,17 @@ var _aim_angle := -PI * 0.5
 var _shot_timer := 0.0
 var _last_shot_position := Vector2.ZERO
 var _upgrade_fx := 0.0
+## Hệ số sát thương nhờ Cờ hiệu (1 = không được buff).
+var _damage_multiplier := 1.0
 
 
 func _ready() -> void:
 	assert(data != null, "Tower cần TowerData: hãy gán data trước khi add_child().")
+	add_to_group(GROUP)
 	if total_invested == 0:
 		total_invested = data.cost
+	if recent_wave < 0:
+		record_spend(total_invested)
 
 
 func get_level() -> int:
@@ -73,25 +93,75 @@ func can_upgrade() -> bool:
 	return data.can_upgrade()
 
 
-## Giá nâng cấp lên cấp tiếp theo (0 nếu đã tối đa).
-func get_upgrade_cost() -> int:
-	return data.next_level.cost if data.can_upgrade() else 0
+## Giá nâng cấp theo nhánh `branch` (0 nếu đã tối đa).
+func get_upgrade_cost(branch: int = 0) -> int:
+	var next := data.get_upgrade(branch)
+	return next.cost if next else 0
+
+
+## Tầm bắn thực tế (đã tính ô đồi). Cờ hiệu: bán kính hào quang.
+func get_range() -> float:
+	return data.attack_range * range_multiplier
+
+
+## Ghi nhận vàng vừa tiêu cho tháp (xây / nâng cấp).
+func record_spend(amount: int) -> void:
+	if recent_wave != GameManager.current_wave:
+		recent_wave = GameManager.current_wave
+		recent_spend = 0
+	recent_spend += amount
+
+
+## Phần vàng tiêu trong wave hiện tại (được hoàn 100%).
+func get_recent_spend() -> int:
+	return recent_spend if recent_wave == GameManager.current_wave else 0
+
+
+## true nếu toàn bộ tiền của tháp đều tiêu trong wave hiện tại (bán = hoàn tác hoàn toàn).
+func is_refundable_in_full() -> bool:
+	return get_recent_spend() >= total_invested
 
 
 ## Số vàng nhận lại nếu bán tháp lúc này.
 func get_sell_value() -> int:
-	return int(total_invested * GameConfig.SELL_REFUND_RATIO)
+	var recent := get_recent_spend()
+	return recent + int((total_invested - recent) * data.get_sell_ratio())
 
 
-## Đổi sang bộ chỉ số cấp tiếp theo. Việc trừ vàng do BuildManager lo.
-func upgrade() -> void:
-	if not data.can_upgrade():
+## Đổi sang bộ chỉ số cấp sau (nhánh `branch` nếu có). Việc trừ vàng do BuildManager lo.
+func upgrade(branch: int = 0) -> void:
+	var next := data.get_upgrade(branch)
+	if next == null:
 		return
-	data = data.next_level
+	data = next
 	total_invested += data.cost
+	record_spend(data.cost)
+	if data.preferred_target_mode >= 0:
+		target_mode = data.preferred_target_mode as TargetMode
 	_upgrade_fx = UPGRADE_FX_TIME
 	upgraded.emit(self)
 	queue_redraw()
+
+
+## Hệ số sát thương hiện tại (buff Cờ hiệu).
+func get_damage_multiplier() -> float:
+	return _damage_multiplier
+
+
+## Tính lại buff: lấy Cờ hiệu MẠNH NHẤT có hào quang phủ tới tháp này (không cộng dồn).
+func refresh_buff() -> void:
+	var best := 0.0
+	if data.is_attacker():
+		for node in get_tree().get_nodes_in_group(GROUP):
+			var banner := node as Tower
+			if banner == null or banner == self or banner.is_queued_for_deletion() or banner.data.aura_radius <= 0.0:
+				continue
+			var radius := banner.data.aura_radius * banner.range_multiplier
+			if banner.global_position.distance_squared_to(global_position) <= radius * radius:
+				best = maxf(best, banner.data.aura_damage_bonus)
+	if not is_equal_approx(_damage_multiplier, 1.0 + best):
+		_damage_multiplier = 1.0 + best
+		queue_redraw()
 
 
 ## Enemy gọi hàm này (qua DamageInfo.source) mỗi khi tháp gây sát thương.
@@ -107,6 +177,12 @@ func _process(delta: float) -> void:
 	_shot_timer = maxf(_shot_timer - delta, 0.0)
 	_upgrade_fx = maxf(_upgrade_fx - delta, 0.0)
 
+	if not data.is_attacker():
+		target = null
+		if _upgrade_fx > 0.0:
+			queue_redraw()
+		return
+
 	# Chọn lại mục tiêu mỗi frame để luôn theo đúng TargetMode.
 	target = _find_target()
 	if target:
@@ -119,7 +195,8 @@ func _process(delta: float) -> void:
 
 
 func is_in_range(enemy: Enemy) -> bool:
-	return global_position.distance_squared_to(enemy.global_position) <= data.attack_range * data.attack_range
+	var reach := get_range()
+	return global_position.distance_squared_to(enemy.global_position) <= reach * reach
 
 
 func _find_target() -> Enemy:
@@ -138,29 +215,38 @@ func _find_target() -> Enemy:
 	return best
 
 
-## Điểm càng cao càng được ưu tiên.
+## Điểm càng cao càng được ưu tiên. "Đầu đoàn" / "Cuối đoàn" tính theo quãng đường CÒN LẠI
+## tới nhà chính, nên đúng cả trên bản đồ có nhiều làn dài ngắn khác nhau.
+## Mạnh nhất / Yếu nhất: hoà máu thì ưu tiên con gần nhà chính hơn.
 func _score_target(enemy: Enemy) -> float:
 	match target_mode:
 		TargetMode.LAST:
-			return -enemy.progress
+			return enemy.remaining_distance()
 		TargetMode.CLOSEST:
 			return -global_position.distance_squared_to(enemy.global_position)
 		TargetMode.STRONGEST:
-			return enemy.health
+			return enemy.health * 10000.0 - enemy.remaining_distance()
+		TargetMode.WEAKEST:
+			return -enemy.health * 10000.0 - enemy.remaining_distance()
 		_:
-			return enemy.progress # FIRST
+			return -enemy.remaining_distance() # FIRST
 
 
 func _shoot(enemy: Enemy) -> void:
 	_cooldown = 1.0 / data.fire_rate
-	var info := DamageInfo.new(data.damage, data.damage_type, self)
+	var damage := data.damage * _damage_multiplier
+	var info := DamageInfo.new(damage, data.damage_type, self)
 	info.effects = data.on_hit_effects
 	info.hits_air = data.can_hit_air
-	fired.emit(enemy, data.damage)
+	info.armor_pen = data.armor_pen
+	fired.emit(enemy, damage)
 
 	match data.attack_type:
 		TowerData.AttackType.PROJECTILE:
 			_spawn_projectile(enemy, info)
+		TowerData.AttackType.PULSE:
+			_shot_timer = SHOT_VISUAL_TIME * 3.0
+			Combat.apply_hit(null, global_position, info, get_range(), get_tree())
 		_:
 			_shot_timer = SHOT_VISUAL_TIME
 			_last_shot_position = enemy.global_position
@@ -212,8 +298,23 @@ static func draw_body(canvas: CanvasItem, tower_data: TowerData, aim_angle: floa
 	for i in tower_data.level:
 		var pip := Vector2((i - (tower_data.level - 1) * 0.5) * 9.0, half - 6.0)
 		canvas.draw_circle(pip, 3.0, paint.call(Color(1.0, 0.85, 0.3)))
+	if tower_data.aura_radius > 0.0:
+		# Cờ hiệu: cột cờ + lá cờ tam giác thay cho nòng súng.
+		canvas.draw_line(Vector2(-4, 8), Vector2(-4, -26), paint.call(Color(0.85, 0.85, 0.9)), 3.0)
+		canvas.draw_colored_polygon(PackedVector2Array([Vector2(-3, -26), Vector2(16, -20), Vector2(-3, -13)]),
+				paint.call(accent.lightened(0.2)))
+		return
+	if tower_data.gold_per_wave > 0:
+		# Mỏ vàng: vài cục vàng trên miệng mỏ, không có nòng.
+		for nugget in [Vector2(-6, -3), Vector2(5, -5), Vector2(0, 5)]:
+			canvas.draw_circle(nugget, 5.0, paint.call(Color(1.0, 0.82, 0.25)))
+			canvas.draw_arc(nugget, 5.0, 0.0, TAU, 12, paint.call(Color(0.6, 0.45, 0.1)), 1.5)
+		return
 	var barrel_tip := Vector2.from_angle(aim_angle) * BARREL_LENGTH
 	var barrel_width := 11.0 if tower_data.splash_radius > 0.0 else 7.0
+	if tower_data.attack_type == TowerData.AttackType.PULSE:
+		canvas.draw_arc(Vector2.ZERO, body_radius + 4.0, 0.0, TAU, 24, paint.call(accent), 3.0)
+		return
 	canvas.draw_line(Vector2.ZERO, barrel_tip, paint.call(accent), barrel_width)
 
 
@@ -226,8 +327,18 @@ func _draw() -> void:
 	draw_body(self, data, _aim_angle, Color(0, 0, 0, 0), 1.0, skin)
 	var barrel_tip := Vector2.from_angle(_aim_angle) * BARREL_LENGTH
 
+	# Được Cờ hiệu buff: mũi tên vàng nhỏ ở góc trên phải.
+	if _damage_multiplier > 1.0:
+		var corner := Vector2(half - 7.0, -half + 7.0)
+		draw_colored_polygon(PackedVector2Array([corner + Vector2(-6, 3), corner + Vector2(0, -4), corner + Vector2(6, 3)]),
+				Color(1.0, 0.85, 0.3))
+
+	# Sóng toả (PULSE): vòng lan ra tới mép tầm bắn.
+	if _shot_timer > 0.0 and data.attack_type == TowerData.AttackType.PULSE:
+		var t := 1.0 - _shot_timer / (SHOT_VISUAL_TIME * 3.0)
+		draw_arc(Vector2.ZERO, get_range() * t, 0.0, TAU, 48, Color(data.color.lightened(0.4), 1.0 - t), 3.0)
 	# Tia bắn tức thời (chỉ với HITSCAN).
-	if _shot_timer > 0.0:
+	elif _shot_timer > 0.0:
 		var alpha := _shot_timer / SHOT_VISUAL_TIME
 		var beam_end := to_local(_last_shot_position)
 		draw_line(barrel_tip, beam_end, Color(data.color.lightened(0.5), alpha), 3.0)

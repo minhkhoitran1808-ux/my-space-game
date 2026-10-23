@@ -17,6 +17,7 @@ damage_type = 0
 damage = 32.0
 fire_rate = 0.6
 attack_range = 150.0
+armor_pen = 0.5
 splash_radius = 64.0
 can_hit_air = false
 projectile_speed = 320.0

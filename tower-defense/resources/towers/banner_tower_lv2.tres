@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="TowerData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/TowerData.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/Tower.tscn" id="2_scene"]
+[ext_resource type="Resource" path="res://resources/towers/banner_tower_lv3.tres" id="9_next"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"banner"
+display_name = "Cờ hiệu"
+description = "Không bắn. Tháp đứng trong hào quang gây thêm sát thương."
+color = Color(1, 0.78, 0.3, 1)
+damage = 0.0
+fire_rate = 0.0
+cost = 90
+aura_radius = 144.0
+aura_damage_bonus = 0.25
+attack_range = 144.0
+level = 2
+next_level = ExtResource("9_next")
+scene = ExtResource("2_scene")

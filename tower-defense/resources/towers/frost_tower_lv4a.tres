@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="TowerData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/TowerData.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/Tower.tscn" id="2_scene"]
+[ext_resource type="Script" path="res://scripts/resources/StatusEffectData.gd" id="3_effect_script"]
+[ext_resource type="Resource" path="res://resources/effects/deep_chill.tres" id="4_effect"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"frost"
+display_name = "Băng"
+description = "Làm chậm mọi địch quanh mục tiêu. Đặt trước các tháp khác."
+color = Color(0.55, 0.9, 1, 1)
+cost = 205
+level = 4
+branch_name = "Băng vĩnh cửu"
+weakness_text = "Gần như không gây sát thương"
+attack_type = 0
+damage_type = 1
+damage = 12.0
+fire_rate = 1.2
+attack_range = 170.0
+splash_radius = 80.0
+on_hit_effects = Array[ExtResource("3_effect_script")]([ExtResource("4_effect")])
+scene = ExtResource("2_scene")

@@ -210,9 +210,9 @@ func _refresh_wave_button() -> void:
 	hud.set_next_wave_preview(next_wave, wave_manager.get_wave_composition(next_wave))
 
 
-func _upgrade_selected_tower() -> void:
+func _upgrade_selected_tower(branch: int = 0) -> void:
 	if selection_manager.has_selection():
-		build_manager.upgrade_tower(selection_manager.selected_tower)
+		build_manager.upgrade_tower(selection_manager.selected_tower, branch)
 
 
 func _sell_selected_tower() -> void:
@@ -277,6 +277,11 @@ func _on_wave_called_early(wave_number: int, bonus: int) -> void:
 
 
 func _on_wave_completed(wave_number: int, reward_bonus: int) -> void:
+	# Mỏ vàng trả vàng mỗi khi hết một wave.
+	for payout in build_manager.collect_mine_gold():
+		var mine: Tower = payout[0]
+		fx_manager.show_text(mine.global_position + Vector2(0, -30), "+%d" % payout[1], Color(1.0, 0.85, 0.3), 16)
+		tracker.gold_from_mines += payout[1]
 	if reward_bonus > 0:
 		hud.show_message("Hoàn thành wave %d! +%d vàng" % [wave_number, reward_bonus], Color(0.5, 1.0, 0.5))
 	AudioManager.play(&"wave_complete")

@@ -44,6 +44,7 @@ var _placement_error := ""
 var _ghost_offset := 0.0
 var _shake_tween: Tween
 var _upgrade_preview_on := false
+var _upgrade_preview_branch := 0
 
 ## Hiệu ứng ngắn: { kind, position, age, life, ... } vẽ trong _fx_layer.
 var _effects: Array[Dictionary] = []
@@ -102,12 +103,14 @@ func get_effect_count() -> int:
 
 
 ## Bật / tắt vòng xem trước tầm bắn sau nâng cấp (khi rê chuột lên nút Nâng cấp).
-func show_upgrade_preview(enabled: bool) -> void:
+func show_upgrade_preview(enabled: bool, branch: int = 0) -> void:
 	_upgrade_preview_on = enabled
+	_upgrade_preview_branch = branch
 	var tower := _selected_tower()
-	if enabled and tower and tower.can_upgrade():
+	var next := tower.data.get_upgrade(branch) if tower else null
+	if enabled and next and next.attack_range > 0.0:
 		_upgrade_ring.position = tower.position
-		_upgrade_ring.show_ring(RangeIndicator.State.UPGRADE_PREVIEW, tower.data.next_level.attack_range)
+		_upgrade_ring.show_ring(RangeIndicator.State.UPGRADE_PREVIEW, next.attack_range * tower.range_multiplier)
 	else:
 		_upgrade_ring.hide_ring()
 
@@ -129,16 +132,16 @@ func _on_hover_cell_changed(cell: Vector2i) -> void:
 func _on_selection_changed(tower: Tower) -> void:
 	if tower:
 		_selection_ring.position = tower.position
-		_selection_ring.show_ring(RangeIndicator.State.SELECTED, tower.data.attack_range)
+		_selection_ring.show_ring(RangeIndicator.State.SELECTED, tower.get_range())
 	else:
 		_selection_ring.hide_ring()
-	show_upgrade_preview(_upgrade_preview_on and tower != null)
+	show_upgrade_preview(_upgrade_preview_on and tower != null, _upgrade_preview_branch)
 
 
 func _on_tower_upgraded(tower: Tower) -> void:
 	if tower == _selected_tower():
-		_selection_ring.set_radius(tower.data.attack_range)
-		show_upgrade_preview(_upgrade_preview_on)
+		_selection_ring.set_radius(tower.get_range())
+		show_upgrade_preview(_upgrade_preview_on, _upgrade_preview_branch)
 
 
 ## Đặt thành công: tháp "đáp đất" (squash), sóng vòng lan tới đúng tầm bắn, bụi, "-giá".
@@ -225,7 +228,7 @@ func _draw_neighbors() -> void:
 	var style: Dictionary = RangeIndicator.STYLE[RangeIndicator.State.NEIGHBOR]
 	var color := Color(style.stroke, style.stroke_alpha)
 	for tower in build_manager.get_towers():
-		_neighbor_layer.draw_arc(tower.position, tower.data.attack_range, 0.0, TAU,
+		_neighbor_layer.draw_arc(tower.position, tower.get_range(), 0.0, TAU,
 				RangeIndicator.POINT_COUNT, color, style.width, true)
 
 

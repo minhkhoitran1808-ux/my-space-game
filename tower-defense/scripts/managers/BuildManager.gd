@@ -78,6 +78,7 @@ func try_place_tower(cell: Vector2i) -> Tower:
 	tower.position = GameConfig.cell_to_world(cell)
 	tower_container.add_child(tower)
 	_occupied_cells[cell] = tower
+	refresh_buffs()
 	tower_placed.emit(tower)
 	return tower
 
@@ -92,17 +93,36 @@ func get_towers() -> Array[Tower]:
 	return towers
 
 
-## Nâng cấp tháp nếu còn cấp và đủ vàng. Trả về true nếu thành công.
-func upgrade_tower(tower: Tower) -> bool:
-	if not tower.can_upgrade():
+## Nâng cấp tháp nếu còn cấp và đủ vàng. branch: nhánh cấp 4 (0 = A, 1 = B; bỏ qua nếu
+## tháp chưa tới chỗ rẽ nhánh). Trả về true nếu thành công.
+func upgrade_tower(tower: Tower, branch: int = 0) -> bool:
+	if tower.data.get_upgrade(branch) == null:
 		placement_failed.emit("Tháp đã đạt cấp tối đa")
 		return false
-	if not GameManager.spend_gold(tower.get_upgrade_cost()):
-		placement_failed.emit("Không đủ vàng (cần %d)" % tower.get_upgrade_cost())
+	var cost := tower.get_upgrade_cost(branch)
+	if not GameManager.spend_gold(cost):
+		placement_failed.emit("Không đủ vàng (cần %d)" % cost)
 		return false
-	tower.upgrade()
+	tower.upgrade(branch)
+	refresh_buffs()
 	tower_upgraded.emit(tower)
 	return true
+
+
+## Tính lại buff Cờ hiệu cho mọi tháp (gọi khi có tháp được xây / nâng cấp / bán).
+func refresh_buffs() -> void:
+	for tower in get_towers():
+		tower.refresh_buff()
+
+
+## Cộng vàng của mọi Mỏ vàng (gọi khi hết một wave). Trả về [[tháp, số vàng], ...].
+func collect_mine_gold() -> Array:
+	var payouts := []
+	for tower in get_towers():
+		if tower.data.gold_per_wave > 0:
+			GameManager.add_gold(tower.data.gold_per_wave)
+			payouts.append([tower, tower.data.gold_per_wave])
+	return payouts
 
 
 ## Bán tháp, hoàn lại một phần vàng và giải phóng ô. Trả về số vàng nhận được.
@@ -113,6 +133,8 @@ func sell_tower(tower: Tower) -> int:
 	var refund := tower.get_sell_value()
 	_occupied_cells.erase(cell)
 	GameManager.add_gold(refund)
+	tower.remove_from_group(Tower.GROUP)
+	refresh_buffs()
 	tower_sold.emit(tower, refund)
 	tower.queue_free()
 	return refund

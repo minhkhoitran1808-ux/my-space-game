@@ -12,7 +12,8 @@ extends Node
 
 ## Phát ra khi đổi tháp đang chọn (null = bỏ chọn).
 signal selection_changed(tower: Tower)
-signal upgrade_requested(tower: Tower)
+## branch: nhánh cấp 4 (U = nhánh A, Shift+U = nhánh B).
+signal upgrade_requested(tower: Tower, branch: int)
 signal sell_requested(tower: Tower)
 
 @export var build_manager: BuildManager
@@ -81,7 +82,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_ESCAPE:
 				deselect()
 			KEY_U:
-				upgrade_requested.emit(selected_tower)
+				upgrade_requested.emit(selected_tower, 1 if event.shift_pressed else 0)
 			KEY_X:
 				sell_requested.emit(selected_tower)
 			KEY_T:
