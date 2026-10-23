@@ -13,11 +13,11 @@ build/
 ├── web/                          ~38 MB  (gần như toàn bộ là engine index.wasm)
 │   ├── index.html                trang chính
 │   ├── index.js, index.wasm      engine Godot
-│   ├── index.pck                 dữ liệu game + 16 âm thanh (~480 KB)
+│   ├── index.pck                 dữ liệu game + âm thanh + nội dung meta (~650 KB)
 │   ├── index.audio*.worklet.js   xử lý âm thanh
 │   └── index*.png                icon / ảnh khởi động
 └── itch/                         ← FILE ĐỂ UPLOAD LÊN ITCH.IO
-    ├── TowerDefense_Web.zip      10.1 MB (index.html nằm ở gốc zip)
+    ├── TowerDefense_Web.zip      10.2 MB (index.html nằm ở gốc zip)
     └── TowerDefense_Windows.zip  37 MB   (TowerDefense/TowerDefense.exe)
 ```
 
