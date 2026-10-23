@@ -141,7 +141,7 @@ Giá trị được giữ ở biến static trong `scripts/core/VisualSettings.g
 ```
 tower-defense/
 ├── project.godot               # main scene = menu chính; autoload: GameManager, AudioManager, SaveManager
-├── assets/audio/               # thả file âm thanh vào đây (xem README trong thư mục)
+├── assets/audio/               # 16 âm thanh tổng hợp bằng tools/gen_sfx.py (thay được bằng file của bạn)
 ├── data/waves/level_XX.json    # wave của từng màn
 ├── resources/
 │   ├── abilities/              # AbilityData: Thiên thạch, Băng giá
@@ -239,8 +239,9 @@ Tháp có `can_hit_air = false` (như Pháo) không nhắm và không nổ lan t
 
 Lỗi trong file wave (sai id, sai số làn...) được báo rõ trong cửa sổ Output.
 
-**Âm thanh:** thả file `.ogg` / `.wav` / `.mp3` đúng tên vào `assets/audio/`
-(danh sách tên trong `assets/audio/README.md`). Không có file thì game im lặng, không lỗi.
+**Âm thanh:** game đã có đủ 16 âm thanh tổng hợp (`python3 tools/gen_sfx.py` để tạo lại).
+Muốn thay: thả file `.ogg` / `.wav` / `.mp3` đúng tên vào `assets/audio/`
+(danh sách tên trong `assets/audio/README.md`). Thiếu file thì sự kiện đó im lặng, không lỗi.
 
 ## Xuất bản (Windows / Web)
 
