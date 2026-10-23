@@ -1,7 +1,10 @@
 # Âm thanh
 
-Thả file âm thanh (`.ogg`, `.wav` hoặc `.mp3`) vào thư mục này với đúng tên dưới đây,
-game sẽ tự phát. Thiếu file nào thì sự kiện đó im lặng, không báo lỗi.
+Mọi file `.wav` ở đây được TỔNG HỢP bằng code (không ghi âm, không bản quyền) bởi
+`tools/gen_sfx.py`. Chạy lại để tạo lại: `python3 tools/gen_sfx.py` (cần numpy).
+
+Muốn thay bằng âm thanh của bạn: thả file (`.ogg`, `.wav` hoặc `.mp3`) đúng tên dưới đây
+(xoá file `.wav` cùng tên nếu dùng đuôi khác). Thiếu file nào thì sự kiện đó im lặng, không báo lỗi.
 
 | Tên file (không đuôi) | Khi nào phát |
 |---|---|

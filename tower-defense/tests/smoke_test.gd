@@ -58,12 +58,12 @@ func _ready() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE_PATH))
 	if _failures.is_empty():
 		print("=== SMOKE TEST PASSED ===")
-		get_tree().quit(0)
+		AudioManager.quit_game(0)
 	else:
 		print("=== SMOKE TEST FAILED (%d) ===" % _failures.size())
 		for failure in _failures:
 			print("  - ", failure)
-		get_tree().quit(1)
+		AudioManager.quit_game(1)
 
 
 # --- Phần 1: từng hệ thống ------------------------------------------------------
@@ -245,8 +245,12 @@ func _test_match_flow() -> void:
 	_check(GameManager.is_playing(), "vẫn đang chơi sau 2 wave")
 	_check(max_effects > 0, "có hiệu ứng số sát thương / vụ nổ (%d)" % max_effects)
 
-	# Âm thanh: chưa có file thì im lặng, không lỗi.
-	_check(not AudioManager.play(&"enemy_death"), "thiếu file âm thanh thì bỏ qua")
+	# Âm thanh: đủ file cho mọi tên game gọi; phát dày thì bị chặn; thiếu file thì im lặng, không lỗi.
+	var missing := AudioManager.SOUND_NAMES.filter(func(sound: String) -> bool: return not AudioManager.has_sound(StringName(sound)))
+	_check(missing.is_empty(), "có file cho mọi âm thanh (thiếu: %s)" % [missing])
+	_check(AudioManager.play(&"sell") and not AudioManager.play(&"sell"), "cùng một âm phát liên tục bị chặn")
+	_check(not AudioManager.play(&"khong_co_file_nay"), "thiếu file âm thanh thì bỏ qua")
+	AudioManager.enabled = false # Phần còn lại chạy siêu tốc, không cần tiếng.
 	await _free_main(main)
 
 

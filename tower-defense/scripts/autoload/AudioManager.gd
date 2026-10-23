@@ -28,6 +28,10 @@ var volume: float = 0.8:
 		for player in _players:
 			player.volume_db = linear_to_db(volume)
 
+## false = không phát gì (smoke test tắt sau khi kiểm tra âm thanh: test chạy nhanh hơn thời gian
+## thực rất nhiều lần, âm bật / tắt liên tục nhanh hơn bộ trộn âm theo kịp).
+var enabled := true
+
 var _players: Array[AudioStreamPlayer] = []
 var _streams: Dictionary = {} # StringName -> AudioStream (null = không có file)
 var _last_played: Dictionary = {} # StringName -> thời điểm phát gần nhất (ms)
@@ -46,7 +50,7 @@ func _ready() -> void:
 ## Phát âm thanh theo tên. Trả về true nếu thực sự có tiếng được phát.
 func play(sound_name: StringName, pitch_variation: float = 0.05) -> bool:
 	var stream := _get_stream(sound_name)
-	if stream == null:
+	if stream == null or not enabled:
 		return false
 
 	var now := Time.get_ticks_msec()
@@ -59,6 +63,16 @@ func play(sound_name: StringName, pitch_variation: float = 0.05) -> bool:
 	player.pitch_scale = 1.0 + randf_range(-pitch_variation, pitch_variation)
 	player.play()
 	return true
+
+
+## Thoát game sạch sẽ: dừng mọi âm thanh, chờ bộ trộn âm nhả chúng rồi mới quit
+## (quit ngay khi đang phát sẽ để lại cảnh báo "resources still in use at exit").
+func quit_game(exit_code: int = 0) -> void:
+	for player in _players:
+		player.stop()
+	# Bộ trộn âm chạy theo thời gian thực (không theo frame), nên chờ theo giây.
+	await get_tree().create_timer(0.25, true, false, true).timeout
+	get_tree().quit(exit_code)
 
 
 func has_sound(sound_name: StringName) -> bool:
