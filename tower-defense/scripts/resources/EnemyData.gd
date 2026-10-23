@@ -7,7 +7,7 @@ extends Resource
 ## WaveManager tự quét thư mục này, nên trong file wave chỉ cần ghi "id".
 
 ## Hình dạng vẽ tạm khi chưa có sprite.
-enum Shape { CIRCLE, SQUARE, TRIANGLE, DIAMOND, BAT }
+enum Shape { CIRCLE, SQUARE, TRIANGLE, DIAMOND, BAT, CROSS }
 
 ## Mã định danh, dùng trong các file data/waves/*.json. Phải duy nhất.
 @export var id: StringName = &"basic"
@@ -34,6 +34,14 @@ enum Shape { CIRCLE, SQUARE, TRIANGLE, DIAMOND, BAT }
 @export_range(0.0, 0.9, 0.05) var magic_resist: float = 0.0
 ## Giảm hiệu quả làm chậm (0.5 = chỉ chịu một nửa).
 @export_range(0.0, 1.0, 0.05) var slow_resistance: float = 0.0
+
+@export_group("Hồi máu")
+## Bán kính hồi máu cho địch xung quanh (0 = không hồi; > 0 = địch "Thầy lang", xem HealerAura).
+@export var heal_radius: float = 0.0
+## Lượng máu hồi mỗi lần cho mỗi địch (nhân theo hệ số máu của wave).
+@export var heal_amount: float = 0.0
+## Khoảng cách giữa hai lần hồi (giây).
+@export var heal_interval: float = 2.5
 
 @export_group("Khi chết")
 ## Loại địch sinh ra khi con này chết (để trống nếu không có).

@@ -9,11 +9,11 @@ extends RefCounted
 ## kỷ lục giữa các lần chơi là công bằng và test có thể lặp lại.
 
 ## Ngân sách mỗi loại địch tiêu tốn (xấp xỉ độ nguy hiểm).
-const THREAT := {&"basic": 1.0, &"fast": 1.0, &"swarm": 0.4, &"armored": 2.5, &"bat": 1.2}
+const THREAT := {&"basic": 1.0, &"fast": 1.0, &"swarm": 0.4, &"armored": 2.5, &"bat": 1.2, &"healer": 2.2}
 ## Wave đầu tiên loại địch được phép xuất hiện.
-const UNLOCK_WAVE := {&"basic": 1, &"fast": 2, &"swarm": 3, &"armored": 4, &"bat": 5}
+const UNLOCK_WAVE := {&"basic": 1, &"fast": 2, &"swarm": 3, &"armored": 4, &"bat": 5, &"healer": 7}
 ## Khoảng cách spawn gợi ý theo loại địch (giây, ở wave 1).
-const BASE_INTERVAL := {&"basic": 0.8, &"fast": 0.45, &"swarm": 0.2, &"armored": 1.2, &"bat": 0.6}
+const BASE_INTERVAL := {&"basic": 0.8, &"fast": 0.45, &"swarm": 0.2, &"armored": 1.2, &"bat": 0.6, &"healer": 1.4}
 const BOSS_ID := &"boss"
 const BOSS_EVERY := 10
 

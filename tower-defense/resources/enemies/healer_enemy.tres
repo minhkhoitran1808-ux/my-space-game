@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/EnemyData.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/Enemy.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"healer"
+display_name = "Thầy lang"
+max_health = 90.0
+speed = 70.0
+reward = 14
+damage_to_base = 1
+armor = 0.2
+magic_resist = 0.0
+slow_resistance = 0.0
+heal_radius = 110.0
+heal_amount = 14.0
+heal_interval = 2.5
+color = Color(0.2, 0.68, 0.45, 1)
+radius = 14.0
+shape = 5
+scene = ExtResource("2_scene")

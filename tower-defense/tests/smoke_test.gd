@@ -78,7 +78,7 @@ func _test_systems() -> void:
 	# Dữ liệu wave
 	_check(waves.validate_waves().is_empty(), "file wave màn 1 hợp lệ: %s" % [waves.validate_waves()])
 	_check(waves.get_total_waves() == 10, "có 10 wave (thực tế %d)" % waves.get_total_waves())
-	for id in [&"basic", &"fast", &"armored", &"swarm", &"boss"]:
+	for id in [&"basic", &"fast", &"armored", &"swarm", &"boss", &"healer"]:
 		_check(waves.get_enemy_type(id) != null, "có loại địch '%s'" % id)
 
 	# Luật đặt tháp
@@ -259,12 +259,12 @@ func _test_match_flow() -> void:
 func _test_level_flow() -> void:
 	print("[1d] Luồng màn")
 	var catalog := GameManager.LEVEL_CATALOG
-	_check(catalog.levels.size() == 3, "có 3 màn chơi")
+	_check(catalog.levels.size() == 4, "có 4 màn chơi")
 
 	var select := LEVEL_SELECT_SCENE.instantiate()
 	add_child(select)
 	await get_tree().process_frame
-	_check(select.play_buttons.size() == 3, "màn chọn màn có 3 thẻ")
+	_check(select.play_buttons.size() == 4, "màn chọn màn có 4 thẻ")
 	_check(not select.play_buttons[0].disabled and select.play_buttons[1].disabled and select.play_buttons[2].disabled,
 			"lúc đầu chỉ mở màn 1")
 	select.play_buttons[0].pressed.emit()
@@ -289,7 +289,7 @@ func _test_level_flow() -> void:
 	var menu := MAIN_MENU_SCENE.instantiate()
 	add_child(menu)
 	await get_tree().process_frame
-	_check(menu.stars_label.text.contains("2 / 9"), "menu chính hiện tổng sao (%s)" % menu.stars_label.text)
+	_check(menu.stars_label.text.contains("2 / 12"), "menu chính hiện tổng sao (%s)" % menu.stars_label.text)
 	menu.play_button.pressed.emit()
 	_check(GameManager.last_requested_scene == GameManager.LEVEL_SELECT_SCENE, "nút Chơi ở menu => màn chọn màn")
 	menu.queue_free()
@@ -633,6 +633,31 @@ func _test_enemy_feedback() -> void:
 		punching_bag.take_damage(DamageInfo.new(5.0, DamageInfo.Type.MAGIC))
 	_check(fx._spark_count <= FxManager.MAX_SPARKS, "tia lửa có trần (%d <= %d)" % [fx._spark_count, FxManager.MAX_SPARKS])
 	punching_bag.queue_free()
+
+	# Thầy lang: hồi máu cho địch khác trong bán kính, không tự hồi, không vượt máu tối đa.
+	var healer := _spawn_test_enemy(path, waves.get_enemy_type(&"healer"))
+	var patient := _spawn_test_enemy(path, waves.get_enemy_type(&"armored"))
+	var far_away := _spawn_test_enemy(path, waves.get_enemy_type(&"armored"))
+	patient.progress = healer.progress + 30.0
+	far_away.progress = healer.progress + 400.0
+	await get_tree().process_frame
+	var aura: HealerAura = healer.get_node("HealerAura")
+	var heals := [0.0]
+	patient.healed.connect(func(_e: Enemy, amount: float) -> void: heals[0] += amount)
+	for e in [healer, patient, far_away]:
+		e.take_damage(DamageInfo.new(50.0, DamageInfo.Type.TRUE))
+	var healer_hp := healer.health
+	var patient_hp := patient.health
+	aura.heal_nearby()
+	_check(patient.health > patient_hp and is_equal_approx(heals[0], patient.health - patient_hp), "Thầy lang hồi máu địch ở gần (+%d)" % roundi(patient.health - patient_hp))
+	_check(far_away.health < far_away.max_health and healer.health == healer_hp, "không hồi địch ở xa, không tự hồi")
+	_check(is_equal_approx(patient.health_bar.ratio, patient.health / patient.max_health), "thanh máu tăng theo khi được hồi")
+	for i in 20:
+		aura.heal_nearby()
+	_check(patient.health == patient.max_health, "hồi không vượt quá máu tối đa")
+	_check(patient.heal(10.0) == 0.0, "đầy máu thì heal() trả về 0")
+	for e in [healer, patient, far_away]:
+		e.queue_free()
 
 	# Cài đặt hiển thị / hỗ trợ (đổi qua chính menu Cài đặt như người chơi).
 	var settings: SettingsMenu = main.hud.settings_menu

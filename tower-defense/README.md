@@ -25,7 +25,7 @@ mở project và bấm Play là chơi được ngay.
 
 ## Nội dung
 
-**3 màn chơi**, màn sau mở khi qua màn trước. Qua màn được 1–3 sao theo số máu còn lại
+**4 màn chơi**, màn sau mở khi qua màn trước. Qua màn được 1–3 sao theo số máu còn lại
 (≥ 80% = 3 sao, ≥ 40% = 2 sao). Tiến độ lưu ở `user://save.cfg`.
 
 | Màn | Bản đồ | Wave | Vàng đầu |
@@ -33,12 +33,13 @@ mở project và bấm Play là chơi được ngay.
 | Đồng cỏ | 1 làn quanh co | 10 | 200 |
 | Ngã ba sông | 2 làn nhập làm một | 10 | 260 |
 | Đường rắn | 1 làn rất dài, 2 Boss | 12 | 300 |
+| Pháo đài | 2 làn hội quân giữa bản đồ, nhiều Thầy lang | 12 | 320 |
 
 **Hướng dẫn chơi lần đầu:** vào màn 1 lần đầu sẽ có hướng dẫn từng bước (xây tháp → gọi wave →
 chọn tháp → nâng cấp → dùng kỹ năng), có nút "Bỏ qua". Xem lại được trong Cài đặt.
 
 **Cài đặt** (menu chính hoặc menu tạm dừng): âm lượng, bật/tắt số sát thương, rung màn hình,
-toàn màn hình. Lưu cùng tiến độ trong `user://save.cfg` ("Xoá tiến độ" không xoá cài đặt).
+toàn màn hình, và nhóm hiển thị / hỗ trợ (xem bên dưới). Lưu cùng tiến độ trong `user://save.cfg` ("Xoá tiến độ" không xoá cài đặt).
 
 **Chế độ vô tận:** qua một màn sẽ mở chế độ vô tận của màn đó (nút ở màn chọn màn).
 Wave được sinh tự động và mạnh dần, cứ 10 wave có Boss; kỷ lục wave cao nhất được lưu lại.
@@ -59,7 +60,7 @@ Wave được sinh tự động và mạnh dần, cứ 10 wave có Boss; kỷ l�
 | Băng | 70 | Tia | Phép | **Làm chậm** các địch quanh mục tiêu |
 | Phép | 120 | Tia | Phép | Sát thương cao + **thiêu đốt**, khắc chế Bọc thép |
 
-**6 loại địch:**
+**7 loại địch:**
 
 | Địch | Hình | Đặc điểm |
 |---|---|---|
@@ -69,6 +70,7 @@ Wave được sinh tự động và mạnh dần, cứ 10 wave có Boss; kỷ l�
 | Bầy chuột | Tròn tím nhỏ | Yếu nhưng rất đông |
 | Dơi lửa | Có cánh, cam | **Bay** thẳng tới nhà chính, bỏ qua đường đi; Pháo không bắn được |
 | Chúa quỷ (Boss) | Kim cương đỏ sẫm | Rất trâu, kháng chậm 50%, trừ 10 máu, chết thì **sinh 8 Bầy chuột** |
+| Thầy lang | Tròn xanh có dấu cộng | Cứ 2.5s **hồi máu** cho địch khác trong 110px (không tự hồi), giáp 20%. Nên hạ trước |
 
 ## Giao diện trong trận (HUD)
 
@@ -150,13 +152,13 @@ tower-defense/
 ├── resources/
 │   ├── abilities/              # AbilityData: Thiên thạch, Băng giá
 │   ├── effects/                # StatusEffectData: làm chậm, thiêu đốt (3 cấp), đóng băng
-│   ├── enemies/                # EnemyData: 5 loại địch
+│   ├── enemies/                # EnemyData: 7 loại địch
 │   ├── levels/                 # LevelData từng màn + catalog.tres (thứ tự màn)
 │   ├── towers/                 # TowerData: 4 tháp × 3 cấp (chuỗi next_level)
 │   └── ui/theme.tres           # theme UI dùng chung
 ├── scenes/
 │   ├── main/Main.tscn          # trận đấu (nạp bản đồ theo màn)
-│   ├── maps/Map01..03.tscn     # bản đồ: chỉ chứa các Path2D (làn đường)
+│   ├── maps/Map01..04.tscn     # bản đồ: chỉ chứa các Path2D (làn đường)
 │   ├── menus/                  # MainMenu, LevelSelect
 │   ├── enemies/, towers/, projectiles/
 │   └── ui/                     # HUD, TowerInfoPanel, PauseMenu, SettingsMenu
@@ -166,7 +168,7 @@ tower-defense/
 │   ├── managers/               # WaveManager, WaveGenerator, BuildManager, SelectionManager,
 │   │                           # AbilityManager, TutorialManager
 │   ├── fx/FxManager.gd         # số sát thương, vụ nổ, rung màn hình
-│   ├── enemies/                # Enemy + HealthBar + HitFeedback
+│   ├── enemies/                # Enemy + HealthBar + HitFeedback + HealerAura
 │   ├── main/                   # Main, Ground, GameMap
 │   ├── menus/, ui/, resources/, enemies/, towers/, core/
 └── tests/smoke_test.tscn       # test tự động

@@ -15,6 +15,8 @@ signal reached_end(enemy: Enemy, damage: int)
 signal health_changed(current: float, maximum: float)
 ## Phát ra mỗi lần trúng đòn, với lượng sát thương THỰC (sau kháng).
 signal damaged(enemy: Enemy, amount: float, info: DamageInfo)
+## Phát ra khi được hồi máu (vd bởi Thầy lang), với lượng máu THỰC được hồi.
+signal healed(enemy: Enemy, amount: float)
 
 ## Tên group để tháp tìm mục tiêu.
 const GROUP := &"enemies"
@@ -65,6 +67,11 @@ func _ready() -> void:
 	health_bar.track(self)
 	hit_feedback.track(self)
 	hit_feedback.changed.connect(queue_redraw)
+	if data.heal_radius > 0.0:
+		var aura := HealerAura.new()
+		aura.name = "HealerAura"
+		add_child(aura)
+		aura.setup(self)
 
 	var path := get_parent() as Path2D
 	assert(path != null and path.curve != null, "Enemy phải là con trực tiếp của một Path2D có Curve2D.")
@@ -115,6 +122,19 @@ func take_damage(info: DamageInfo) -> float:
 	if health <= 0.0:
 		_die()
 	return amount
+
+
+## Hồi máu (không vượt quá máu tối đa). Trả về lượng máu thực sự được hồi.
+func heal(amount: float) -> float:
+	if _is_dead or amount <= 0.0:
+		return 0.0
+	var gained := minf(amount, max_health - health)
+	if gained <= 0.0:
+		return 0.0
+	health += gained
+	health_changed.emit(health, max_health)
+	healed.emit(self, gained)
+	return gained
 
 
 func _die() -> void:
@@ -177,6 +197,15 @@ func _draw() -> void:
 				draw_colored_polygon(wing, body_color.darkened(0.25))
 			draw_circle(Vector2.ZERO, r * 0.6, body_color)
 			draw_arc(Vector2.ZERO, r * 0.6, 0.0, TAU, 24, outline, 2.0)
+		EnemyData.Shape.CROSS:
+			# Thầy lang: thân tròn có dấu cộng trắng.
+			draw_circle(Vector2.ZERO, r, body_color)
+			draw_arc(Vector2.ZERO, r, 0.0, TAU, 32, outline, 2.0)
+			var arm := r * 0.55
+			var thick := maxf(r * 0.32, 3.0)
+			var cross_color := Color.WHITE.lerp(body_color, 0.15)
+			draw_rect(Rect2(-arm, -thick * 0.5, arm * 2.0, thick), cross_color)
+			draw_rect(Rect2(-thick * 0.5, -arm, thick, arm * 2.0), cross_color)
 		_:
 			draw_circle(Vector2.ZERO, r, body_color)
 			draw_arc(Vector2.ZERO, r, 0.0, TAU, 32, outline, 2.0)

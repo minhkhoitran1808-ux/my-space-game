@@ -28,6 +28,7 @@ const MAX_FLOATING_TEXTS := 120
 const SPARK_COUNT := 3
 const SPARK_LIFETIME := 0.22
 const MAX_SPARKS := 90
+const HEAL_COLOR := Color("4ADE80")
 
 const DAMAGE_COLORS := {
 	DamageInfo.Type.PHYSICAL: Color(1.0, 1.0, 1.0),
@@ -68,6 +69,7 @@ func _on_settings_changed(key: String, value: Variant) -> void:
 
 func track_enemy(enemy: Enemy) -> void:
 	enemy.damaged.connect(_on_enemy_damaged)
+	enemy.healed.connect(_on_enemy_healed)
 	enemy.died.connect(_on_enemy_died)
 	enemy.reached_end.connect(_on_enemy_reached_end)
 
@@ -145,6 +147,12 @@ func _add_sparks(enemy: Enemy, color: Color) -> void:
 			"spark": true,
 		})
 	_spark_count += SPARK_COUNT
+
+
+## Vài tia xanh lá bay lên khi địch được Thầy lang hồi máu (không dùng số: nhiều địch được
+## hồi cùng lúc thì số chồng lên nhau rất rối; thanh máu đã cho biết lượng hồi).
+func _on_enemy_healed(enemy: Enemy, _amount: float) -> void:
+	_add_sparks(enemy, HEAL_COLOR)
 
 
 func _on_enemy_died(enemy: Enemy, reward: int) -> void:

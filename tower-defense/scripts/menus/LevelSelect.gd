@@ -3,6 +3,9 @@ extends Control
 ## Màn bị khoá cho tới khi màn trước có ít nhất 1 sao. Qua một màn thì mở chế độ vô tận của màn đó.
 
 const CARD_SIZE := Vector2(360, 370)
+## Thẻ co lại khi có nhiều màn để vẫn nằm vừa một hàng (lề màn hình 40px mỗi bên, khe 24px).
+const SCREEN_MARGIN := 40.0
+const CARD_GAP := 24.0
 
 @onready var cards_container: HBoxContainer = %Cards
 @onready var back_button: Button = %BackButton
@@ -39,7 +42,7 @@ func _build_cards() -> void:
 
 func _create_card(level: LevelData, index: int, unlocked: bool) -> Control:
 	var card := PanelContainer.new()
-	card.custom_minimum_size = CARD_SIZE
+	card.custom_minimum_size = Vector2(_card_width(), CARD_SIZE.y)
 	card.modulate.a = 1.0 if unlocked else 0.55
 
 	var margin := MarginContainer.new()
@@ -70,7 +73,7 @@ func _create_card(level: LevelData, index: int, unlocked: bool) -> Control:
 	box.add_child(description)
 
 	var info := Label.new()
-	info.text = "%d wave  ·  %d vàng  ·  %d máu  ·  %d làn đường" % [level.get_wave_count(),
+	info.text = "%d wave  ·  %d vàng\n%d máu  ·  %d làn đường" % [level.get_wave_count(),
 			level.starting_gold, level.starting_lives, _count_lanes(level)]
 	info.add_theme_font_size_override("font_size", 14)
 	info.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
@@ -103,6 +106,13 @@ func _create_card(level: LevelData, index: int, unlocked: bool) -> Control:
 	box.add_child(endless)
 	endless_buttons.append(endless)
 	return card
+
+
+## Bề rộng thẻ: tối đa CARD_SIZE.x, nhỏ hơn nếu số màn nhiều tới mức không vừa một hàng.
+func _card_width() -> float:
+	var count := maxi(GameManager.LEVEL_CATALOG.levels.size(), 1)
+	var available := get_viewport_rect().size.x - SCREEN_MARGIN * 2.0 - CARD_GAP * (count - 1)
+	return minf(CARD_SIZE.x, floorf(available / count))
 
 
 func _count_lanes(level: LevelData) -> int:
