@@ -16,6 +16,7 @@ damage = 80.0
 fire_rate = 0.7
 attack_range = 170.0
 splash_radius = 84.0
+can_hit_air = false
 projectile_speed = 320.0
 color = Color(0.95, 0.55, 0.2, 1)
 scene = ExtResource("2_scene")

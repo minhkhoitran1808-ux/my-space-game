@@ -19,5 +19,7 @@ game sẽ tự phát. Thiếu file nào thì sự kiện đó im lặng, không 
 | `wave_complete` | Hết wave |
 | `victory` | Thắng màn |
 | `defeat` | Thua màn |
+| `ability_meteor` | Dùng kỹ năng Thiên thạch |
+| `ability_freeze` | Dùng kỹ năng Băng giá |
 
 Ví dụ: `assets/audio/enemy_death.wav`. Danh sách này cũng nằm trong `AudioManager.SOUND_NAMES`.

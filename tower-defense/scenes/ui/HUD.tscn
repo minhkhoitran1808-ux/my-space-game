@@ -121,6 +121,11 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 
+[node name="AbilityButtons" type="HBoxContainer" parent="BottomBar/Margin/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
 [node name="Spacer" type="Control" parent="BottomBar/Margin/HBox"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -131,8 +136,8 @@ layout_mode = 2
 size_flags_vertical = 4
 theme_override_colors/font_color = Color(1, 1, 1, 0.7)
 theme_override_font_sizes/font_size = 13
-text = "Chuột trái: đặt tháp  ·  Chuột phải / Esc: huỷ  ·  Space: wave  ·  F: tốc độ  ·  P: dừng
-Click vào tháp để xem chỉ số, nâng cấp [U], bán [X], đổi mục tiêu [T]"
+text = "Click tháp: U nâng cấp · X bán · T mục tiêu
+Space wave · F tốc độ · P dừng · Esc huỷ"
 horizontal_alignment = 2
 
 [node name="MessageLabel" type="Label" parent="."]

@@ -41,6 +41,8 @@ enum AttackType {
 @export var splash_radius: float = 0.0
 ## Hiệu ứng gây lên mọi địch bị trúng.
 @export var on_hit_effects: Array[StatusEffectData] = []
+## Có bắn được địch bay không (false = chỉ bắn mục tiêu mặt đất).
+@export var can_hit_air: bool = true
 
 @export_group("Đạn")
 ## Tốc độ đạn (pixel / giây). Chỉ dùng khi attack_type = PROJECTILE.

@@ -20,6 +20,8 @@ var source: Node = null
 var effects: Array[StatusEffectData] = []
 ## true nếu là sát thương theo thời gian (thiêu đốt...), để UI hiển thị nhỏ hơn.
 var is_periodic: bool = false
+## false = đòn đánh mặt đất, nổ lan không trúng địch bay.
+var hits_air: bool = true
 
 
 func _init(p_amount: float = 0.0, p_type: Type = Type.PHYSICAL, p_source: Node = null) -> void:

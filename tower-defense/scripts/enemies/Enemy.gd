@@ -37,6 +37,8 @@ var wave_index: int = -1
 var _is_dead := false
 var _path_length := 0.0
 var _hit_flash := 0.0
+## Đồng hồ cho hoạt ảnh vỗ cánh / nhấp nhô của địch bay.
+var _flight_time := 0.0
 
 @onready var status_effects: StatusEffectHandler = $StatusEffects
 
@@ -75,6 +77,9 @@ func _process(delta: float) -> void:
 
 	if _hit_flash > 0.0:
 		_hit_flash = maxf(_hit_flash - delta, 0.0)
+		queue_redraw()
+	if data.is_flying:
+		_flight_time += delta
 		queue_redraw()
 
 
@@ -131,6 +136,11 @@ func _draw() -> void:
 	var body_color := data.color.lerp(Color.WHITE, _hit_flash / HIT_FLASH_TIME)
 	var outline := data.color.darkened(0.5)
 
+	# Địch bay: bóng mờ dưới đất, thân vẽ cao hơn và nhấp nhô.
+	if data.is_flying:
+		_draw_ellipse(Vector2(0, r * 0.9), Vector2(r * 1.1, r * 0.4), Color(0, 0, 0, 0.3))
+		draw_set_transform(Vector2(0, -10.0 + sin(_flight_time * 4.0) * 2.5))
+
 	# Vòng sáng hiệu ứng (làm chậm = xanh, thiêu đốt = cam...).
 	var ring := r + 4.0
 	for tint in status_effects.get_tints():
@@ -151,6 +161,15 @@ func _draw() -> void:
 			draw_colored_polygon(dia, body_color)
 			dia.append(dia[0])
 			draw_polyline(dia, outline, 2.0)
+		EnemyData.Shape.BAT:
+			# Hai cánh tam giác vỗ lên xuống quanh thân tròn nhỏ.
+			var flap := sin(_flight_time * 14.0) * r * 0.5
+			for side in [-1.0, 1.0]:
+				var wing := PackedVector2Array([Vector2(side * r * 0.3, -r * 0.2),
+						Vector2(side * r * 1.6, -r * 0.4 - flap), Vector2(side * r * 1.1, r * 0.5 - flap * 0.5)])
+				draw_colored_polygon(wing, body_color.darkened(0.25))
+			draw_circle(Vector2.ZERO, r * 0.6, body_color)
+			draw_arc(Vector2.ZERO, r * 0.6, 0.0, TAU, 24, outline, 2.0)
 		_:
 			draw_circle(Vector2.ZERO, r, body_color)
 			draw_arc(Vector2.ZERO, r, 0.0, TAU, 32, outline, 2.0)
@@ -162,3 +181,12 @@ func _draw() -> void:
 		var ratio := health / max_health
 		draw_rect(Rect2(bar_pos, bar_size), Color(0, 0, 0, 0.7))
 		draw_rect(Rect2(bar_pos, Vector2(bar_size.x * ratio, bar_size.y)), Color.RED.lerp(Color.GREEN, ratio))
+	draw_set_transform(Vector2.ZERO)
+
+
+func _draw_ellipse(center: Vector2, radii: Vector2, color: Color) -> void:
+	var points := PackedVector2Array()
+	for i in 16:
+		var angle := TAU * i / 16.0
+		points.append(center + Vector2(cos(angle) * radii.x, sin(angle) * radii.y))
+	draw_colored_polygon(points, color)

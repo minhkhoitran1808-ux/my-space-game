@@ -19,6 +19,7 @@ static func describe(data: TowerData, next: TowerData = null) -> String:
 	if not effects_now.is_empty():
 		lines.append("Hiệu ứng: %s" % (effects_now if effects_now == effects_next else "%s → %s" % [effects_now, effects_next]))
 	lines.append("Kiểu bắn: %s" % ("Tia (trúng ngay)" if data.attack_type == TowerData.AttackType.HITSCAN else "Đạn bay"))
+	lines.append("Mục tiêu: %s" % ("Mặt đất + Trên không" if data.can_hit_air else "Chỉ mặt đất"))
 	return "\n".join(lines)
 
 

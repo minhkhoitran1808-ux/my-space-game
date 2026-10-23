@@ -14,6 +14,7 @@ signal next_level_pressed
 signal level_select_pressed
 signal speed_pressed
 signal pause_pressed
+signal ability_pressed(ability: AbilityData)
 
 const MESSAGE_DURATION := 1.6
 
@@ -21,6 +22,7 @@ const MESSAGE_DURATION := 1.6
 @onready var lives_label: Label = %LivesLabel
 @onready var wave_label: Label = %WaveLabel
 @onready var tower_buttons: HBoxContainer = %TowerButtons
+@onready var ability_buttons: HBoxContainer = %AbilityButtons
 @onready var start_wave_button: Button = %StartWaveButton
 @onready var next_wave_label: Label = %NextWaveLabel
 @onready var speed_button: Button = %SpeedButton
@@ -37,6 +39,7 @@ const MESSAGE_DURATION := 1.6
 @onready var tower_info_panel: TowerInfoPanel = %TowerInfoPanel
 
 var _buttons_by_tower: Dictionary = {} # TowerData -> Button
+var _buttons_by_ability: Dictionary = {} # AbilityData -> Button
 var _message_tween: Tween
 
 
@@ -80,6 +83,44 @@ func setup_tower_buttons(towers: Array[TowerData]) -> void:
 		tower_buttons.add_child(button)
 		_buttons_by_tower[tower_data] = button
 	_update_tower_buttons()
+
+
+## Tạo một nút cho mỗi kỹ năng chủ động.
+func setup_ability_buttons(abilities: Array[AbilityData]) -> void:
+	for child in ability_buttons.get_children():
+		child.queue_free()
+	_buttons_by_ability.clear()
+	for ability in abilities:
+		var button := Button.new()
+		button.icon = _make_color_icon(ability.color)
+		button.custom_minimum_size = Vector2(150, 0)
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.toggle_mode = true
+		button.focus_mode = Control.FOCUS_NONE
+		button.tooltip_text = "%s  [%s]\n%s\nHồi chiêu: %ds" % [ability.display_name,
+				OS.get_keycode_string(ability.hotkey), ability.description, roundi(ability.cooldown)]
+		button.pressed.connect(func() -> void:
+			button.set_pressed_no_signal(false)
+			ability_pressed.emit(ability))
+		ability_buttons.add_child(button)
+		_buttons_by_ability[ability] = button
+		update_ability_cooldown(ability, 0.0)
+
+
+## Cập nhật nút kỹ năng: hiện số giây còn hồi, hoặc "Sẵn sàng".
+func update_ability_cooldown(ability: AbilityData, remaining: float) -> void:
+	var button: Button = _buttons_by_ability.get(ability)
+	if button == null:
+		return
+	var status := "Sẵn sàng" if remaining <= 0.0 else "Hồi %ds" % ceili(remaining)
+	button.text = "[%s] %s\n%s" % [OS.get_keycode_string(ability.hotkey), ability.display_name, status]
+	button.disabled = remaining > 0.0
+
+
+## Đánh dấu nút kỹ năng đang ngắm (null = không ngắm).
+func set_targeting_ability(ability: AbilityData) -> void:
+	for data: AbilityData in _buttons_by_ability:
+		_buttons_by_ability[data].set_pressed_no_signal(data == ability)
 
 
 ## Đánh dấu nút của loại tháp đang được chọn (null = không chọn).
@@ -141,6 +182,16 @@ func show_game_over(victory: bool, stars: int, lives: int, max_lives: int, has_n
 	game_over_panel.show()
 
 
+## Bảng kết thúc chế độ vô tận: wave đạt được và kỷ lục.
+func show_endless_over(wave_reached: int, best_wave: int, new_record: bool) -> void:
+	result_label.text = "KỶ LỤC MỚI!" if new_record else "KẾT THÚC"
+	result_label.modulate = Color(1.0, 0.85, 0.3)
+	result_stars.visible = false
+	result_detail.text = "Trụ được tới wave %d  ·  Kỷ lục: wave %d" % [wave_reached, best_wave]
+	next_level_button.visible = false
+	game_over_panel.show()
+
+
 ## Tạo icon tròn đơn sắc cho nút tháp (tạm thời, thay bằng sprite khi có asset).
 func _make_color_icon(color: Color, size: int = 22) -> Texture2D:
 	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
@@ -168,4 +219,6 @@ func _on_lives_changed(lives: int) -> void:
 
 
 func _on_wave_changed(current_wave: int, total_waves: int) -> void:
-	wave_label.text = "Wave: %d/%d" % [current_wave, total_waves]
+	# total_waves = 0 nghĩa là chế độ vô tận.
+	wave_label.text = "Wave: %d/%d" % [current_wave, total_waves] if total_waves > 0 \
+			else "Wave: %d (vô tận)" % current_wave

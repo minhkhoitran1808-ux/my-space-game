@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/AbilityData.gd" id="1_data"]
+[ext_resource type="Resource" path="res://resources/effects/freeze.tres" id="2_freeze"]
+[ext_resource type="Script" path="res://scripts/resources/StatusEffectData.gd" id="3_effect_script"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"freeze"
+display_name = "Băng giá"
+description = "Dùng ngay: làm chậm 90% TOÀN BỘ địch trên bản đồ trong 3 giây."
+hotkey = 69
+cooldown = 50.0
+targeted = false
+radius = 0.0
+effects = Array[ExtResource("3_effect_script")]([ExtResource("2_freeze")])
+color = Color(0.6, 0.9, 1, 1)

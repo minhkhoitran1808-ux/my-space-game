@@ -7,7 +7,7 @@ extends Resource
 ## WaveManager tự quét thư mục này, nên trong file wave chỉ cần ghi "id".
 
 ## Hình dạng vẽ tạm khi chưa có sprite.
-enum Shape { CIRCLE, SQUARE, TRIANGLE, DIAMOND }
+enum Shape { CIRCLE, SQUARE, TRIANGLE, DIAMOND, BAT }
 
 ## Mã định danh, dùng trong các file data/waves/*.json. Phải duy nhất.
 @export var id: StringName = &"basic"
@@ -21,6 +21,11 @@ enum Shape { CIRCLE, SQUARE, TRIANGLE, DIAMOND }
 @export var reward: int = 8
 ## Số mạng nhà chính bị trừ khi địch đi tới cuối đường.
 @export var damage_to_base: int = 1
+
+@export_group("Di chuyển")
+## Địch bay: đi theo làn trên không (thẳng tới nhà chính) và chỉ trúng đòn của
+## tháp / kỹ năng bắn được mục tiêu trên không.
+@export var is_flying: bool = false
 
 @export_group("Kháng")
 ## Giảm sát thương Vật lý (0.6 = giảm 60%).

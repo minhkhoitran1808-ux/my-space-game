@@ -1,14 +1,16 @@
 extends Control
 ## Màn chọn màn: mỗi màn trong LevelCatalog là một thẻ (tên, sao, mô tả, thông tin, nút chơi).
-## Màn bị khoá cho tới khi màn trước có ít nhất 1 sao.
+## Màn bị khoá cho tới khi màn trước có ít nhất 1 sao. Qua một màn thì mở chế độ vô tận của màn đó.
 
-const CARD_SIZE := Vector2(360, 330)
+const CARD_SIZE := Vector2(360, 370)
 
 @onready var cards_container: HBoxContainer = %Cards
 @onready var back_button: Button = %BackButton
 
 ## Nút "Chơi" của từng màn, theo thứ tự trong catalog (test dùng để bấm thử).
 var play_buttons: Array[Button] = []
+## Nút "Vô tận" của từng màn, theo thứ tự trong catalog.
+var endless_buttons: Array[Button] = []
 
 
 func _ready() -> void:
@@ -26,6 +28,7 @@ func _build_cards() -> void:
 	for child in cards_container.get_children():
 		child.queue_free()
 	play_buttons.clear()
+	endless_buttons.clear()
 	var catalog := GameManager.LEVEL_CATALOG
 	for index in catalog.levels.size():
 		cards_container.add_child(_create_card(catalog.levels[index], index,
@@ -82,9 +85,23 @@ func _create_card(level: LevelData, index: int, unlocked: bool) -> Control:
 		play.text = "Chơi lại"
 	else:
 		play.text = "Chơi"
-	play.pressed.connect(GameManager.start_level.bind(level))
+	play.pressed.connect(GameManager.start_level.bind(level, false))
 	box.add_child(play)
 	play_buttons.append(play)
+
+	var endless := Button.new()
+	endless.custom_minimum_size = Vector2(0, 36)
+	endless.disabled = stars.stars == 0
+	var best := SaveManager.get_endless_best(level.id)
+	if endless.disabled:
+		endless.text = "Vô tận - qua màn này để mở"
+	elif best > 0:
+		endless.text = "Vô tận  (kỷ lục: wave %d)" % best
+	else:
+		endless.text = "Vô tận"
+	endless.pressed.connect(GameManager.start_level.bind(level, true))
+	box.add_child(endless)
+	endless_buttons.append(endless)
 	return card
 
 

@@ -16,6 +16,7 @@ extends Node2D
 @onready var build_manager: BuildManager = $BuildManager
 @onready var selection_manager: SelectionManager = $SelectionManager
 @onready var fx_manager: FxManager = $FxManager
+@onready var ability_manager: AbilityManager = $AbilityManager
 @onready var hud: HUD = $UI/HUD
 @onready var tower_info_panel: TowerInfoPanel = hud.tower_info_panel
 @onready var pause_menu: PauseMenu = hud.pause_menu
@@ -31,6 +32,8 @@ func _ready() -> void:
 
 	# HUD -> hệ thống
 	hud.setup_tower_buttons(build_manager.available_towers)
+	hud.setup_ability_buttons(ability_manager.abilities)
+	hud.ability_pressed.connect(ability_manager.request)
 	hud.start_wave_pressed.connect(_start_next_wave)
 	hud.tower_selected.connect(build_manager.select_tower)
 	hud.restart_pressed.connect(GameManager.restart_level)
@@ -64,6 +67,12 @@ func _ready() -> void:
 	wave_manager.wave_completed.connect(_on_wave_completed)
 	wave_manager.wave_called_early.connect(_on_wave_called_early)
 
+	# Kỹ năng
+	ability_manager.targeting_changed.connect(_on_ability_targeting_changed)
+	ability_manager.cooldown_changed.connect(hud.update_ability_cooldown)
+	ability_manager.ability_failed.connect(hud.show_message)
+	ability_manager.ability_cast.connect(_on_ability_cast)
+
 	# Hiệu ứng
 	wave_manager.enemy_spawned.connect(fx_manager.track_enemy)
 	fx_manager.track_projectile_container(build_manager.projectile_container)
@@ -74,7 +83,9 @@ func _ready() -> void:
 	if not build_manager.available_towers.is_empty():
 		build_manager.select_tower(build_manager.available_towers[0])
 	_refresh_wave_button()
-	hud.show_message("%s - %d wave" % [level.display_name, wave_manager.get_total_waves()], Color(0.6, 0.85, 1.0))
+	var intro := "%s - Vô tận" % level.display_name if GameManager.endless_mode \
+			else "%s - %d wave" % [level.display_name, wave_manager.get_total_waves()]
+	hud.show_message(intro, Color(0.6, 0.85, 1.0))
 
 
 ## Nạp bản đồ của màn và giao các làn đường cho những hệ thống cần chúng.
@@ -85,7 +96,10 @@ func _load_level(p_level: LevelData) -> void:
 	var paths := map.get_paths()
 	ground.setup(paths)
 	build_manager.paths = paths
-	wave_manager.setup(level.waves_file, paths)
+	if GameManager.endless_mode:
+		wave_manager.setup_endless(String(level.id), paths, map.get_air_paths())
+	else:
+		wave_manager.setup(level.waves_file, paths, map.get_air_paths())
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -145,9 +159,23 @@ func _sell_selected_tower() -> void:
 
 func _on_build_mode_changed(tower_data: TowerData) -> void:
 	hud.set_selected_tower(tower_data)
-	# Vào chế độ xây thì bỏ chọn tháp đang xem.
+	# Vào chế độ xây thì bỏ chọn tháp đang xem và thôi ngắm kỹ năng.
 	if tower_data != null:
 		selection_manager.deselect()
+		ability_manager.cancel_targeting()
+
+
+## Đang ngắm kỹ năng thì thoát chế độ xây / bỏ chọn tháp để click không bị nhầm.
+func _on_ability_targeting_changed(ability: AbilityData) -> void:
+	hud.set_targeting_ability(ability)
+	if ability != null:
+		build_manager.cancel_build()
+		selection_manager.deselect()
+
+
+func _on_ability_cast(ability: AbilityData, cast_position: Vector2) -> void:
+	fx_manager.play_ability(ability, cast_position)
+	hud.show_message("%s!" % ability.display_name, ability.color)
 
 
 func _on_tower_placed(tower: Tower) -> void:
@@ -191,8 +219,14 @@ func _on_game_state_changed(state: GameManager.GameState) -> void:
 		SaveManager.record_result(level.id, stars)
 	build_manager.cancel_build()
 	selection_manager.deselect()
+	ability_manager.cancel_targeting()
 	pause_menu.hide()
 	get_tree().paused = true
-	hud.show_game_over(victory, stars, GameManager.lives, GameManager.starting_lives,
-			victory and GameManager.get_next_level() != null)
+	if GameManager.endless_mode:
+		var wave := wave_manager.get_current_wave_number()
+		var new_record := SaveManager.record_endless(level.id, wave)
+		hud.show_endless_over(wave, SaveManager.get_endless_best(level.id), new_record)
+	else:
+		hud.show_game_over(victory, stars, GameManager.lives, GameManager.starting_lives,
+				victory and GameManager.get_next_level() != null)
 	AudioManager.play(&"victory" if victory else &"defeat")

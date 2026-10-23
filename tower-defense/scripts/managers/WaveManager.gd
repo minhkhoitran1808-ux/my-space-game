@@ -18,6 +18,9 @@ extends Node
 ## Gọi wave sớm: khi wave hiện tại đã spawn xong (nhưng địch còn trên đường), người chơi
 ## được gọi wave tiếp theo và nhận thưởng thêm. Vì vậy số địch còn sống được đếm
 ## RIÊNG cho từng wave; mỗi wave báo hoàn thành khi địch của chính nó chết hết.
+##
+## Địch bay (EnemyData.is_flying) đi theo các làn trên không (air_paths).
+## Chế độ vô tận (endless = true): không đọc file, wave được WaveGenerator sinh dần, không bao giờ hết.
 
 signal wave_started(wave_number: int)
 ## Phát ra khi wave đã spawn hết địch (địch có thể vẫn còn trên đường).
@@ -34,6 +37,12 @@ signal enemy_spawned(enemy: Enemy)
 var waves_file: String = ""
 ## Các làn đường (Path2D); địch được add làm con của làn nó đi.
 var paths: Array[Path2D] = []
+## Làn trên không cho địch bay.
+var air_paths: Array[Path2D] = []
+## Chế độ vô tận: wave sinh tự động, không có chiến thắng.
+var endless: bool = false
+## Khoá seed cho WaveGenerator (thường là id màn) để chế độ vô tận lặp lại được.
+var endless_seed: String = ""
 
 ## Khoảng cách (pixel trên đường đi) giữa các địch con sinh ra khi địch mẹ chết.
 const DEATH_SPAWN_SPACING := 14.0
@@ -66,17 +75,28 @@ func _ready() -> void:
 	_load_enemy_types()
 
 
-## Main gọi sau khi nạp bản đồ: gán file wave + các làn đường.
-func setup(p_waves_file: String, p_paths: Array[Path2D]) -> void:
+## Main gọi sau khi nạp bản đồ: gán file wave + các làn đường (mặt đất và trên không).
+func setup(p_waves_file: String, p_paths: Array[Path2D], p_air_paths: Array[Path2D]) -> void:
 	waves_file = p_waves_file
 	paths = p_paths
+	air_paths = p_air_paths
 	_load_waves()
+
+
+## Bật chế độ vô tận (gọi thay cho setup()).
+func setup_endless(seed_key: String, p_paths: Array[Path2D], p_air_paths: Array[Path2D]) -> void:
+	paths = p_paths
+	air_paths = p_air_paths
+	endless = true
+	endless_seed = seed_key
+	_waves.clear()
 
 
 # --- API công khai --------------------------------------------------------------
 
+## Tổng số wave (0 trong chế độ vô tận).
 func get_total_waves() -> int:
-	return _waves.size()
+	return 0 if endless else _waves.size()
 
 
 ## Số thứ tự wave hiện tại (bắt đầu từ 1, 0 = chưa bắt đầu).
@@ -85,7 +105,7 @@ func get_current_wave_number() -> int:
 
 
 func has_more_waves() -> bool:
-	return _current_wave_index + 1 < _waves.size()
+	return endless or _current_wave_index + 1 < _waves.size()
 
 
 func is_spawning() -> bool:
@@ -123,6 +143,8 @@ func get_early_call_bonus() -> int:
 ## [{ data: EnemyData, count: int }, ...] theo thứ tự xuất hiện.
 func get_wave_composition(wave_number: int) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
+	if endless and wave_number >= 1:
+		_ensure_wave(wave_number - 1)
 	if wave_number < 1 or wave_number > _waves.size():
 		return result
 	var by_type: Dictionary = {}
@@ -148,6 +170,8 @@ func start_next_wave() -> bool:
 	var early := is_early_call()
 	var early_bonus := get_early_call_bonus()
 	_current_wave_index += 1
+	if endless:
+		_ensure_wave(_current_wave_index)
 	GameManager.set_current_wave(get_current_wave_number())
 	_build_spawn_queue(_waves[_current_wave_index])
 	_alive_by_wave[_current_wave_index] = 0
@@ -249,6 +273,12 @@ func _build_spawn_queue(wave: Dictionary) -> void:
 			})
 
 
+## Chế độ vô tận: sinh thêm wave cho tới khi có wave thứ index (tính từ 0).
+func _ensure_wave(index: int) -> void:
+	while _waves.size() <= index:
+		_waves.append(WaveGenerator.generate(_waves.size() + 1, endless_seed, _enemy_types.keys()))
+
+
 # --- Spawn ----------------------------------------------------------------------
 
 ## Spawn tất cả địch đã tới lượt; nếu phần tử kế tiếp cần chờ thì hẹn Timer.
@@ -260,8 +290,10 @@ func _process_spawn_queue() -> void:
 			next.delay = 0.0 # Lần gọi tiếp theo (khi Timer hết giờ) sẽ spawn ngay.
 			return
 		var entry: Dictionary = _spawn_queue.pop_front()
-		_spawn_enemy(entry.data, entry.health_multiplier, entry.speed_multiplier, 0.0,
-				_spawning_wave_index, paths[entry.path_index])
+		var enemy_data: EnemyData = entry.data
+		var lanes := air_paths if enemy_data.is_flying and not air_paths.is_empty() else paths
+		_spawn_enemy(enemy_data, entry.health_multiplier, entry.speed_multiplier, 0.0,
+				_spawning_wave_index, lanes[entry.path_index % lanes.size()])
 
 	if not is_spawning():
 		return
@@ -271,13 +303,13 @@ func _process_spawn_queue() -> void:
 	_check_wave_completed(finished_wave)
 
 
-## wave_index < 0 nghĩa là "wave hiện tại"; path = null nghĩa là làn đầu tiên.
+## wave_index < 0 nghĩa là "wave hiện tại"; path = null nghĩa là làn đầu tiên phù hợp.
 func _spawn_enemy(enemy_data: EnemyData, health_multiplier: float, speed_multiplier: float,
 		start_progress: float = 0.0, wave_index: int = -1, path: Path2D = null) -> Enemy:
 	if wave_index < 0:
 		wave_index = maxi(_current_wave_index, 0)
 	if path == null:
-		path = paths[0]
+		path = air_paths[0] if enemy_data.is_flying and not air_paths.is_empty() else paths[0]
 	var enemy := enemy_data.scene.instantiate() as Enemy
 	enemy.setup(enemy_data, health_multiplier, speed_multiplier)
 	enemy.wave_index = wave_index
@@ -295,8 +327,12 @@ func _on_enemy_died(enemy: Enemy, reward: int) -> void:
 	var child_data := enemy.data.spawn_on_death
 	if child_data and child_data.scene:
 		for i in enemy.data.spawn_on_death_count:
+			# Con cùng kiểu di chuyển (bay / đi bộ) với mẹ thì xuất hiện ngay chỗ mẹ chết,
+			# khác kiểu thì bắt đầu từ đầu làn phù hợp.
+			var same_lane := child_data.is_flying == enemy.data.is_flying
 			_spawn_enemy(child_data, enemy.health_multiplier, 1.0,
-					maxf(enemy.progress - i * DEATH_SPAWN_SPACING, 0.0), enemy.wave_index, enemy.get_parent())
+					maxf(enemy.progress - i * DEATH_SPAWN_SPACING, 0.0) if same_lane else 0.0,
+					enemy.wave_index, enemy.get_parent() if same_lane else null)
 
 	_alive_by_wave[enemy.wave_index] -= 1
 	GameManager.add_gold(reward)

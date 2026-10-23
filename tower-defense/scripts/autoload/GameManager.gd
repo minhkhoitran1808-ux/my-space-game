@@ -45,6 +45,8 @@ var game_speed: float = 1.0
 var starting_lives: int = STARTING_LIVES
 ## Màn đang chơi. Null = chưa chọn (vd chạy thẳng Main.tscn bằng F6) => dùng màn đầu tiên.
 var current_level: LevelData = null
+## true = đang chơi chế độ vô tận của current_level.
+var endless_mode: bool = false
 
 ## Test hook: true thì các hàm chuyển cảnh chỉ ghi lại scene được yêu cầu, không đổi thật.
 var block_scene_changes := false
@@ -134,13 +136,15 @@ func get_next_level() -> LevelData:
 	return LEVEL_CATALOG.get_next_level(get_current_level())
 
 
-func start_level(level: LevelData) -> void:
+func start_level(level: LevelData, endless: bool = false) -> void:
 	current_level = level
+	endless_mode = endless
 	_change_scene(GAME_SCENE)
 
 
+## Chơi lại đúng màn và đúng chế độ (thường / vô tận) hiện tại.
 func restart_level() -> void:
-	start_level(get_current_level())
+	start_level(get_current_level(), endless_mode)
 
 
 func go_to_level_select() -> void:

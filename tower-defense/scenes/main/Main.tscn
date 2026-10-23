@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/main/Main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/main/Ground.gd" id="2_ground"]
@@ -12,6 +12,10 @@
 [ext_resource type="Resource" path="res://resources/towers/mage_tower.tres" id="10_mage_tower"]
 [ext_resource type="Script" path="res://scripts/managers/SelectionManager.gd" id="11_selection"]
 [ext_resource type="Script" path="res://scripts/fx/FxManager.gd" id="12_fx"]
+[ext_resource type="Script" path="res://scripts/managers/AbilityManager.gd" id="13_ability"]
+[ext_resource type="Script" path="res://scripts/resources/AbilityData.gd" id="14_ability_data"]
+[ext_resource type="Resource" path="res://resources/abilities/meteor.tres" id="15_meteor"]
+[ext_resource type="Resource" path="res://resources/abilities/freeze.tres" id="16_freeze"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -41,6 +45,10 @@ available_towers = Array[ExtResource("4_tower_data")]([ExtResource("5_basic_towe
 [node name="SelectionManager" type="Node" parent="." node_paths=PackedStringArray("build_manager")]
 script = ExtResource("11_selection")
 build_manager = NodePath("../BuildManager")
+
+[node name="AbilityManager" type="Node2D" parent="."]
+script = ExtResource("13_ability")
+abilities = Array[ExtResource("14_ability_data")]([ExtResource("15_meteor"), ExtResource("16_freeze")])
 
 [node name="WaveManager" type="Node" parent="."]
 script = ExtResource("6_wave")

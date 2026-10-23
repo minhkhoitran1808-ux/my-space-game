@@ -11,6 +11,7 @@ extends Node
 ##      nâng cấp / bán, chọn tháp bằng chuột và phím tắt...).
 ##      Nhịp trận: tốc độ game, tạm dừng, xem trước wave, gọi wave sớm, hiệu ứng, âm thanh.
 ##      Luồng màn: menu, chọn màn, khoá / mở màn, lưu sao.
+##      Kỹ năng chủ động, địch bay, chế độ vô tận.
 ##   2. Với MỖI màn: bot tự chọn ô có độ phủ đường đi tốt nhất, nâng cấp khi dư tiền,
 ##      và phải THẮNG. Bot không cần biết trước bản đồ nên áp dụng được cho màn mới.
 ##   3. Với MỖI màn: không đặt tháp nào thì phải THUA (đảm bảo game không quá dễ).
@@ -42,6 +43,8 @@ func _ready() -> void:
 	await _test_tower_management()
 	await _test_match_flow()
 	await _test_level_flow()
+	await _test_abilities_and_flying()
+	await _test_endless()
 	for level in GameManager.LEVEL_CATALOG.levels:
 		await _test_bot_playthrough(level)
 	for level in GameManager.LEVEL_CATALOG.levels:
@@ -268,6 +271,10 @@ func _test_level_flow() -> void:
 	add_child(select)
 	await get_tree().process_frame
 	_check(not select.play_buttons[1].disabled and select.play_buttons[2].disabled, "qua màn 1 thì mở màn 2")
+	_check(not select.endless_buttons[0].disabled and select.endless_buttons[1].disabled, "qua màn 1 thì mở vô tận màn 1")
+	select.endless_buttons[0].pressed.emit()
+	_check(GameManager.endless_mode and GameManager.current_level == catalog.levels[0], "bấm Vô tận => vào chế độ vô tận")
+	GameManager.endless_mode = false
 	select.queue_free()
 
 	var menu := MAIN_MENU_SCENE.instantiate()
@@ -291,6 +298,99 @@ func _test_level_flow() -> void:
 	SaveManager.reset_progress()
 	GameManager.current_level = null
 	await get_tree().process_frame
+
+
+# --- Phần 1e: kỹ năng chủ động + địch bay --------------------------------------
+
+func _test_abilities_and_flying() -> void:
+	print("[1e] Kỹ năng + địch bay")
+	var main := await _new_main()
+	var build: BuildManager = main.build_manager
+	var waves: WaveManager = main.wave_manager
+	var abilities: AbilityManager = main.ability_manager
+	var path: Path2D = main.map.get_paths()[0]
+	build.cancel_build()
+	var meteor: AbilityData = abilities.abilities[0]
+	var freeze: AbilityData = abilities.abilities[1]
+
+	# Thiên thạch: phím Q để ngắm, click chuột để thả. 120 sát thương chuẩn (bỏ qua giáp).
+	var armored := _spawn_test_enemy(path, waves.get_enemy_type(&"armored"))
+	_press_key(KEY_Q)
+	_check(abilities.targeting == meteor, "phím Q vào chế độ ngắm Thiên thạch")
+	_click(armored.global_position, MOUSE_BUTTON_LEFT)
+	await get_tree().process_frame
+	_check(is_equal_approx(armored.health, 30.0) or armored.health < 30.0, "Thiên thạch gây 120 sát thương chuẩn lên Bọc thép (còn %.0f)" % armored.health)
+	_check(armored.status_effects.has_effect(&"burn"), "Thiên thạch gây thiêu đốt")
+	_check(abilities.targeting == null and not abilities.is_ready(meteor), "dùng xong thì hồi chiêu")
+	var failures := []
+	abilities.ability_failed.connect(func(reason: String) -> void: failures.append(reason))
+	abilities.request(meteor)
+	_check(failures.size() == 1 and abilities.targeting == null, "không dùng được khi đang hồi chiêu")
+
+	# Băng giá: dùng ngay, làm chậm toàn bộ địch.
+	var basic := _spawn_test_enemy(path, waves.get_enemy_type(&"basic"))
+	abilities.request(freeze)
+	_check(is_equal_approx(basic.status_effects.get_speed_multiplier(), 0.1), "Băng giá làm chậm 90% mọi địch")
+
+	# Địch bay: đi làn trên không, Pháo không bắn được, Cung thủ bắn được.
+	var bat: Enemy = waves._spawn_enemy(waves.get_enemy_type(&"bat"), 1.0, 1.0, 500.0)
+	bat.base_speed = 0.0
+	_check(bat.get_parent() == main.map.get_air_paths()[0], "địch bay đi làn trên không")
+	_check(not main.map.get_paths().has(bat.get_parent()), "làn trên không không phải làn mặt đất")
+	armored.queue_free()
+	basic.queue_free()
+	await get_tree().process_frame
+	GameManager.add_gold(500)
+	var near := GameConfig.world_to_cell(bat.global_position) + Vector2i(0, 1)
+	build.select_tower(build.available_towers[1])
+	var cannon := build.try_place_tower(near)
+	build.select_tower(build.available_towers[0])
+	var archer := build.try_place_tower(near + Vector2i(1, 0))
+	_check(cannon != null and cannon._find_target() == null, "Pháo không nhắm địch bay")
+	_check(archer != null and archer._find_target() == bat, "Cung thủ nhắm được địch bay")
+	var ground_splash := DamageInfo.new(50.0, DamageInfo.Type.TRUE)
+	ground_splash.hits_air = false
+	Combat.apply_hit(null, bat.global_position, ground_splash, 80.0, get_tree())
+	_check(is_equal_approx(bat.health, bat.max_health), "nổ lan mặt đất không trúng địch bay")
+	_check(TowerStats.describe(build.available_towers[1]).contains("Chỉ mặt đất"), "bảng chỉ số ghi rõ Pháo chỉ bắn mặt đất")
+	await _free_main(main)
+
+
+# --- Phần 1f: chế độ vô tận ---------------------------------------------------
+
+func _test_endless() -> void:
+	print("[1f] Chế độ vô tận")
+	var level: LevelData = GameManager.LEVEL_CATALOG.levels[0]
+	var ids := [&"basic", &"fast", &"swarm", &"armored", &"bat", &"boss"]
+	_check(WaveGenerator.generate(7, "x", ids) == WaveGenerator.generate(7, "x", ids), "sinh wave lặp lại được (cùng seed)")
+	var boss_waves := 0
+	for n in range(1, 31):
+		var wave := WaveGenerator.generate(n, String(level.id), ids)
+		for group: Dictionary in wave.groups:
+			if group.enemy == "boss":
+				boss_waves += 1
+	_check(boss_waves == 3, "Boss xuất hiện ở wave 10, 20, 30 (%d wave có Boss)" % boss_waves)
+
+	GameManager.current_level = level
+	GameManager.endless_mode = true
+	var main := await _new_main()
+	var waves: WaveManager = main.wave_manager
+	_check(waves.endless and waves.get_total_waves() == 0 and waves.has_more_waves(), "WaveManager ở chế độ vô tận")
+	_check(main.hud.wave_label.text.contains("vô tận"), "HUD ghi chế độ vô tận")
+	_check(waves.validate_waves().is_empty(), "wave sinh ra hợp lệ")
+	var frames := 0
+	while GameManager.is_playing() and frames < MAX_FRAMES_PER_RUN:
+		if waves.can_start_next_wave() and not waves.is_wave_in_progress():
+			waves.start_next_wave()
+		await get_tree().process_frame
+		frames += 1
+	print("    không xây tháp: trụ tới wave %d" % waves.get_current_wave_number())
+	_check(GameManager.state == GameManager.GameState.DEFEAT, "vô tận không xây tháp thì thua")
+	_check(SaveManager.get_endless_best(level.id) == waves.get_current_wave_number(), "lưu kỷ lục vô tận")
+	_check(main.hud.game_over_panel.visible and main.hud.result_detail.text.contains("Kỷ lục"), "bảng kết thúc vô tận hiện kỷ lục")
+	await _free_main(main)
+	GameManager.endless_mode = false
+	SaveManager.reset_progress()
 
 
 # --- Phần 2: bot chơi hết từng màn ----------------------------------------------
@@ -342,7 +442,12 @@ func _test_bot_playthrough(level: LevelData) -> void:
 			waves.get_current_wave_number(), waves.get_total_waves(), GameManager.lives, level.starting_lives,
 			towers_built, upgrades, GameManager.calculate_stars()])
 	_check(won, "%s: bot thắng cả %d wave" % [level.display_name, waves.get_total_waves()])
-	_check(spawns_per_lane.size() == main.map.get_paths().size(), "%s: địch đi đủ %d làn" % [level.display_name, main.map.get_paths().size()])
+	var ground_lanes_used := 0
+	for lane in main.map.get_paths():
+		if spawns_per_lane.has(lane):
+			ground_lanes_used += 1
+	_check(ground_lanes_used == main.map.get_paths().size(), "%s: địch đi đủ %d làn mặt đất" % [level.display_name, main.map.get_paths().size()])
+	_check(spawns_per_lane.has(main.map.get_air_paths()[0]), "%s: có địch bay trên làn trên không" % level.display_name)
 	if won:
 		var has_next := GameManager.LEVEL_CATALOG.get_next_level(level) != null
 		_check(main.hud.game_over_panel.visible and main.hud.result_stars.visible, "%s: bảng thắng có sao" % level.display_name)

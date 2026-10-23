@@ -37,7 +37,8 @@
 			"reward_bonus": 45,
 			"groups": [
 				{ "enemy": "armored", "count": 8, "interval": 1.1, "health_multiplier": 2.08 },
-				{ "enemy": "swarm", "count": 30, "interval": 0.18, "delay": 2.0, "health_multiplier": 2.25 }
+				{ "enemy": "swarm", "count": 30, "interval": 0.18, "delay": 2.0, "health_multiplier": 2.25 },
+				{ "enemy": "bat", "count": 6, "interval": 0.7, "delay": 2.0, "health_multiplier": 2.25 }
 			]
 		},
 		{
@@ -58,7 +59,8 @@
 			"reward_bonus": 60,
 			"groups": [
 				{ "enemy": "armored", "count": 12, "interval": 0.8, "health_multiplier": 3.37 },
-				{ "enemy": "fast", "count": 16, "interval": 0.3, "delay": 3.0, "health_multiplier": 3.55 }
+				{ "enemy": "fast", "count": 16, "interval": 0.3, "delay": 3.0, "health_multiplier": 3.55 },
+				{ "enemy": "bat", "count": 10, "interval": 0.5, "delay": 2.0, "health_multiplier": 3.55 }
 			]
 		},
 		{

@@ -124,6 +124,8 @@ func _find_target() -> Enemy:
 		var enemy := node as Enemy
 		if enemy == null or not enemy.is_alive() or not is_in_range(enemy):
 			continue
+		if enemy.data.is_flying and not data.can_hit_air:
+			continue
 		var score := _score_target(enemy)
 		if score > best_score:
 			best_score = score
@@ -148,6 +150,7 @@ func _shoot(enemy: Enemy) -> void:
 	_cooldown = 1.0 / data.fire_rate
 	var info := DamageInfo.new(data.damage, data.damage_type, self)
 	info.effects = data.on_hit_effects
+	info.hits_air = data.can_hit_air
 	fired.emit(enemy, data.damage)
 
 	match data.attack_type:

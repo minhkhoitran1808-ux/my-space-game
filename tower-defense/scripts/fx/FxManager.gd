@@ -35,6 +35,11 @@ var _particles: Array[Dictionary] = []
 ## { position, radius, color, age }
 var _rings: Array[Dictionary] = []
 var _shake_strength := 0.0
+## Loé sáng toàn màn hình (kỹ năng toàn bản đồ).
+var _flash_color := Color.TRANSPARENT
+var _flash_time := 0.0
+
+const FLASH_DURATION := 0.5
 
 
 # --- Đăng ký nguồn sự kiện (Main gọi) ------------------------------------------
@@ -55,6 +60,26 @@ func track_projectile_container(container: Node) -> void:
 	container.child_entered_tree.connect(func(node: Node) -> void:
 		if node is Projectile:
 			node.impacted.connect(_on_projectile_impacted))
+
+
+## Hiệu ứng khi người chơi dùng kỹ năng.
+func play_ability(ability: AbilityData, cast_position: Vector2) -> void:
+	if ability.radius > 0.0:
+		for i in 3:
+			_rings.append({"position": cast_position, "radius": ability.radius * (0.6 + i * 0.25),
+					"color": ability.color, "age": -i * 0.06})
+		for i in 16:
+			_particles.append({
+				"position": cast_position,
+				"velocity": Vector2.from_angle(TAU * i / 16.0) * randf_range(150.0, 260.0),
+				"color": ability.color,
+				"age": 0.0,
+			})
+		shake(8.0)
+	else:
+		_flash_color = ability.color
+		_flash_time = FLASH_DURATION
+	AudioManager.play(StringName("ability_%s" % ability.id))
 
 
 ## Rung màn hình (cộng dồn, tự giảm dần).
@@ -117,6 +142,9 @@ func _add_text(at: Vector2, text: String, color: Color, size: int) -> void:
 
 func _process(delta: float) -> void:
 	_update_shake(delta)
+	if _flash_time > 0.0:
+		_flash_time = maxf(_flash_time - delta, 0.0)
+		queue_redraw()
 	if get_active_effect_count() == 0:
 		return
 
@@ -148,8 +176,11 @@ func _update_shake(delta: float) -> void:
 
 
 func _draw() -> void:
+	if _flash_time > 0.0:
+		draw_rect(get_viewport_rect().grow(32.0), Color(_flash_color, 0.35 * _flash_time / FLASH_DURATION))
+
 	for ring in _rings:
-		var t: float = ring.age / RING_LIFETIME
+		var t: float = clampf(ring.age / RING_LIFETIME, 0.0, 1.0)
 		draw_circle(ring.position, ring.radius * (0.4 + 0.6 * t), Color(ring.color, 0.25 * (1.0 - t)))
 		draw_arc(ring.position, ring.radius * (0.4 + 0.6 * t), 0.0, TAU, 32, Color(ring.color, 1.0 - t), 3.0)
 
