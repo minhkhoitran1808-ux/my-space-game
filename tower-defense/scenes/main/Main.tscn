@@ -38,6 +38,7 @@ script = ExtResource("18_range_display")
 [node name="Projectiles" type="Node2D" parent="."]
 
 [node name="FxManager" type="Node2D" parent="." node_paths=PackedStringArray("camera")]
+z_index = 11
 script = ExtResource("12_fx")
 camera = NodePath("../Camera2D")
 

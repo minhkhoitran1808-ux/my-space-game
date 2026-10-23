@@ -19,5 +19,6 @@ spawn_on_death = ExtResource("3_child")
 spawn_on_death_count = 8
 color = Color(0.55, 0.1, 0.15, 1)
 radius = 26.0
+elite = true
 shape = 3
 scene = ExtResource("2_scene")

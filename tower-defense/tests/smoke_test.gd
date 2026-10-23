@@ -13,6 +13,7 @@ extends Node
 ##      Luồng màn: menu, chọn màn, khoá / mở màn, lưu sao.
 ##      Kỹ năng chủ động, địch bay, chế độ vô tận. Cài đặt, hướng dẫn chơi lần đầu.
 ##      Hiển thị tầm bắn + ghost tháp (trạng thái, bán kính, phản hồi đặt đúng / sai).
+##      Thanh máu địch (ẩn / hiện, màu theo ngưỡng, vệt sát thương) + nháy trắng khi trúng đòn.
 ##   2. Với MỖI màn: bot tự chọn ô có độ phủ đường đi tốt nhất, nâng cấp khi dư tiền,
 ##      và phải THẮNG. Bot không cần biết trước bản đồ nên áp dụng được cho màn mới.
 ##   3. Với MỖI màn: không đặt tháp nào thì phải THUA (đảm bảo game không quá dễ).
@@ -48,6 +49,7 @@ func _ready() -> void:
 	await _test_endless()
 	await _test_settings_and_tutorial()
 	await _test_range_display()
+	await _test_enemy_feedback()
 	for level in GameManager.LEVEL_CATALOG.levels:
 		await _test_bot_playthrough(level)
 	for level in GameManager.LEVEL_CATALOG.levels:
@@ -536,6 +538,71 @@ func _test_range_display() -> void:
 	_check(not ring.is_shown() and not display.get_upgrade_ring().is_shown(), "bỏ chọn: ẩn vòng")
 	await _free_main(main)
 	SaveManager.reset_progress()
+
+
+# --- Phần 1i: thanh máu địch + hiệu ứng trúng đòn -------------------------------
+
+func _test_enemy_feedback() -> void:
+	print("[1i] Thanh máu địch + hiệu ứng trúng đòn")
+	var main := await _new_main()
+	var waves: WaveManager = main.wave_manager
+	var path: Path2D = main.map.get_paths()[0]
+	var enemy := _spawn_test_enemy(path, waves.get_enemy_type(&"basic"))
+	var bar := enemy.health_bar
+	var hit := enemy.hit_feedback
+	await get_tree().process_frame
+
+	_check(not bar.visible and not bar.is_shown(), "đầy máu: ẩn thanh máu")
+	_check(not hit.is_active() and hit.flash_amount == 0.0, "chưa trúng đòn: không nháy")
+	_check(bar.z_index > 0 and bar.global_rotation == 0.0, "thanh máu nằm trên địch và không xoay")
+	_check(bar.position.y < -enemy.data.radius, "thanh máu nằm trên đầu địch")
+
+	# Trúng 30%: thanh hiện, xanh lá, có vệt trắng giữ ở mức cũ.
+	enemy.take_damage(DamageInfo.new(enemy.max_health * 0.3, DamageInfo.Type.TRUE))
+	_check(hit.flash_amount > 0.9 and hit.is_active(), "trúng đòn: nháy trắng ngay")
+	_check(is_equal_approx(bar.ratio, 0.7) and is_equal_approx(bar.trail_ratio, 1.0), "máu tụt ngay, vệt giữ mức cũ")
+	_check(HealthBar.color_for_ratio(bar.ratio) == HealthBar.COLOR_HIGH, "máu > 50%: xanh lá")
+	for i in 9: # 0.15s: hết nháy (0.1s) nhưng vẫn trong khoảng chặn 0.33s
+		await get_tree().process_frame
+	_check(bar.visible and is_equal_approx(bar.modulate.a, 1.0), "thanh máu hiện sau cú trúng đầu tiên")
+	_check(hit.flash_amount == 0.0 and hit.body_scale == Vector2.ONE, "nháy + giật kết thúc sau ~0.1s")
+
+	# Đòn thứ hai trong khoảng chặn 0.33s: vẫn trừ máu nhưng không nháy lại.
+	enemy.take_damage(DamageInfo.new(enemy.max_health * 0.3, DamageInfo.Type.TRUE))
+	_check(is_equal_approx(bar.ratio, 0.4), "đòn liên tiếp vẫn trừ máu đúng")
+	_check(hit.flash_amount == 0.0, "không nháy quá 3 lần / giây")
+	_check(HealthBar.color_for_ratio(bar.ratio) == HealthBar.COLOR_MID, "máu 25-50%: vàng")
+	_check(is_equal_approx(bar.trail_ratio, 1.0), "vệt giữ đỉnh của cả chuỗi đòn")
+	for i in 60:
+		await get_tree().process_frame
+	_check(is_equal_approx(bar.trail_ratio, bar.ratio), "vệt sát thương rút về máu hiện tại")
+	_check(not bar.is_processing() and not hit.is_active(), "hết hiệu ứng: tắt _process (không tốn hiệu năng)")
+
+	# Sát thương theo thời gian không làm nháy.
+	var tick := DamageInfo.new(1.0, DamageInfo.Type.TRUE)
+	tick.is_periodic = true
+	enemy.take_damage(tick)
+	_check(hit.flash_amount == 0.0, "thiêu đốt không gây nháy")
+	enemy.take_damage(DamageInfo.new(enemy.max_health * 0.2, DamageInfo.Type.TRUE))
+	_check(HealthBar.color_for_ratio(bar.ratio) == HealthBar.COLOR_LOW, "máu <= 25%: đỏ")
+	_check(hit.flash_amount > 0.9, "hết khoảng chặn: nháy lại bình thường")
+
+	# Boss (tinh nhuệ): luôn hiện, thanh to hơn, có vạch chia.
+	var boss := _spawn_test_enemy(path, waves.get_enemy_type(&"boss"))
+	await get_tree().process_frame
+	_check(boss.health_bar.visible and boss.health_bar.show_ticks, "Boss: thanh máu luôn hiện, có vạch chia")
+	_check(boss.health_bar.bar_size.x > bar.bar_size.x, "Boss: thanh máu rộng hơn địch thường")
+	var swarm := _spawn_test_enemy(path, waves.get_enemy_type(&"swarm"))
+	_check(swarm.health_bar.bar_size.x < bar.bar_size.x, "địch nhỏ: thanh máu ngắn hơn")
+	var bat := _spawn_test_enemy(path, waves.get_enemy_type(&"bat"))
+	_check(bat.health_bar.position.y < -bat.data.radius - HealthBar.FLYING_LIFT, "địch bay: thanh máu trên thân đang bay")
+
+	# Chết vẫn phát died đúng như cũ.
+	var died := [false]
+	enemy.died.connect(func(_e: Enemy, _r: int) -> void: died[0] = true)
+	enemy.take_damage(DamageInfo.new(99999.0, DamageInfo.Type.TRUE))
+	_check(died[0] and not enemy.is_alive(), "hết máu: vẫn phát died")
+	await _free_main(main)
 
 
 # --- Phần 2: bot chơi hết từng màn ----------------------------------------------

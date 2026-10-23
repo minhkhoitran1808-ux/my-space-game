@@ -44,6 +44,9 @@ enum Shape { CIRCLE, SQUARE, TRIANGLE, DIAMOND, BAT }
 @export var color: Color = Color(0.85, 0.25, 0.25)
 @export var radius: float = 14.0
 @export var shape: Shape = Shape.CIRCLE
+## Địch tinh nhuệ / boss: thanh máu luôn hiện (kể cả đầy máu), to hơn, có vạch chia 25%,
+## và giật nhẹ hơn khi trúng đòn.
+@export var elite: bool = false
 
 @export_group("Scene")
 ## Scene sẽ được instantiate khi spawn (gốc phải là Enemy / PathFollow2D).

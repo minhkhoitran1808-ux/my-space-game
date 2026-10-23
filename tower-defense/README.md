@@ -107,6 +107,22 @@ Wave được sinh tự động và mạnh dần, cứ 10 wave có Boss; kỷ l�
 - Phản hồi: đặt sai → ghost rung ±4px 0.2s + lý do nổi lên; đặt đúng → tháp "đáp đất" (squash 0.18s),
   sóng vòng lan tới đúng tầm bắn, bụi, "-giá". Animation chỉ để trình diễn, không khoá input.
 
+## Thanh máu địch và hiệu ứng trúng đòn
+
+Hai component con của `scenes/enemies/Enemy.tscn`, chỉ nghe signal của Enemy (`health_changed`, `damaged`),
+không đụng tới máu, tốc độ hay việc chết / chạm nhà.
+
+- `scenes/enemies/HealthBar.tscn` + `scripts/enemies/HealthBar.gd`: thanh mảnh 4–6px, viền 1px tối, nền tối.
+  - Màu đổi theo ngưỡng: > 50% xanh lá `#4ADE50`, 25–50% vàng `#FACC15`, ≤ 25% đỏ `#EF4444`
+    (máu thấp còn đổi viền sang trắng, để không phụ thuộc chỉ vào màu).
+  - Vệt sát thương trắng: máu thật tụt ngay, vệt giữ 0.4s rồi rút (1.5 thanh/giây).
+  - Ẩn khi đầy máu, hiện dần 0.08s từ cú trúng đầu tiên. Địch `elite = true` (Boss): luôn hiện, rộng 56px, vạch chia 25%.
+  - Rộng theo cỡ địch (`radius × 2.6`, kẹp 26–40px), đặt trên đỉnh thân 7px (địch bay: trên thân đang bay),
+    `z_index = 10` nên luôn nằm trên mọi địch. Không xoay, không bị nén theo thân.
+- `scripts/enemies/HitFeedback.gd`: nháy trắng 0.10s (ease-out) + giật (1.08, 0.92) trong 0.12s, neo ở chân.
+  Tối đa 3 lần nháy / giây mỗi địch; thiêu đốt (sát thương theo thời gian) không nháy; Boss giật nhẹ hơn.
+- Hiệu năng: cả hai chỉ chạy `_process` trong lúc có hiệu ứng rồi tự tắt; thanh máu chỉ vẽ lại khi máu đổi.
+
 ## Kiến trúc
 
 ```
@@ -133,6 +149,7 @@ tower-defense/
 │   ├── managers/               # WaveManager, WaveGenerator, BuildManager, SelectionManager,
 │   │                           # AbilityManager, TutorialManager
 │   ├── fx/FxManager.gd         # số sát thương, vụ nổ, rung màn hình
+│   ├── enemies/                # Enemy + HealthBar + HitFeedback
 │   ├── main/                   # Main, Ground, GameMap
 │   ├── menus/, ui/, resources/, enemies/, towers/, core/
 └── tests/smoke_test.tscn       # test tự động

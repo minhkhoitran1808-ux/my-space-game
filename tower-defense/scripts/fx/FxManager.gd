@@ -113,7 +113,8 @@ func get_active_effect_count() -> int:
 func _on_enemy_damaged(enemy: Enemy, amount: float, info: DamageInfo) -> void:
 	if not show_damage_numbers or amount < 0.5 or _texts.size() >= MAX_FLOATING_TEXTS:
 		return
-	_add_text(enemy.global_position + Vector2(randf_range(-8, 8), -enemy.data.radius - 6.0),
+	# Số sát thương mọc phía TRÊN thanh máu để không bao giờ che thanh.
+	_add_text(enemy.global_position + Vector2(randf_range(-8, 8), enemy.health_bar.position.y - 6.0),
 			str(roundi(amount)), DAMAGE_COLORS.get(info.type, Color.WHITE), 12 if info.is_periodic else 15)
 
 

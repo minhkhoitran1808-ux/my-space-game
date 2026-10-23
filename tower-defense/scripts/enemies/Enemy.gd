@@ -18,8 +18,6 @@ signal damaged(enemy: Enemy, amount: float, info: DamageInfo)
 
 ## Tên group để tháp tìm mục tiêu.
 const GROUP := &"enemies"
-const HEALTH_BAR_HEIGHT := 5.0
-const HIT_FLASH_TIME := 0.1
 
 @export var data: EnemyData
 
@@ -36,11 +34,14 @@ var wave_index: int = -1
 
 var _is_dead := false
 var _path_length := 0.0
-var _hit_flash := 0.0
 ## Đồng hồ cho hoạt ảnh vỗ cánh / nhấp nhô của địch bay.
 var _flight_time := 0.0
 
 @onready var status_effects: StatusEffectHandler = $StatusEffects
+## Thanh máu trên đầu (node riêng: không xoay, không bị nén theo thân).
+@onready var health_bar: HealthBar = $HealthBar
+## Nháy trắng + giật khi trúng đòn.
+@onready var hit_feedback: HitFeedback = $HitFeedback
 
 
 ## Gán dữ liệu trước khi add_child(). Hệ số nhân cho phép wave sau mạnh hơn.
@@ -60,6 +61,10 @@ func _ready() -> void:
 	rotates = false
 	add_to_group(GROUP)
 	status_effects.effects_changed.connect(queue_redraw)
+	# Hai component tự nghe signal health_changed / damaged của địch.
+	health_bar.track(self)
+	hit_feedback.track(self)
+	hit_feedback.changed.connect(queue_redraw)
 
 	var path := get_parent() as Path2D
 	assert(path != null and path.curve != null, "Enemy phải là con trực tiếp của một Path2D có Curve2D.")
@@ -75,9 +80,6 @@ func _process(delta: float) -> void:
 		_reach_end()
 		return
 
-	if _hit_flash > 0.0:
-		_hit_flash = maxf(_hit_flash - delta, 0.0)
-		queue_redraw()
 	if data.is_flying:
 		_flight_time += delta
 		queue_redraw()
@@ -105,13 +107,11 @@ func take_damage(info: DamageInfo) -> float:
 	# Báo cho nguồn gây sát thương (thường là Tower) để cộng thống kê.
 	if is_instance_valid(info.source) and info.source.has_method(&"record_damage"):
 		info.source.record_damage(amount, health <= 0.0)
-	_hit_flash = HIT_FLASH_TIME
 	for effect in info.effects:
 		status_effects.apply(effect, info.source)
 
 	health_changed.emit(health, max_health)
 	damaged.emit(self, amount, info)
-	queue_redraw()
 	if health <= 0.0:
 		_die()
 	return amount
@@ -130,16 +130,23 @@ func _reach_end() -> void:
 
 
 # --- Hiển thị tạm (chưa có sprite) ---------------------------------------------
+# Thanh máu là node con riêng (HealthBar), không vẽ ở đây.
 
 func _draw() -> void:
 	var r := data.radius
-	var body_color := data.color.lerp(Color.WHITE, _hit_flash / HIT_FLASH_TIME)
-	var outline := data.color.darkened(0.5)
+	# Nháy trắng khi trúng đòn: cả thân lẫn viền ngả về trắng.
+	var flash := hit_feedback.flash_amount
+	var body_color := data.color.lerp(Color.WHITE, flash)
+	var outline := data.color.darkened(0.5).lerp(Color.WHITE, flash * 0.8)
 
 	# Địch bay: bóng mờ dưới đất, thân vẽ cao hơn và nhấp nhô.
+	var body_offset := Vector2.ZERO
 	if data.is_flying:
 		_draw_ellipse(Vector2(0, r * 0.9), Vector2(r * 1.1, r * 0.4), Color(0, 0, 0, 0.3))
-		draw_set_transform(Vector2(0, -10.0 + sin(_flight_time * 4.0) * 2.5))
+		body_offset.y = -HealthBar.FLYING_LIFT + sin(_flight_time * 4.0) * 2.5
+	# "Giật" khi trúng đòn: nén/giãn quanh chân thân (chân đứng yên, đầu lún xuống).
+	var squash := hit_feedback.body_scale
+	draw_set_transform(body_offset + Vector2(0.0, r * (1.0 - squash.y)), 0.0, squash)
 
 	# Vòng sáng hiệu ứng (làm chậm = xanh, thiêu đốt = cam...).
 	var ring := r + 4.0
@@ -174,13 +181,6 @@ func _draw() -> void:
 			draw_circle(Vector2.ZERO, r, body_color)
 			draw_arc(Vector2.ZERO, r, 0.0, TAU, 32, outline, 2.0)
 
-	# Thanh máu (chỉ hiện khi đã bị bắn).
-	if health < max_health:
-		var bar_size := Vector2(maxf(r * 2.4, 24.0), HEALTH_BAR_HEIGHT)
-		var bar_pos := Vector2(-bar_size.x * 0.5, -r - 10.0)
-		var ratio := health / max_health
-		draw_rect(Rect2(bar_pos, bar_size), Color(0, 0, 0, 0.7))
-		draw_rect(Rect2(bar_pos, Vector2(bar_size.x * ratio, bar_size.y)), Color.RED.lerp(Color.GREEN, ratio))
 	draw_set_transform(Vector2.ZERO)
 
 
