@@ -7,6 +7,8 @@ extends Node2D
 
 ## Các làn đường cần vẽ (Main gọi setup() sau khi nạp bản đồ).
 var paths: Array[Path2D] = []
+## Bản đồ (để vẽ địa hình bùn / đồi). Có thể null.
+var map: GameMap = null
 
 @export_group("Màu sắc")
 @export var background_color := Color(0.12, 0.14, 0.16)
@@ -17,8 +19,9 @@ var paths: Array[Path2D] = []
 @export var base_color := Color(0.3, 0.55, 0.9)
 
 
-func setup(p_paths: Array[Path2D]) -> void:
+func setup(p_paths: Array[Path2D], p_map: GameMap = null) -> void:
 	paths = p_paths
+	map = p_map
 	queue_redraw()
 
 
@@ -26,6 +29,7 @@ func _draw() -> void:
 	# Vẽ tràn ra ngoài màn hình một chút để khi rung màn hình không lộ mép.
 	draw_rect(get_viewport_rect().grow(32.0), background_color)
 	_draw_grass()
+	_draw_hills()
 	if paths.is_empty():
 		return
 	# Vẽ viền của mọi làn trước rồi mới vẽ mặt đường, để chỗ các làn nhập nhau liền mạch.
@@ -33,6 +37,7 @@ func _draw() -> void:
 		_draw_path_layer(path, GameConfig.PATH_WIDTH + 8.0, path_border_color)
 	for path in paths:
 		_draw_path_layer(path, GameConfig.PATH_WIDTH, path_color)
+	_draw_mud()
 	_draw_base()
 
 
@@ -45,6 +50,41 @@ func _draw_grass() -> void:
 		for x in range(first.x, last.x + 1):
 			var color := grass_color_a if (x + y) % 2 == 0 else grass_color_b
 			draw_rect(Rect2(x * cell, y * cell, cell, cell), color)
+
+
+## Đồi: cỏ sáng hơn + 2 đường đồng mức (vẽ dưới đường đi).
+func _draw_hills() -> void:
+	if map == null:
+		return
+	for points: PackedVector2Array in map.get_terrain_polygons(GameMap.TERRAIN_HILL):
+		draw_colored_polygon(points, Color(0.36, 0.55, 0.3))
+		var center := Vector2.ZERO
+		for point in points:
+			center += point
+		center /= points.size()
+		for scale in [0.8, 0.55]:
+			var ring := PackedVector2Array()
+			for point in points:
+				ring.append(center + (point - center) * scale)
+			ring.append(ring[0])
+			draw_polyline(ring, Color(0.5, 0.7, 0.4), 2.0)
+
+
+## Bùn: nâu sẫm có chấm, vẽ ĐÈ lên đường đi để thấy rõ đoạn đường bị chậm.
+func _draw_mud() -> void:
+	if map == null:
+		return
+	for points: PackedVector2Array in map.get_terrain_polygons(GameMap.TERRAIN_MUD):
+		draw_colored_polygon(points, Color(0.33, 0.25, 0.16, 0.85))
+		var bounds := Rect2(points[0], Vector2.ZERO)
+		for point in points:
+			bounds = bounds.expand(point)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(points)
+		for i in int(bounds.get_area() / 400.0):
+			var dot := bounds.position + Vector2(rng.randf(), rng.randf()) * bounds.size
+			if Geometry2D.is_point_in_polygon(dot, points):
+				draw_circle(dot, rng.randf_range(2.0, 4.0), Color(0.24, 0.18, 0.1))
 
 
 ## Vẽ một lớp của làn đường; hình tròn ở mỗi điểm giúp bo tròn góc cua.

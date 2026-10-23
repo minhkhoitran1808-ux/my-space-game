@@ -58,6 +58,9 @@ var endless_mode: bool = false
 ## Độ khó của ván (màn chọn màn đặt trước khi vào trận).
 var difficulty: Difficulty = Difficulty.NORMAL
 
+## Test hook: mở khoá mọi tháp bất kể tiến độ chiến dịch.
+var unlock_all_towers := false
+
 ## Test hook: true thì các hàm chuyển cảnh chỉ ghi lại scene được yêu cầu, không đổi thật.
 var block_scene_changes := false
 var last_requested_scene: String = ""
@@ -144,6 +147,22 @@ func get_current_level() -> LevelData:
 
 func get_next_level() -> LevelData:
 	return LEVEL_CATALOG.get_next_level(get_current_level())
+
+
+## Màn mở khoá một loại tháp (null nếu tháp luôn mở sẵn).
+func get_unlock_level(tower_data: TowerData) -> LevelData:
+	for level in LEVEL_CATALOG.levels:
+		if level.unlocks_tower and level.unlocks_tower.id == tower_data.id:
+			return level
+	return null
+
+
+## Tháp đã được mở khoá chưa (qua màn mở khoá ở bất kỳ độ khó nào).
+func is_tower_unlocked(tower_data: TowerData) -> bool:
+	if unlock_all_towers:
+		return true
+	var level := get_unlock_level(tower_data)
+	return level == null or SaveManager.get_stars(level.id) > 0
 
 
 ## Hệ số máu địch của độ khó hiện tại.

@@ -130,10 +130,17 @@ func setup_tower_buttons(towers: Array[TowerData]) -> void:
 		var button := Button.new()
 		button.text = "[%d] %s\n%d vàng" % [i + 1, tower_data.display_name, tower_data.cost]
 		button.icon = _make_color_icon(tower_data.color)
+		# Tháp chưa mở khoá (theo chiến dịch): khoá nút, ghi màn mở khoá.
+		if not GameManager.is_tower_unlocked(tower_data):
+			var unlock_level := GameManager.get_unlock_level(tower_data)
+			button.text = "[%d] %s\nKhoá" % [i + 1, tower_data.display_name]
+			button.disabled = true
+			button.tooltip_text = "Mở khoá khi qua màn \"%s\"" % unlock_level.display_name
 		button.theme_type_variation = &"DockButton"
 		button.custom_minimum_size = Vector2(124, 52)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.tooltip_text = TowerStats.tooltip(tower_data)
+		if not button.disabled:
+			button.tooltip_text = TowerStats.tooltip(tower_data)
 		button.toggle_mode = true
 		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(tower_selected.emit.bind(tower_data))

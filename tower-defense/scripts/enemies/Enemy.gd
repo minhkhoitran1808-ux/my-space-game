@@ -22,6 +22,8 @@ signal summon_requested(enemy: Enemy, summon_data: EnemyData, count: int)
 
 ## Tên group để tháp tìm mục tiêu.
 const GROUP := &"enemies"
+const TERRAIN_CHECK_INTERVAL := 0.2
+const MUD_EFFECT := preload("res://resources/effects/mud.tres")
 
 @export var data: EnemyData
 
@@ -31,6 +33,8 @@ var health: float = 0.0
 var base_speed: float = 0.0
 ## Hệ số máu của wave, để địch con sinh ra khi chết cũng mạnh tương ứng.
 var health_multiplier: float = 1.0
+## Bản đồ để kiểm tra bùn (WaveManager gán). Địch bay không bị bùn ảnh hưởng.
+var terrain_map: GameMap = null
 ## Hệ số vàng khi bị hạ (WaveManager gán: tăng 3% mỗi wave; quân sinh từ địch khác = 0).
 var reward_multiplier: float = 1.0
 ## Node gây đòn cuối cùng (dùng cho thống kê của tháp).
@@ -42,6 +46,8 @@ var _is_dead := false
 var _path_length := 0.0
 ## Đồng hồ cho hoạt ảnh vỗ cánh / nhấp nhô của địch bay.
 var _flight_time := 0.0
+## Đếm giờ kiểm tra địa hình (không cần kiểm tra mỗi frame).
+var _terrain_timer := 0.0
 
 @onready var status_effects: StatusEffectHandler = $StatusEffects
 ## Thanh máu trên đầu (node riêng: không xoay, không bị nén theo thân).
@@ -91,6 +97,7 @@ func _process(delta: float) -> void:
 	if _is_dead:
 		return
 
+	_check_terrain(delta)
 	progress += get_current_speed() * delta
 	if progress >= _path_length - 0.01:
 		_reach_end()
@@ -99,6 +106,19 @@ func _process(delta: float) -> void:
 	if data.is_flying:
 		_flight_time += delta
 		queue_redraw()
+
+
+## Mỗi 0.2s xem có đang lội bùn không; có thì gắn hiệu ứng "bùn" (chậm 20%, không cộng dồn
+## với làm chậm khác vì StatusEffectHandler chỉ lấy mức chậm mạnh nhất).
+func _check_terrain(delta: float) -> void:
+	if terrain_map == null or data.is_flying:
+		return
+	_terrain_timer -= delta
+	if _terrain_timer > 0.0:
+		return
+	_terrain_timer = TERRAIN_CHECK_INTERVAL
+	if terrain_map.get_terrain_at(global_position) == GameMap.TERRAIN_MUD:
+		status_effects.apply(MUD_EFFECT)
 
 
 ## Tốc độ thực tế (đã tính làm chậm).

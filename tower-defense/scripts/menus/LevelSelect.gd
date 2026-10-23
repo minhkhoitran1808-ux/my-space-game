@@ -2,12 +2,13 @@ extends Control
 ## Màn chọn màn: mỗi màn trong LevelCatalog là một thẻ (tên, sao, mô tả, thông tin, nút chơi).
 ## Màn bị khoá cho tới khi màn trước có ít nhất 1 sao. Qua một màn thì mở chế độ vô tận của màn đó.
 
-const CARD_SIZE := Vector2(360, 370)
-## Thẻ co lại khi có nhiều màn để vẫn nằm vừa một hàng (lề màn hình 40px mỗi bên, khe 24px).
+const CARD_SIZE := Vector2(288, 214)
+## Thẻ xếp lưới tối đa COLUMNS cột; bề rộng co theo màn hình (lề 40px mỗi bên, khe 16px).
+const COLUMNS := 4
 const SCREEN_MARGIN := 40.0
-const CARD_GAP := 24.0
+const CARD_GAP := 16.0
 
-@onready var cards_container: HBoxContainer = %Cards
+@onready var cards_container: GridContainer = %Cards
 @onready var back_button: Button = %BackButton
 
 ## Nút "Chơi" của từng màn, theo thứ tự trong catalog (test dùng để bấm thử).
@@ -74,6 +75,7 @@ func _build_cards() -> void:
 	play_buttons.clear()
 	endless_buttons.clear()
 	var catalog := GameManager.LEVEL_CATALOG
+	cards_container.columns = clampi(catalog.levels.size(), 1, COLUMNS)
 	for index in catalog.levels.size():
 		cards_container.add_child(_create_card(catalog.levels[index], index,
 				SaveManager.is_level_unlocked(catalog, index)))
@@ -88,43 +90,53 @@ func _create_card(level: LevelData, index: int, unlocked: bool) -> Control:
 
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 20)
+		margin.add_theme_constant_override("margin_" + side, 12)
 	card.add_child(margin)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 12)
+	box.add_theme_constant_override("separation", 6)
 	margin.add_child(box)
 
+	var head := HBoxContainer.new()
+	box.add_child(head)
 	var title := Label.new()
 	title.text = "%d. %s" % [index + 1, level.display_name]
-	title.add_theme_font_size_override("font_size", 26)
-	box.add_child(title)
-
+	title.add_theme_font_size_override("font_size", 20)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	head.add_child(title)
 	var stars := StarRating.new()
 	stars.stars = SaveManager.get_stars_for(level.id, GameManager.difficulty)
-	stars.star_size = 30.0
-	stars.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	box.add_child(stars)
+	stars.star_size = 20.0
+	stars.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(stars)
 
+	# Mô tả đầy đủ nằm trong tooltip của thẻ; trên thẻ chỉ hiện 2 dòng đầu.
+	card.tooltip_text = level.description
 	var description := Label.new()
 	description.text = level.description
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	description.max_lines_visible = 2
+	description.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	description.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	description.add_theme_font_size_override("font_size", 13)
 	description.add_theme_color_override("font_color", Color(1, 1, 1, 0.8))
 	box.add_child(description)
 
 	var info := Label.new()
-	info.text = "%d wave  ·  %d vàng\n%d máu  ·  %d làn đường" % [level.get_wave_count(),
+	info.text = "%d wave · %d vàng · %d máu · %d làn" % [level.get_wave_count(),
 			level.starting_gold, level.starting_lives, _count_lanes(level)]
-	info.add_theme_font_size_override("font_size", 14)
+	if level.unlocks_tower:
+		info.text += "\nMở khoá tháp: " + level.unlocks_tower.display_name
+	info.add_theme_font_size_override("font_size", 12)
 	info.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
 	box.add_child(info)
 
 	var play := Button.new()
-	play.custom_minimum_size = Vector2(0, 46)
+	play.custom_minimum_size = Vector2(0, 34)
 	play.disabled = not unlocked
 	if not unlocked:
-		play.text = "Khoá - hãy qua màn trước"
+		play.text = "Khoá · qua màn trước"
 	elif stars.stars > 0:
 		play.text = "Chơi lại"
 	else:
@@ -134,11 +146,11 @@ func _create_card(level: LevelData, index: int, unlocked: bool) -> Control:
 	play_buttons.append(play)
 
 	var endless := Button.new()
-	endless.custom_minimum_size = Vector2(0, 36)
+	endless.custom_minimum_size = Vector2(0, 28)
 	endless.disabled = SaveManager.get_stars(level.id) == 0 # Mở vô tận khi đã qua màn ở bất kỳ độ khó nào.
 	var best := SaveManager.get_endless_best(level.id)
 	if endless.disabled:
-		endless.text = "Vô tận - qua màn này để mở"
+		endless.text = "Vô tận · qua màn này để mở"
 	elif best > 0:
 		endless.text = "Vô tận  (kỷ lục: wave %d)" % best
 	else:
@@ -149,9 +161,9 @@ func _create_card(level: LevelData, index: int, unlocked: bool) -> Control:
 	return card
 
 
-## Bề rộng thẻ: tối đa CARD_SIZE.x, nhỏ hơn nếu số màn nhiều tới mức không vừa một hàng.
+## Bề rộng thẻ: tối đa CARD_SIZE.x, nhỏ hơn nếu một hàng COLUMNS thẻ không vừa màn hình.
 func _card_width() -> float:
-	var count := maxi(GameManager.LEVEL_CATALOG.levels.size(), 1)
+	var count := clampi(GameManager.LEVEL_CATALOG.levels.size(), 1, COLUMNS)
 	var available := get_viewport_rect().size.x - SCREEN_MARGIN * 2.0 - CARD_GAP * (count - 1)
 	return minf(CARD_SIZE.x, floorf(available / count))
 

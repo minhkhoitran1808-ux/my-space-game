@@ -38,6 +38,7 @@ var _failures := PackedStringArray()
 func _ready() -> void:
 	print("=== SMOKE TEST ===")
 	GameManager.block_scene_changes = true
+	GameManager.unlock_all_towers = true # Phần [1s] tắt để kiểm tra mở khoá theo chiến dịch.
 	SaveManager.save_path = TEST_SAVE_PATH
 	SaveManager.reset_progress()
 
@@ -47,6 +48,7 @@ func _ready() -> void:
 	await _test_new_enemies()
 	await _test_wave_pacing()
 	await _test_difficulty()
+	await _test_terrain_and_unlocks()
 	await _test_match_flow()
 	await _test_level_flow()
 	await _test_abilities_and_flying()
@@ -542,17 +544,114 @@ func _test_match_flow() -> void:
 	await _free_main(main)
 
 
+# --- Phần 1s: địa hình (bùn / đồi) và mở tháp theo chiến dịch ---------------------
+
+func _test_terrain_and_unlocks() -> void:
+	print("[1s] Địa hình và mở khoá tháp")
+	SaveManager.reset_progress()
+	SaveManager.set_flag(TutorialManager.DONE_FLAG, true)
+	GameManager.difficulty = GameManager.Difficulty.NORMAL
+	var catalog := GameManager.LEVEL_CATALOG
+	GameManager.current_level = catalog.levels[6] # Đầm lầy: có cả bùn lẫn đồi.
+	var main := await _new_main()
+	var map: GameMap = main.map
+	_check(not map.get_terrain_polygons(GameMap.TERRAIN_MUD).is_empty() and not map.get_terrain_polygons(GameMap.TERRAIN_HILL).is_empty(),
+			"màn Đầm lầy có vùng bùn và đồi")
+
+	# Bùn: tìm một điểm trên đường nằm trong bùn, đặt địch đứng đó.
+	var path: Path2D = map.get_paths()[0]
+	var mud_progress := -1.0
+	var step := 0.0
+	while step < path.curve.get_baked_length():
+		if map.get_terrain_at(path.to_global(path.curve.sample_baked(step))) == GameMap.TERRAIN_MUD:
+			mud_progress = step + 12.0
+			break
+		step += 8.0
+	_check(mud_progress > 0.0, "đường đi qua bùn")
+	var basic: EnemyData = main.wave_manager.get_enemy_type(&"basic")
+	var walker: Enemy = main.wave_manager._spawn_enemy(basic, 1.0, 0.0, mud_progress)
+	var dry: Enemy = main.wave_manager._spawn_enemy(basic, 1.0, 0.0, 10.0)
+	walker.base_speed = 0.001
+	dry.base_speed = 0.001
+	for i in 20:
+		await get_tree().physics_frame
+	_check(is_equal_approx(walker.status_effects.get_speed_multiplier(), 1.0 - GameMap.MUD_SLOW)
+			and is_equal_approx(dry.status_effects.get_speed_multiplier(), 1.0),
+			"lội bùn chậm 20%%, đất khô không chậm (%.2f / %.2f)" % [walker.status_effects.get_speed_multiplier(), dry.status_effects.get_speed_multiplier()])
+	walker.queue_free()
+	dry.queue_free()
+
+	# Đồi: tháp xây trên ô đồi được +15% tầm, vòng tầm bắn vẽ đúng bán kính mới.
+	var build: BuildManager = main.build_manager
+	var archer: TowerData = build.available_towers[0]
+	GameManager.add_gold(5000)
+	var hill_cell := Vector2i(-1, -1)
+	var flat_cell := Vector2i(-1, -1)
+	for x in 20:
+		for y in 12:
+			var cell := Vector2i(x, y)
+			if not build.get_placement_error(cell, archer).is_empty():
+				continue
+			if build.get_range_multiplier(cell) > 1.0:
+				hill_cell = cell
+			else:
+				flat_cell = cell
+	_check(hill_cell.x >= 0 and flat_cell.x >= 0, "có ô đồi và ô thường để xây")
+	_choose(build, archer)
+	var hill_tower := build.try_place_tower(hill_cell)
+	_choose(build, archer)
+	var flat_tower := build.try_place_tower(flat_cell)
+	_check(hill_tower != null and is_equal_approx(hill_tower.get_range(), archer.attack_range * 1.15)
+			and is_equal_approx(flat_tower.get_range(), archer.attack_range),
+			"tháp trên đồi +15%% tầm (%d so với %d)" % [roundi(hill_tower.get_range()), roundi(flat_tower.get_range())])
+	await _free_main(main)
+
+	# Tháp mới khoá cho tới khi qua màn mở khoá.
+	GameManager.unlock_all_towers = false
+	var banner: TowerData = load("res://resources/towers/banner_tower.tres")
+	var mine: TowerData = load("res://resources/towers/mine_tower.tres")
+	_check(GameManager.get_unlock_level(banner) == catalog.levels[2] and GameManager.get_unlock_level(mine) == catalog.levels[4],
+			"Cờ hiệu mở sau màn 3, Mỏ vàng sau màn 5")
+	GameManager.current_level = catalog.levels[0]
+	main = await _new_main()
+	build = main.build_manager
+	build.select_tower(banner)
+	var banner_button: Button = main.hud._buttons_by_tower[banner]
+	_check(build.selected_tower_data != banner and banner_button.disabled and banner_button.text.contains("Khoá"),
+			"tháp chưa mở: không chọn được, nút bị khoá")
+	_check(not main.hud._buttons_by_tower[build.available_towers[0]].disabled, "tháp cũ luôn mở")
+	await _free_main(main)
+
+	# Thắng màn 3 lần đầu: mở Cờ hiệu và hiện thông báo tháp mới.
+	GameManager.current_level = catalog.levels[2]
+	main = await _new_main()
+	var toasts_before := ToastLayer.get_queue_size() + (1 if ToastLayer.is_showing() else 0)
+	GameManager.win()
+	await get_tree().process_frame
+	_check(GameManager.is_tower_unlocked(banner) and not GameManager.is_tower_unlocked(mine), "thắng màn 3 => mở Cờ hiệu")
+	_check(ToastLayer.get_queue_size() + (1 if ToastLayer.is_showing() else 0) > toasts_before, "hiện thông báo THÁP MỚI")
+	await _free_main(main)
+	GameManager.unlock_all_towers = true
+	SaveManager.reset_progress()
+	GameManager.current_level = null
+
+
 # --- Phần 1d: luồng màn (menu, chọn màn, khoá / mở, sao) ----------------------
 
 func _test_level_flow() -> void:
 	print("[1d] Luồng màn")
 	var catalog := GameManager.LEVEL_CATALOG
-	_check(catalog.levels.size() == 4, "có 4 màn chơi")
+	_check(catalog.levels.size() == 8, "có 8 màn chơi")
 
 	var select := LEVEL_SELECT_SCENE.instantiate()
 	add_child(select)
 	await get_tree().process_frame
-	_check(select.play_buttons.size() == 4, "màn chọn màn có 4 thẻ")
+	_check(select.play_buttons.size() == 8, "màn chọn màn có 8 thẻ")
+	_check(select.cards_container.columns == 4, "thẻ màn xếp lưới 4 cột")
+	var view: Rect2 = select.get_viewport_rect()
+	var last_card: Control = select.cards_container.get_child(select.cards_container.get_child_count() - 1)
+	_check(view.encloses(last_card.get_global_rect()) and view.encloses(select.back_button.get_global_rect()),
+			"8 thẻ và nút Quay lại nằm gọn trong màn hình (%s)" % last_card.get_global_rect())
 	_check(not select.play_buttons[0].disabled and select.play_buttons[1].disabled and select.play_buttons[2].disabled,
 			"lúc đầu chỉ mở màn 1")
 	select.play_buttons[0].pressed.emit()
@@ -577,7 +676,7 @@ func _test_level_flow() -> void:
 	var menu := MAIN_MENU_SCENE.instantiate()
 	add_child(menu)
 	await get_tree().process_frame
-	_check(menu.stars_label.text.contains("2 / 12"), "menu chính hiện tổng sao (%s)" % menu.stars_label.text)
+	_check(menu.stars_label.text.contains("2 / 24"), "menu chính hiện tổng sao (%s)" % menu.stars_label.text)
 	menu.play_button.pressed.emit()
 	_check(GameManager.last_requested_scene == GameManager.LEVEL_SELECT_SCENE, "nút Chơi ở menu => màn chọn màn")
 	menu.queue_free()

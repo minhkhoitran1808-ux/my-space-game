@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/StatusEffectData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"mud"
+display_name = "Lội bùn"
+duration = 0.3
+slow_amount = 0.2
+tint = Color(0.45, 0.35, 0.2, 0)

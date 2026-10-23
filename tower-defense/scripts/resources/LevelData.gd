@@ -20,6 +20,9 @@ extends Resource
 @export var coin_reward: int = 150
 ## Nghỉ giữa hai wave (giây); hết giờ wave sau tự bắt đầu. Gọi sớm được thưởng số giây còn lại.
 @export var intermission_seconds: float = 20.0
+## Tháp được mở khoá khi qua màn này lần đầu (để trống = không mở gì). Mở dần từng tháp
+## theo chiến dịch để mỗi màn chỉ dạy thêm một ý.
+@export var unlocks_tower: TowerData
 
 
 ## Đọc nhanh số wave từ file JSON (để hiển thị ở màn chọn màn).

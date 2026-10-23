@@ -134,8 +134,10 @@ func _load_level(p_level: LevelData) -> void:
 	map = level.map_scene.instantiate() as GameMap
 	map_root.add_child(map)
 	var paths := map.get_paths()
-	ground.setup(paths)
+	ground.setup(paths, map)
 	build_manager.paths = paths
+	build_manager.map = map
+	wave_manager.map = map
 	if GameManager.endless_mode:
 		wave_manager.setup_endless(String(level.id), paths, map.get_air_paths())
 	else:
@@ -304,7 +306,10 @@ func _on_game_state_changed(state: GameManager.GameState) -> void:
 	var victory := state == GameManager.GameState.VICTORY
 	var stars := GameManager.calculate_stars()
 	if victory:
+		var newly_unlocked := level.unlocks_tower != null and not GameManager.is_tower_unlocked(level.unlocks_tower)
 		SaveManager.record_result(level.id, stars, GameManager.difficulty)
+		if newly_unlocked:
+			ToastLayer.push("THÁP MỚI", level.unlocks_tower.display_name, level.unlocks_tower.description, Color("#FFC72C"))
 	build_manager.cancel_build()
 	selection_manager.deselect()
 	ability_manager.cancel_targeting()

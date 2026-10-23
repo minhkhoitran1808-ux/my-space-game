@@ -29,12 +29,18 @@ signal placement_failed(reason: String)
 var selected_tower_data: TowerData = null
 ## Các làn đường của bản đồ (không được xây đè lên). Main gán sau khi nạp bản đồ.
 var paths: Array[Path2D] = []
+## Bản đồ hiện tại (để biết ô đồi). Main gán; có thể null.
+var map: GameMap = null
 
 var _occupied_cells: Dictionary = {} # Vector2i -> Tower
 var _hover_cell := Vector2i(-1, -1)
 
 
 func select_tower(tower_data: TowerData) -> void:
+	if tower_data and not GameManager.is_tower_unlocked(tower_data):
+		var level := GameManager.get_unlock_level(tower_data)
+		placement_failed.emit("%s: mở khoá khi qua màn \"%s\"" % [tower_data.display_name, level.display_name])
+		return
 	# Bấm lại đúng loại đang chọn => huỷ chọn.
 	selected_tower_data = null if tower_data == selected_tower_data else tower_data
 	build_mode_changed.emit(selected_tower_data)
@@ -76,11 +82,19 @@ func try_place_tower(cell: Vector2i) -> Tower:
 	tower.total_invested = tower_data.cost
 	tower.projectile_container = projectile_container
 	tower.position = GameConfig.cell_to_world(cell)
+	tower.range_multiplier = get_range_multiplier(cell)
 	tower_container.add_child(tower)
 	_occupied_cells[cell] = tower
 	refresh_buffs()
 	tower_placed.emit(tower)
 	return tower
+
+
+## Hệ số tầm bắn của một ô (ô đồi: 1.15).
+func get_range_multiplier(cell: Vector2i) -> float:
+	if map and map.get_terrain_at(GameConfig.cell_to_world(cell)) == GameMap.TERRAIN_HILL:
+		return 1.0 + GameMap.HILL_RANGE_BONUS
+	return 1.0
 
 
 func get_tower_at(cell: Vector2i) -> Tower:

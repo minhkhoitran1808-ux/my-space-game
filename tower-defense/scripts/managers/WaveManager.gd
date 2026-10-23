@@ -57,6 +57,8 @@ const DEFAULT_INTERMISSION := 20.0
 const CLEAR_BONUS_BASE := 15
 const CLEAR_BONUS_PER_WAVE := 3
 
+## Bản đồ (để địch biết đang đi qua bùn). Main gán; có thể null.
+var map: GameMap = null
 ## Đếm ngược giữa wave: tự gọi wave sau khi hết giờ. Smoke-test bot tắt để tự quyết khi nào gọi.
 var auto_start_waves := true
 var intermission_time := DEFAULT_INTERMISSION
@@ -375,6 +377,7 @@ func _spawn_enemy(enemy_data: EnemyData, health_multiplier: float, speed_multipl
 		health_multiplier *= GameManager.get_hp_multiplier()
 	enemy.setup(enemy_data, health_multiplier, speed_multiplier)
 	enemy.wave_index = wave_index
+	enemy.terrain_map = map
 	enemy.reward_multiplier = 0.0 if spawned_by_enemy else 1.0 + REWARD_GROWTH_PER_WAVE * wave_index
 	enemy.died.connect(_on_enemy_died)
 	enemy.summon_requested.connect(_on_summon_requested)

@@ -1,0 +1,77 @@
+{
+	"waves": [
+		{
+			"groups": [
+				{ "enemy": "basic", "count": 14, "interval": 0.7, "health_multiplier": 1.3 }
+			]
+		},
+		{
+			"groups": [
+				{ "enemy": "armored", "count": 6, "interval": 1.0, "health_multiplier": 1.3 },
+				{ "enemy": "fast", "count": 10, "interval": 0.5, "delay": 2.0, "health_multiplier": 1.4 }
+			]
+		},
+		{
+			"groups": [
+				{ "enemy": "splitter", "count": 6, "interval": 1.2, "health_multiplier": 1.5 },
+				{ "enemy": "basic", "count": 10, "interval": 0.6, "delay": 2.0, "health_multiplier": 1.5 }
+			]
+		},
+		{
+			"groups": [
+				{ "enemy": "healer", "count": 3, "interval": 1.5, "health_multiplier": 1.6 },
+				{ "enemy": "armored", "count": 8, "interval": 0.9, "delay": 1.0, "health_multiplier": 1.7 }
+			]
+		},
+		{
+			"test": "Giáp nặng",
+			"groups": [
+				{ "enemy": "armored", "count": 18, "interval": 0.6, "health_multiplier": 1.9 }
+			]
+		},
+		{
+			"groups": [
+				{ "enemy": "wisp", "count": 14, "interval": 0.5, "health_multiplier": 2.1 },
+				{ "enemy": "bat", "count": 10, "interval": 0.6, "delay": 2.0, "health_multiplier": 2.1 }
+			]
+		},
+		{
+			"groups": [
+				{ "enemy": "basic", "count": 24, "interval": 0.45, "health_multiplier": 1.9 }
+			]
+		},
+		{
+			"groups": [
+				{ "enemy": "splitter", "count": 10, "interval": 0.9, "health_multiplier": 2.4 },
+				{ "enemy": "swarm", "count": 40, "interval": 0.12, "delay": 2.0, "health_multiplier": 2.4 }
+			]
+		},
+		{
+			"test": "Đội hồi máu",
+			"groups": [
+				{ "enemy": "healer", "count": 8, "interval": 0.8, "health_multiplier": 2.5 },
+				{ "enemy": "armored", "count": 10, "interval": 0.8, "delay": 1.0, "health_multiplier": 2.6 }
+			]
+		},
+		{
+			"groups": [
+				{ "enemy": "fast", "count": 30, "interval": 0.25, "health_multiplier": 2.8 },
+				{ "enemy": "wisp", "count": 12, "interval": 0.6, "delay": 2.0, "health_multiplier": 2.8 }
+			]
+		},
+		{
+			"groups": [
+				{ "enemy": "armored", "count": 16, "interval": 0.6, "health_multiplier": 3.0 },
+				{ "enemy": "splitter", "count": 10, "interval": 0.9, "delay": 2.0, "health_multiplier": 3.0 },
+				{ "enemy": "bat", "count": 14, "interval": 0.5, "delay": 3.0, "health_multiplier": 3.0 }
+			]
+		},
+		{
+			"reward_bonus": 0,
+			"groups": [
+				{ "enemy": "boss", "count": 2, "interval": 4.0, "health_multiplier": 1.6 },
+				{ "enemy": "healer", "count": 6, "interval": 1.0, "delay": 3.0, "health_multiplier": 3.1 }
+			]
+		}
+	]
+}

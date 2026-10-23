@@ -9,13 +9,55 @@ extends Node2D
 ## Địch bay đi theo các Path2D trong node con "AirPaths". Nếu bản đồ không có node này,
 ## một làn trên không thẳng từ đầu làn 1 tới nhà chính sẽ được tạo tự động.
 ## Làn trên không không được vẽ và không chặn việc xây tháp.
+##
+## Địa hình (tuỳ chọn): node con "Terrain" chứa các Polygon2D có metadata "kind":
+## - "mud": bùn, địch đi bộ qua bị chậm 20%.
+## - "hill": đồi, tháp đặt lên được +15% tầm bắn.
+## Polygon2D chỉ dùng để chỉnh hình trong editor; Ground vẽ địa hình nên chúng được ẩn đi.
+
+const TERRAIN_MUD := &"mud"
+const TERRAIN_HILL := &"hill"
+## Hiệu ứng của địa hình.
+const MUD_SLOW := 0.2
+const HILL_RANGE_BONUS := 0.15
 
 @onready var _paths_root: Node = $Paths
+
+
+## kind -> Array[PackedVector2Array] (toạ độ toàn cục), lập một lần trong _ready().
+var _terrain: Dictionary = {}
 
 
 func _ready() -> void:
 	if not has_node("AirPaths"):
 		_create_default_air_path()
+	if has_node("Terrain"):
+		for node in get_node("Terrain").get_children():
+			var polygon := node as Polygon2D
+			if polygon == null or not polygon.has_meta("kind"):
+				continue
+			var points := PackedVector2Array()
+			for point in polygon.polygon:
+				points.append(polygon.to_global(point))
+			var kind := StringName(polygon.get_meta("kind"))
+			if not _terrain.has(kind):
+				_terrain[kind] = []
+			_terrain[kind].append(points)
+			polygon.visible = false
+
+
+## Các vùng địa hình một loại (toạ độ toàn cục).
+func get_terrain_polygons(kind: StringName) -> Array:
+	return _terrain.get(kind, [])
+
+
+## Loại địa hình tại một điểm (&"" nếu là đất thường).
+func get_terrain_at(world_pos: Vector2) -> StringName:
+	for kind: StringName in _terrain:
+		for points: PackedVector2Array in _terrain[kind]:
+			if Geometry2D.is_point_in_polygon(world_pos, points):
+				return kind
+	return &""
 
 
 func get_paths() -> Array[Path2D]:

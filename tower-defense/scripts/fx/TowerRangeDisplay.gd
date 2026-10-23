@@ -152,7 +152,7 @@ func _on_tower_placed(tower: Tower) -> void:
 		var squash := tower.create_tween()
 		squash.tween_property(tower, "scale", SQUASH_SCALE, 0.06)
 		squash.tween_property(tower, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		_add_effect({"kind": "shockwave", "position": tower.position, "radius": tower.data.attack_range,
+		_add_effect({"kind": "shockwave", "position": tower.position, "radius": tower.get_range(),
 				"life": SHOCKWAVE_TIME})
 		for i in 10:
 			var direction := Vector2.from_angle(TAU * i / 10.0 + randf_range(-0.25, 0.25))
@@ -201,7 +201,7 @@ func _refresh_preview() -> void:
 	var center := GameConfig.cell_to_world(_hover_cell)
 	_placement_ring.position = center # Snap ngay vào ô, không trễ.
 	_placement_ring.show_ring(RangeIndicator.State.VALID if _placement_error.is_empty() else RangeIndicator.State.INVALID,
-			data.attack_range)
+			data.attack_range * build_manager.get_range_multiplier(_hover_cell))
 	_ghost.visible = true
 	_ghost.position = center + Vector2(_ghost_offset, 0)
 	_ghost.queue_redraw()
@@ -260,6 +260,10 @@ func _draw_ghost() -> void:
 	var affordable := GameManager.can_afford(data.cost)
 	_draw_text(_ghost, Vector2(cell.x * 0.5 + 6.0, cell.y * 0.5 - 4.0), "%d vàng" % data.cost,
 			Color.WHITE if affordable else COLOR_INVALID.lightened(0.2), 14, HORIZONTAL_ALIGNMENT_LEFT)
+	# Ô đồi: báo thưởng tầm bắn.
+	if valid and data.attack_range > 0.0 and build_manager.get_range_multiplier(_hover_cell) > 1.0:
+		_draw_text(_ghost, Vector2(cell.x * 0.5 + 6.0, cell.y * 0.5 + 12.0), "Đồi: +%d%% tầm" % roundi(GameMap.HILL_RANGE_BONUS * 100.0),
+				Color(0.6, 1.0, 0.6), 13, HORIZONTAL_ALIGNMENT_LEFT)
 
 
 func _draw_effects() -> void:
