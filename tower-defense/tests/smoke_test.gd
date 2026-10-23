@@ -54,6 +54,7 @@ func _ready() -> void:
 	await _test_achievements()
 	await _test_inventory()
 	await _test_shop()
+	await _test_daily_and_codex()
 	for level in GameManager.LEVEL_CATALOG.levels:
 		await _test_bot_playthrough(level)
 	for level in GameManager.LEVEL_CATALOG.levels:
@@ -1062,6 +1063,95 @@ func _test_shop() -> void:
 	ShopManager.date_override = ""
 	ToastLayer.clear()
 	SaveManager.reset_progress()
+
+
+# --- Phần 1n: nhiệm vụ ngày, quà đăng nhập, Codex, hub menu chính --------------------
+
+func _test_daily_and_codex() -> void:
+	print("[1n] Nhiệm vụ ngày + quà đăng nhập + Codex")
+	SaveManager.reset_progress()
+	DailyManager.date_override = "2026-03-10"
+	_check(DailyManager.defs.size() >= 6, "có %d mẫu nhiệm vụ" % DailyManager.defs.size())
+	var active := DailyManager.get_active()
+	_check(active.size() == DailyManager.QUESTS_PER_DAY, "ngày đầu: 3 nhiệm vụ")
+	var unique_ids := {}
+	for item: Dictionary in active:
+		unique_ids[item.id] = true
+	_check(unique_ids.size() == active.size(), "3 nhiệm vụ khác nhau")
+
+	# Tiến độ tính từ lúc nhận: làm đủ thì Nhận được, đúng một lần.
+	var quest: Dictionary = active[0]
+	var def := DailyManager.get_def(quest)
+	_check(DailyManager.get_progress(quest).x == 0 and not DailyManager.claim_quest(0), "chưa làm thì chưa nhận được")
+	StatsManager.increment(def.stat_key, def.target)
+	var level_exp_before := ProgressionManager.get_exp() + ProgressionManager.get_level() * 100000
+	_check(DailyManager.is_complete(quest) and DailyManager.get_claimable_quest_count() >= 1, "làm đủ: '%s' hoàn thành" % def.get_text())
+	_check(DailyManager.claim_quest(0) and not DailyManager.claim_quest(0), "nhận thưởng nhiệm vụ đúng một lần")
+	_check(EconomyManager.get_amount(EconomyManager.COINS) == def.reward_coins
+			and ProgressionManager.get_exp() + ProgressionManager.get_level() * 100000 > level_exp_before, "nhận %d xu + KN" % def.reward_coins)
+
+	# Đổi miễn phí 1 lần / ngày.
+	var old_id: String = DailyManager.get_active()[1].id
+	_check(DailyManager.reroll(1) and DailyManager.get_active()[1].id != old_id, "đổi nhiệm vụ miễn phí")
+	_check(not DailyManager.can_reroll() and not DailyManager.reroll(2), "chỉ đổi 1 lần mỗi ngày")
+
+	# Ngày mới: nhiệm vụ đã nhận bị bỏ, nhiệm vụ chưa làm được giữ, thêm 3 nhiệm vụ mới.
+	DailyManager.date_override = "2026-03-11"
+	_check(DailyManager.get_active().size() == 2 + 3 and DailyManager.can_reroll(), "ngày sau: giữ 2 cũ + 3 mới, được đổi lại")
+	# Nghỉ 10 ngày: chỉ giữ tối đa 3 ngày nhiệm vụ.
+	DailyManager.date_override = "2026-03-21"
+	var days := {}
+	for item: Dictionary in DailyManager.get_active():
+		days[item.day] = true
+	_check(DailyManager.get_active().size() == 9 and days.size() == 3, "nghỉ lâu: tích luỹ tối đa 3 ngày (9 nhiệm vụ)")
+
+	# Quà đăng nhập: mỗi ngày 1 lần, bỏ lỡ ngày không bị reset.
+	_check(DailyManager.can_claim_login() and DailyManager.get_login_index() == 0, "có quà ngày 1")
+	var gift := DailyManager.claim_login()
+	_check(not gift.is_empty() and DailyManager.claim_login().is_empty(), "nhận quà hôm nay đúng một lần")
+	DailyManager.date_override = "2026-03-22"
+	DailyManager.claim_login()
+	DailyManager.date_override = "2026-03-30" # Bỏ lỡ 7 ngày.
+	_check(DailyManager.can_claim_login() and DailyManager.get_login_index() == 2, "bỏ lỡ nhiều ngày: vẫn tiếp tục ngày 3 (không reset)")
+
+	# Lưu / đọc lại.
+	SaveManager.flush()
+	SaveManager.save_path = TEST_SAVE_PATH
+	_check(DailyManager.get_login_claimed_total() == 2 and DailyManager.get_active().size() == 9, "đọc lại: giữ chuỗi đăng nhập + nhiệm vụ")
+
+	# Hub menu chính: thẻ hồ sơ + chấm đỏ Nhiệm vụ + Codex.
+	StatsManager._on_enemy_seen(&"basic")
+	StatsManager._on_enemy_seen(&"healer")
+	var menu := MAIN_MENU_SCENE.instantiate()
+	add_child(menu)
+	await get_tree().process_frame
+	_check(menu.profile_chip.visible and menu._quests_dot.count == DailyManager.get_claimable_count() and menu._quests_dot.count >= 1, "hub: thẻ hồ sơ + chấm đỏ Nhiệm vụ (%d)" % menu._quests_dot.count)
+	_check(menu.settings_button.get_parent() == menu._meta_grid, "nút Cài đặt nằm trong lưới hub")
+	menu.quests_button.pressed.emit()
+	_check(menu.quests_screen.visible and menu.quests_screen.claim_buttons.size() == 9, "màn Nhiệm vụ: 9 thẻ")
+	menu.quests_screen.login_button.pressed.emit()
+	_check(DailyManager.get_login_claimed_total() == 3 and menu.quests_screen.login_button.disabled, "bấm Nhận quà hôm nay")
+	menu.quests_screen.close()
+	menu.codex_button.pressed.emit()
+	var codex: CodexScreen = menu.codex_screen
+	_check(codex.visible and codex.shown_count == waves_enemy_count() and codex._summary.text.begins_with("Đã gặp 2 /"), "Codex: đủ loại địch, đã gặp 2 (%s)" % codex._summary.text)
+	codex.tab = CodexScreen.Tab.ITEMS
+	codex.refresh()
+	_check(codex.shown_count == InventoryManager.defs.size(), "Codex vật phẩm: đủ %d ô" % codex.shown_count)
+	codex.close()
+	menu.queue_free()
+	await get_tree().process_frame
+	DailyManager.date_override = ""
+	ToastLayer.clear()
+	SaveManager.reset_progress()
+
+
+func waves_enemy_count() -> int:
+	var count := 0
+	for file_name in ResourceLoader.list_directory("res://resources/enemies"):
+		if file_name.ends_with(".tres"):
+			count += 1
+	return count
 
 
 # --- Phần 2: bot chơi hết từng màn ----------------------------------------------

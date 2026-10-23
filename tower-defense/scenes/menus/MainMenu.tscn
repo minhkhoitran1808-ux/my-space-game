@@ -105,7 +105,8 @@ layout_mode = 1
 [node name="ResetDialog" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
 title = "Xoá tiến độ"
-dialog_text = "Xoá toàn bộ sao, kỷ lục vô tận và khoá lại các màn đã mở?
+dialog_text = "Xoá TOÀN BỘ tiến độ: sao, kỷ lục vô tận, cấp, Xu, Bụi,
+thành tựu, kho đồ, nhiệm vụ và khoá lại các màn đã mở?
 (Cài đặt được giữ nguyên.)"
 ok_button_text = "Xoá"
 cancel_button_text = "Huỷ"

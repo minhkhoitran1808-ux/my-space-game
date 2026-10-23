@@ -30,6 +30,7 @@ ProgressionManager="*res://scripts/autoload/ProgressionManager.gd"
 InventoryManager="*res://scripts/autoload/InventoryManager.gd"
 ShopManager="*res://scripts/autoload/ShopManager.gd"
 AchievementManager="*res://scripts/autoload/AchievementManager.gd"
+DailyManager="*res://scripts/autoload/DailyManager.gd"
 ToastLayer="*res://scripts/autoload/ToastLayer.gd"
 
 [display]

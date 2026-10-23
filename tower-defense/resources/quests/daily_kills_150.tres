@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="QuestDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/QuestDef.gd" id="1_quest"]
+
+[resource]
+script = ExtResource("1_quest")
+id = &"daily_kills_150"
+description = "Hạ {target} địch"
+stat_key = &"enemies_killed"
+target = 150
+reward_coins = 80
+reward_exp = 40

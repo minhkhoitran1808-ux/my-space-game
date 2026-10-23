@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="QuestDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/QuestDef.gd" id="1_quest"]
+
+[resource]
+script = ExtResource("1_quest")
+id = &"daily_ability_3"
+description = "Dùng kỹ năng chủ động {target} lần"
+stat_key = &"abilities_used"
+target = 3
+reward_coins = 70
+reward_exp = 30
