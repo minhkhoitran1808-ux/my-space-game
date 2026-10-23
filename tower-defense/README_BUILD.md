@@ -13,12 +13,12 @@ build/
 ├── web/                          ~38 MB  (gần như toàn bộ là engine index.wasm)
 │   ├── index.html                trang chính
 │   ├── index.js, index.wasm      engine Godot
-│   ├── index.pck                 dữ liệu game (184 KB)
+│   ├── index.pck                 dữ liệu game + 16 âm thanh (~480 KB)
 │   ├── index.audio*.worklet.js   xử lý âm thanh
 │   └── index*.png                icon / ảnh khởi động
 └── itch/                         ← FILE ĐỂ UPLOAD LÊN ITCH.IO
-    ├── TowerDefense_Web.zip      9.8 MB  (index.html nằm ở gốc zip)
-    └── TowerDefense_Windows.zip  36 MB   (TowerDefense/TowerDefense.exe)
+    ├── TowerDefense_Web.zip      10.1 MB (index.html nằm ở gốc zip)
+    └── TowerDefense_Windows.zip  37 MB   (TowerDefense/TowerDefense.exe)
 ```
 
 ## Chạy bản Windows
@@ -92,9 +92,11 @@ Cần Godot 4.7.2 và export template cùng phiên bản:
 Trong editor: **Project → Export… → Export All** (hoặc chọn từng preset → **Export Project**,
 nhớ bỏ tick "Export With Debug").
 
-Hoặc bằng dòng lệnh (chạy trong thư mục `tower-defense/`):
+Hoặc bằng dòng lệnh (chạy trong thư mục `tower-defense/`). Nên xoá bản cũ trước và đặt file
+`build/.gdignore` để Godot không quét / gói nhầm bản build cũ vào bản mới (preset cũng đã loại `build/*`):
 
 ```
+rm -rf build && mkdir -p build/windows build/web build/itch && touch build/.gdignore
 godot --headless --export-release "Windows Desktop" build/windows/TowerDefense.exe
 godot --headless --export-release "Web" build/web/index.html
 ```
