@@ -67,6 +67,8 @@ const COLOR_RETRY := Color("#F77F00")
 @onready var message_label: Label = %MessageLabel
 @onready var tower_info_panel: TowerInfoPanel = %TowerInfoPanel
 @onready var boss_bar: BossBar = %BossBar
+## Khối thưởng cuối ván (xu, KN, vật phẩm), dựng bằng code và chèn vào thẻ kết quả.
+var reward_summary: RewardSummary
 @onready var settings_menu: SettingsMenu = %SettingsMenu
 @onready var tutorial_panel: PanelContainer = %TutorialPanel
 @onready var tutorial_step_label: Label = %TutorialStepLabel
@@ -103,6 +105,10 @@ func _ready() -> void:
 	for node in find_children("*", "BaseButton", true, false):
 		if not node is CheckBox and not node is CheckButton:
 			UiFx.setup_button(node)
+
+	reward_summary = RewardSummary.new()
+	var stats_row := result_card.find_child("Stats", true, false)
+	stats_row.add_sibling(reward_summary)
 
 	game_over_panel.hide()
 	message_label.modulate.a = 0.0
@@ -246,6 +252,11 @@ func show_game_over(victory: bool, stars: int, lives: int, max_lives: int, has_n
 	result_stars.visible = victory
 	next_level_button.visible = has_next_level
 	_open_result_panel(stars if victory else 0)
+
+
+## Hiện phần thưởng cuối ván (gọi sau show_game_over / show_endless_over).
+func show_match_rewards(rewards: Dictionary) -> void:
+	reward_summary.play(rewards)
 
 
 ## Hiện một bước hướng dẫn (text rỗng = ẩn bảng hướng dẫn).

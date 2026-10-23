@@ -50,12 +50,15 @@ func _ready() -> void:
 	await _test_settings_and_tutorial()
 	await _test_range_display()
 	await _test_enemy_feedback()
+	await _test_meta_foundation()
 	for level in GameManager.LEVEL_CATALOG.levels:
 		await _test_bot_playthrough(level)
 	for level in GameManager.LEVEL_CATALOG.levels:
 		await _test_defeat_without_towers(level)
 
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE_PATH))
+	for path in [TEST_SAVE_PATH, SaveManager.profile_path, SaveManager.profile_path + ".bak",
+			SaveManager.profile_path + ".tmp"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	if _failures.is_empty():
 		print("=== SMOKE TEST PASSED ===")
 		AudioManager.quit_game(0)
@@ -714,6 +717,75 @@ func _test_enemy_feedback() -> void:
 	await _free_main(main)
 
 
+# --- Phần 1j: nền móng meta (save JSON, ví tiền, thưởng cuối ván, cấp) --------------
+
+func _test_meta_foundation() -> void:
+	print("[1j] Nền móng meta")
+	SaveManager.reset_progress()
+
+	# Ví tiền: mọi thay đổi có lý do; không tiêu quá số đang có.
+	EconomyManager.add(EconomyManager.COINS, 120, "test")
+	_check(EconomyManager.get_amount(EconomyManager.COINS) == 120, "cộng xu")
+	_check(not EconomyManager.spend(EconomyManager.COINS, 500, "test") and EconomyManager.get_amount(EconomyManager.COINS) == 120, "không đủ xu thì không trừ")
+	_check(EconomyManager.spend(EconomyManager.COINS, 20, "test") and EconomyManager.get_amount(EconomyManager.COINS) == 100, "trừ xu")
+	_check(EconomyManager.get_log().back().reason == "test", "giao dịch được ghi lý do")
+
+	# Lưu rồi đọc lại: số nguyên giữ nguyên kiểu (JSON trả float).
+	StatsManager.increment(StatsManager.ENEMIES_KILLED, 7)
+	SaveManager.record_result(&"level_01", 2)
+	SaveManager.flush()
+	SaveManager.save_path = TEST_SAVE_PATH # Đọc lại từ đĩa.
+	_check(EconomyManager.get_amount(EconomyManager.COINS) == 100 and typeof(EconomyManager.get_amount(EconomyManager.COINS)) == TYPE_INT, "đọc lại: xu là số nguyên")
+	_check(StatsManager.get_stat(StatsManager.ENEMIES_KILLED) == 7 and SaveManager.get_stars(&"level_01") == 2, "đọc lại: thống kê + sao giữ nguyên")
+
+	# File chính hỏng -> khôi phục từ bản dự phòng (.bak = lần lưu trước đó).
+	EconomyManager.add(EconomyManager.COINS, 1, "test")
+	SaveManager.flush()
+	var broken := FileAccess.open(SaveManager.profile_path, FileAccess.WRITE)
+	broken.store_string("{ hỏng")
+	broken.close()
+	SaveManager.save_path = TEST_SAVE_PATH
+	_check(EconomyManager.get_amount(EconomyManager.COINS) == 100, "save hỏng: khôi phục từ bản dự phòng")
+	_check(SaveManager._read_json(SaveManager.profile_path) != null and SaveManager._read_json(SaveManager.profile_path + ".bak") != null,
+			"sau khi khôi phục: file chính được ghi lại, bản dự phòng còn nguyên")
+
+	# Save kiểu cũ (tiến độ nằm trong .cfg) được chuyển sang hồ sơ JSON.
+	var legacy_path := "user://smoke_test_legacy.cfg"
+	var legacy := ConfigFile.new()
+	legacy.set_value("stars", "level_02", 3)
+	legacy.set_value("endless_best_wave", "level_01", 17)
+	legacy.set_value("flags", "tutorial_done", true)
+	legacy.set_value("settings", "master_volume", 0.8)
+	legacy.save(legacy_path)
+	SaveManager.save_path = legacy_path
+	_check(SaveManager.get_stars(&"level_02") == 3 and SaveManager.get_endless_best(&"level_01") == 17 \
+			and SaveManager.get_flag("tutorial_done"), "chuyển tiến độ từ save.cfg cũ sang JSON")
+	_check(FileAccess.file_exists(SaveManager.profile_path), "đã tạo hồ sơ JSON từ save cũ")
+	for path in [legacy_path, SaveManager.profile_path, SaveManager.profile_path + ".bak"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	SaveManager.save_path = TEST_SAVE_PATH
+
+	# Công thức thưởng cuối ván.
+	var lost := {"won": false, "endless": false, "waves_survived": 5, "total_waves": 10}
+	var won := {"won": true, "endless": false, "waves_survived": 10, "total_waves": 10}
+	var endless := {"won": false, "endless": true, "waves_survived": 20, "total_waves": 0}
+	_check(ProgressionManager.calculate_match_rewards(lost, 150) == {"coins": 61, "exp": 30}, "thua ở wave 5/10: 61 xu + 30 KN (%s)" % ProgressionManager.calculate_match_rewards(lost, 150))
+	_check(ProgressionManager.calculate_match_rewards(won, 150) == {"coins": 210, "exp": 40}, "thắng 10/10: 210 xu + 40 KN")
+	_check(ProgressionManager.calculate_match_rewards(endless, 150).coins == roundi(150 * pow(2.0, 1.3)), "vô tận wave 20: thưởng theo số wave")
+
+	# Lên cấp: KN dư chuyển sang cấp sau, mỗi cấp mới thưởng xu.
+	SaveManager.reset_progress()
+	var levels := [0]
+	var on_level := func(_new_level: int) -> void: levels[0] += 1
+	Events.level_up.connect(on_level)
+	var gained := ProgressionManager.add_exp(ProgressionManager.exp_to_next(1) + ProgressionManager.exp_to_next(2) + 5, "test")
+	Events.level_up.disconnect(on_level)
+	_check(gained == 2 and levels[0] == 2 and ProgressionManager.get_level() == 3 and ProgressionManager.get_exp() == 5, "lên 2 cấp, dư 5 KN")
+	_check(EconomyManager.get_amount(EconomyManager.COINS) == 50 * 2 + 50 * 3, "thưởng lên cấp: 100 + 150 xu")
+	SaveManager.reset_progress()
+	_check(ProgressionManager.get_level() == 1 and EconomyManager.get_amount(EconomyManager.COINS) == 0, "xoá tiến độ: về cấp 1, 0 xu")
+
+
 # --- Phần 2: bot chơi hết từng màn ----------------------------------------------
 
 func _test_bot_playthrough(level: LevelData) -> void:
@@ -763,6 +835,10 @@ func _test_bot_playthrough(level: LevelData) -> void:
 			waves.get_current_wave_number(), waves.get_total_waves(), GameManager.lives, level.starting_lives,
 			towers_built, upgrades, GameManager.calculate_stars()])
 	_check(won, "%s: bot thắng cả %d wave" % [level.display_name, waves.get_total_waves()])
+	var expected := ProgressionManager.calculate_match_rewards(main.tracker.build_result(won, GameManager.calculate_stars()), level.coin_reward)
+	_check(main.last_rewards.get("coins", -1) == expected.coins and expected.coins >= roundi(level.coin_reward * 1.4) - 1,
+			"%s: thắng nhận %d xu (gồm thưởng thắng 40%%)" % [level.display_name, main.last_rewards.get("coins", -1)])
+	_check(main.hud.reward_summary.visible, "%s: bảng kết quả hiện phần thưởng" % level.display_name)
 	var ground_lanes_used := 0
 	for lane in main.map.get_paths():
 		if spawns_per_lane.has(lane):
@@ -829,7 +905,9 @@ func _test_defeat_without_towers(level: LevelData) -> void:
 			waves.start_next_wave()
 		await get_tree().process_frame
 		frames += 1
-	print("    thua ở wave %d" % waves.get_current_wave_number())
+	print("    thua ở wave %d, nhận %d xu + %d KN" % [waves.get_current_wave_number(),
+			main.last_rewards.get("coins", 0), main.last_rewards.get("exp", 0)])
+	_check(main.last_rewards.get("exp", 0) > 0, "%s: thua vẫn nhận KN" % level.display_name)
 	_check(GameManager.state == GameManager.GameState.DEFEAT, "%s: không xây tháp thì thua" % level.display_name)
 	_check(main.hud.game_over_panel.visible and not main.hud.next_level_button.visible, "%s: bảng thua không có nút màn sau" % level.display_name)
 	await _free_main(main)

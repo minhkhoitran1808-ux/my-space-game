@@ -1,19 +1,33 @@
 extends Node
-## SaveManager (Autoload): lưu tiến độ người chơi vào user://save.cfg.
+## SaveManager (Autoload): lưu tiến độ người chơi và cài đặt.
 ##
-## Lưu số sao tốt nhất của từng màn (theo LevelData.id), kỷ lục chế độ vô tận,
-## cờ trạng thái (vd đã xem hướng dẫn) và cài đặt người chơi.
+## Hai file riêng:
+## - Cài đặt (âm lượng, hiển thị...) -> ConfigFile `user://save.cfg` (save_path).
+## - Hồ sơ người chơi (sao, kỷ lục, cờ, xu, cấp, thành tựu, kho đồ...) -> JSON
+##   `user://save.profile.json` (profile_path, suy ra từ save_path).
+##   Dùng JSON chứ không dùng Resource: file Resource có thể chứa script, không an toàn khi
+##   người chơi chia sẻ / sửa save. JSON có "save_version" + hàm _migrate() để nâng cấp save cũ.
+##
+## Ghi an toàn: ghi ra file .tmp, chuyển file chính cũ thành .bak, rồi đổi tên .tmp thành file
+## chính. Đọc lỗi thì tự lấy lại từ .bak. Save cũ (tiến độ nằm trong save.cfg) được chuyển
+## sang hồ sơ JSON ở lần chạy đầu tiên.
+##
+## Các manager meta (Economy, Stats, Progression, Achievements, Inventory...) không giữ bản sao:
+## chúng đọc / ghi thẳng vào section() của hồ sơ rồi gọi request_save(). Nhờ vậy "Xoá tiến độ"
+## hay nạp lại hồ sơ không bao giờ để sót dữ liệu cũ trong bộ nhớ.
+## request_save() chỉ đánh dấu và gộp mọi yêu cầu trong cùng frame thành một lần ghi.
+##
 ## Màn đầu luôn mở; màn sau mở khi màn trước đã có ít nhất 1 sao.
-## File nằm ở thư mục dữ liệu người dùng của Godot (Project > Open User Data Folder).
 
+## Tiến độ / hồ sơ thay đổi (UI menu nghe để vẽ lại).
 signal progress_changed
 ## Phát ra khi một cài đặt thay đổi.
 signal settings_changed(key: String, value: Variant)
 
-const SECTION_STARS := "stars"
-const SECTION_ENDLESS := "endless_best_wave"
-const SECTION_FLAGS := "flags"
+const PROFILE_VERSION := 1
 const SECTION_SETTINGS := "settings"
+## Các section tiến độ của định dạng cũ (save.cfg), chỉ dùng khi chuyển sang JSON.
+const LEGACY_SECTIONS := {"stars": "stars", "endless_best_wave": "endless_best", "flags": "flags"}
 
 ## Giá trị mặc định của các cài đặt.
 const DEFAULT_SETTINGS := {
@@ -28,13 +42,22 @@ const DEFAULT_SETTINGS := {
 	"colorblind": false,
 }
 
-## Đổi được (vd test dùng file riêng để không ghi đè tiến độ thật).
+## Đổi được (vd test dùng file riêng để không ghi đè tiến độ thật). Đổi là nạp lại cả hai file.
 var save_path: String = "user://save.cfg":
 	set(value):
 		save_path = value
 		_load()
 
+## File hồ sơ JSON (suy ra từ save_path: "user://save.cfg" -> "user://save.profile.json").
+var profile_path: String:
+	get:
+		return save_path.get_basename() + ".profile.json"
+
+## Toàn bộ hồ sơ người chơi (Dictionary thuần, ghi ra JSON).
+var profile: Dictionary = {}
+
 var _config := ConfigFile.new()
+var _save_pending := false
 
 
 func _ready() -> void:
@@ -42,30 +65,92 @@ func _ready() -> void:
 	apply_settings()
 
 
+func _notification(what: int) -> void:
+	# Đóng cửa sổ khi còn yêu cầu lưu chưa ghi: ghi ngay.
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_PREDELETE:
+		if _save_pending:
+			flush()
+
+
+# --- Hồ sơ: truy cập chung ----------------------------------------------------------
+
+## Một nhánh của hồ sơ (tạo rỗng nếu chưa có). Sửa Dictionary trả về rồi gọi request_save().
+func section(name: String) -> Dictionary:
+	if not profile.has(name) or not profile[name] is Dictionary:
+		profile[name] = {}
+	return profile[name]
+
+
+## Đọc số nguyên từ Dictionary của hồ sơ (JSON trả mọi số về float nên luôn ép int).
+static func read_int(dict: Dictionary, key: Variant, default: int = 0) -> int:
+	var value: Variant = dict.get(key, default)
+	return int(value) if value is float or value is int else default
+
+
+## Đánh dấu cần lưu; mọi yêu cầu trong cùng frame được gộp thành một lần ghi.
+func request_save() -> void:
+	if _save_pending:
+		return
+	_save_pending = true
+	flush.call_deferred()
+
+
+## Ghi hồ sơ xuống đĩa ngay (an toàn: .tmp -> đổi tên, giữ .bak).
+func flush() -> void:
+	_save_pending = false
+	profile["save_version"] = PROFILE_VERSION
+	var tmp_path := profile_path + ".tmp"
+	var file := FileAccess.open(tmp_path, FileAccess.WRITE)
+	if file == null:
+		push_error("SaveManager: không ghi được '%s' (lỗi %d)." % [tmp_path, FileAccess.get_open_error()])
+		return
+	file.store_string(JSON.stringify(profile, "\t"))
+	file.close()
+	var main_path := ProjectSettings.globalize_path(profile_path)
+	var backup_path := main_path + ".bak"
+	if FileAccess.file_exists(profile_path):
+		if FileAccess.file_exists(profile_path + ".bak"):
+			DirAccess.remove_absolute(backup_path)
+		DirAccess.rename_absolute(main_path, backup_path)
+	var error := DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp_path), main_path)
+	if error != OK:
+		push_error("SaveManager: không đổi tên file lưu (lỗi %d)." % error)
+
+
+## Xoá toàn bộ hồ sơ (sao, kỷ lục, cờ, xu, cấp, thành tựu, kho đồ...). Cài đặt được giữ nguyên.
+func reset_progress() -> void:
+	profile = _new_profile()
+	flush()
+	progress_changed.emit()
+	Events.claimables_changed.emit()
+
+
+# --- Sao + kỷ lục + cờ ------------------------------------------------------------------
+
 func get_stars(level_id: StringName) -> int:
-	return int(_config.get_value(SECTION_STARS, String(level_id), 0))
+	return read_int(section("stars"), String(level_id))
 
 
 ## Ghi kết quả một màn; chỉ giữ lại số sao cao nhất.
 func record_result(level_id: StringName, stars: int) -> void:
 	if stars <= get_stars(level_id):
 		return
-	_config.set_value(SECTION_STARS, String(level_id), stars)
-	_save()
+	section("stars")[String(level_id)] = stars
+	request_save()
 	progress_changed.emit()
 
 
 ## Kỷ lục chế độ vô tận của một màn (wave cao nhất đã tới).
 func get_endless_best(level_id: StringName) -> int:
-	return int(_config.get_value(SECTION_ENDLESS, String(level_id), 0))
+	return read_int(section("endless_best"), String(level_id))
 
 
 ## Ghi kết quả vô tận; trả về true nếu là kỷ lục mới.
 func record_endless(level_id: StringName, wave_reached: int) -> bool:
 	if wave_reached <= get_endless_best(level_id):
 		return false
-	_config.set_value(SECTION_ENDLESS, String(level_id), wave_reached)
-	_save()
+	section("endless_best")[String(level_id)] = wave_reached
+	request_save()
 	progress_changed.emit()
 	return true
 
@@ -78,30 +163,18 @@ func is_level_unlocked(catalog: LevelCatalog, index: int) -> bool:
 
 func get_total_stars() -> int:
 	var total := 0
-	if _config.has_section(SECTION_STARS):
-		for key in _config.get_section_keys(SECTION_STARS):
-			total += int(_config.get_value(SECTION_STARS, key, 0))
+	for key in section("stars"):
+		total += read_int(section("stars"), key)
 	return total
 
 
-## Xoá tiến độ (sao, kỷ lục, cờ hướng dẫn). Cài đặt được giữ nguyên.
-func reset_progress() -> void:
-	for section in [SECTION_STARS, SECTION_ENDLESS, SECTION_FLAGS]:
-		if _config.has_section(section):
-			_config.erase_section(section)
-	_save()
-	progress_changed.emit()
-
-
-# --- Cờ trạng thái ----------------------------------------------------------------
-
 func get_flag(flag: String) -> bool:
-	return bool(_config.get_value(SECTION_FLAGS, flag, false))
+	return bool(section("flags").get(flag, false))
 
 
 func set_flag(flag: String, value: bool) -> void:
-	_config.set_value(SECTION_FLAGS, flag, value)
-	_save()
+	section("flags")[flag] = value
+	request_save()
 
 
 # --- Cài đặt ------------------------------------------------------------------------
@@ -112,7 +185,7 @@ func get_setting(key: String) -> Variant:
 
 func set_setting(key: String, value: Variant) -> void:
 	_config.set_value(SECTION_SETTINGS, key, value)
-	_save()
+	_save_config()
 	_apply_setting(key, value)
 	settings_changed.emit(key, value)
 
@@ -136,16 +209,77 @@ func _apply_setting(key: String, value: Variant) -> void:
 						else DisplayServer.WINDOW_MODE_WINDOWED)
 
 
+# --- Đọc / ghi file ---------------------------------------------------------------------
+
+func _new_profile() -> Dictionary:
+	return {"save_version": PROFILE_VERSION}
+
+
 func _load() -> void:
+	_save_pending = false
 	_config = ConfigFile.new()
 	if FileAccess.file_exists(save_path):
 		var error := _config.load(save_path)
 		if error != OK:
-			push_warning("SaveManager: không đọc được '%s' (lỗi %d), bắt đầu tiến độ mới." % [save_path, error])
+			push_warning("SaveManager: không đọc được '%s' (lỗi %d), dùng cài đặt mặc định." % [save_path, error])
 			_config = ConfigFile.new()
 
+	var loaded: Variant = _read_json(profile_path)
+	var recovered := false
+	if loaded == null and FileAccess.file_exists(profile_path + ".bak"):
+		loaded = _read_json(profile_path + ".bak")
+		recovered = loaded != null
+		if recovered:
+			push_warning("SaveManager: hồ sơ hỏng hoặc thiếu, đã khôi phục từ bản dự phòng.")
+	if loaded is Dictionary:
+		profile = _migrate(loaded)
+		if recovered:
+			# Bỏ file chính hỏng trước, để flush() không biến nó thành bản dự phòng.
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(profile_path))
+			flush()
+	else:
+		profile = _new_profile()
+		if _import_legacy_progress():
+			flush()
 
-func _save() -> void:
+
+func _read_json(path: String) -> Variant:
+	if not FileAccess.file_exists(path):
+		return null
+	# JSON.new().parse() không in lỗi ra console như JSON.parse_string().
+	var json := JSON.new()
+	if json.parse(FileAccess.get_file_as_string(path)) != OK:
+		return null
+	return json.data if json.data is Dictionary else null
+
+
+## Nâng cấp hồ sơ từ phiên bản cũ lên PROFILE_VERSION (mỗi phiên bản thêm một bước).
+func _migrate(data: Dictionary) -> Dictionary:
+	var version := read_int(data, "save_version", 0)
+	if version > PROFILE_VERSION:
+		push_warning("SaveManager: hồ sơ từ phiên bản mới hơn (%d), có thể thiếu dữ liệu." % version)
+	# (Phiên bản 1 là bản đầu tiên, chưa có bước nâng cấp nào.)
+	data["save_version"] = PROFILE_VERSION
+	return data
+
+
+## Chuyển sao / kỷ lục / cờ từ save.cfg kiểu cũ sang hồ sơ JSON. Trả về true nếu có dữ liệu.
+func _import_legacy_progress() -> bool:
+	var imported := false
+	for legacy_section: String in LEGACY_SECTIONS:
+		if not _config.has_section(legacy_section):
+			continue
+		var target := section(LEGACY_SECTIONS[legacy_section])
+		for key in _config.get_section_keys(legacy_section):
+			target[key] = _config.get_value(legacy_section, key)
+		_config.erase_section(legacy_section)
+		imported = true
+	if imported:
+		_save_config()
+	return imported
+
+
+func _save_config() -> void:
 	var error := _config.save(save_path)
 	if error != OK:
 		push_error("SaveManager: không ghi được '%s' (lỗi %d)." % [save_path, error])

@@ -12,3 +12,4 @@ map_scene = ExtResource("2_map")
 waves_file = "res://data/waves/level_03.json"
 starting_gold = 300
 starting_lives = 20
+coin_reward = 250

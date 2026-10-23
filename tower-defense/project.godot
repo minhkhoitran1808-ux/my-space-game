@@ -20,9 +20,13 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+Events="*res://scripts/autoload/Events.gd"
 GameManager="*res://scripts/autoload/GameManager.gd"
 AudioManager="*res://scripts/autoload/AudioManager.gd"
 SaveManager="*res://scripts/autoload/SaveManager.gd"
+EconomyManager="*res://scripts/autoload/EconomyManager.gd"
+StatsManager="*res://scripts/autoload/StatsManager.gd"
+ProgressionManager="*res://scripts/autoload/ProgressionManager.gd"
 
 [display]
 

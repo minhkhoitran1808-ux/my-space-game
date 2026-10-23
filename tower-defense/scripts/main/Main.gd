@@ -26,11 +26,19 @@ extends Node2D
 ## Màn đang chơi và bản đồ đã nạp.
 var level: LevelData
 var map: GameMap
+## Theo dõi ván cho meta-progression (thống kê, thành tựu, thưởng cuối ván).
+var tracker: MatchTracker
+## Phần thưởng của ván vừa kết thúc (test đọc để kiểm tra).
+var last_rewards: Dictionary = {}
 
 
 func _ready() -> void:
 	_load_level(GameManager.get_current_level())
 	GameManager.reset(wave_manager.get_total_waves(), level.starting_gold, level.starting_lives)
+	tracker = MatchTracker.new()
+	tracker.name = "MatchTracker"
+	add_child(tracker)
+	tracker.setup(level, GameManager.endless_mode, GameManager.starting_lives, wave_manager, build_manager, ability_manager)
 
 	# HUD -> hệ thống
 	hud.setup_tower_buttons(build_manager.available_towers)
@@ -86,7 +94,7 @@ func _ready() -> void:
 	wave_manager.enemy_spawned.connect(func(enemy: Enemy) -> void:
 		if enemy.data.elite:
 			hud.boss_bar.track(enemy))
-	wave_manager.enemy_spawned.connect(_announce_new_enemy)
+	Events.enemy_discovered.connect(_announce_new_enemy)
 	fx_manager.track_projectile_container(build_manager.projectile_container)
 
 	GameManager.state_changed.connect(_on_game_state_changed)
@@ -209,13 +217,12 @@ func _on_ability_targeting_changed(ability: AbilityData) -> void:
 		selection_manager.deselect()
 
 
-## Lần đầu gặp một loại địch có mẹo (EnemyData.hint): hiện giới thiệu ngắn, chỉ một lần mỗi file save.
-func _announce_new_enemy(enemy: Enemy) -> void:
-	var data := enemy.data
-	var flag := "seen_enemy_%s" % data.id
-	if data.hint.is_empty() or SaveManager.get_flag(flag):
+## Lần đầu gặp một loại địch có mẹo (EnemyData.hint): hiện giới thiệu ngắn, chỉ một lần mỗi hồ sơ.
+## (StatsManager đánh dấu "đã gặp" và phát Events.enemy_discovered.)
+func _announce_new_enemy(enemy_id: StringName) -> void:
+	var data := wave_manager.get_enemy_type(enemy_id)
+	if data == null or data.hint.is_empty():
 		return
-	SaveManager.set_flag(flag, true)
 	hud.show_message("Địch mới: %s - %s" % [data.display_name, data.hint], Color(1.0, 0.85, 0.4))
 
 
@@ -275,4 +282,9 @@ func _on_game_state_changed(state: GameManager.GameState) -> void:
 	else:
 		hud.show_game_over(victory, stars, GameManager.lives, GameManager.starting_lives,
 				victory and GameManager.get_next_level() != null)
+	# Meta-progression: thưởng xu + KN (kể cả khi thua), rồi báo cho thống kê / thành tựu.
+	var result := tracker.build_result(victory, stars)
+	last_rewards = ProgressionManager.grant_match_rewards(result, level.coin_reward)
+	Events.match_ended.emit(result)
+	hud.show_match_rewards(last_rewards)
 	AudioManager.play(&"victory" if victory else &"defeat")

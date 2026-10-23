@@ -15,6 +15,9 @@ extends Resource
 @export_file("*.json") var waves_file: String = ""
 @export var starting_gold: int = 200
 @export var starting_lives: int = 20
+## Xu (tiền meta) gốc của màn: thưởng cuối ván = coin_reward × (wave đã qua / tổng wave)^1.3,
+## thắng được thêm 40%. Màn khó hơn nên cho nhiều hơn.
+@export var coin_reward: int = 150
 
 
 ## Đọc nhanh số wave từ file JSON (để hiển thị ở màn chọn màn).

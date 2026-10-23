@@ -25,4 +25,5 @@ func _ready() -> void:
 
 func _refresh() -> void:
 	var max_stars := GameManager.LEVEL_CATALOG.levels.size() * 3
-	stars_label.text = "Tổng số sao: %d / %d" % [SaveManager.get_total_stars(), max_stars]
+	stars_label.text = "Tổng số sao: %d / %d    ·    Cấp %d    ·    %d Xu" % [SaveManager.get_total_stars(), max_stars,
+			ProgressionManager.get_level(), EconomyManager.get_amount(EconomyManager.COINS)]
