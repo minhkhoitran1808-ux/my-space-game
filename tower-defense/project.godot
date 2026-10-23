@@ -11,9 +11,12 @@ config_version=5
 [application]
 
 config/name="Tower Defense"
-config/description="Tower Defense 2D - khung project Godot 4"
+config/description="Tower Defense 2D - xây tháp, nâng cấp và giữ vững nhà chính"
+config/version="1.0.0"
 run/main_scene="res://scenes/menus/MainMenu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+boot_splash/bg_color=Color(0.1, 0.11, 0.13, 1)
+config/icon="res://icon.svg"
 
 [autoload]
 

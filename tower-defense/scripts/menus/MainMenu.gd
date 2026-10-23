@@ -16,6 +16,8 @@ func _ready() -> void:
 	reset_button.pressed.connect(reset_dialog.popup_centered)
 	reset_dialog.confirmed.connect(SaveManager.reset_progress)
 	quit_button.pressed.connect(get_tree().quit)
+	# Trên trình duyệt (bản Web) không thể tự thoát game, nên ẩn nút Thoát.
+	quit_button.visible = not OS.has_feature("web")
 	SaveManager.progress_changed.connect(_refresh)
 	_refresh()
 	play_button.grab_focus()

@@ -177,6 +177,8 @@ Lỗi trong file wave (sai id, sai số làn...) được báo rõ trong cửa s
 
 ## Xuất bản (Windows / Web)
 
+> Chi tiết bản build hiện tại, cách chạy và cách đưa lên itch.io: xem **[README_BUILD.md](README_BUILD.md)**.
+
 Project đã có sẵn `export_presets.cfg` với 2 cấu hình: **Windows Desktop** và **Web**
 (cả hai đã tự kèm các file `data/*.json` và bỏ thư mục `tests/`). Chỉ cần làm một lần:
 

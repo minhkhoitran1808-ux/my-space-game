@@ -4,7 +4,8 @@ extends RefCounted
 ## Gom vào một chỗ để tooltip và bảng thông tin luôn hiển thị giống nhau.
 
 
-## Mô tả chỉ số. Nếu truyền "next", các chỉ số thay đổi hiện dạng "cũ → mới".
+## Mô tả chỉ số. Nếu truyền "next", các chỉ số thay đổi hiện dạng "cũ » mới".
+## (Dùng "»" thay vì "→": font mặc định không có "→" và bản Web không có font hệ thống để bù.)
 static func describe(data: TowerData, next: TowerData = null) -> String:
 	var compare_to := next if next else data
 	var lines := PackedStringArray()
@@ -17,7 +18,7 @@ static func describe(data: TowerData, next: TowerData = null) -> String:
 	var effects_now := _effects_text(data)
 	var effects_next := _effects_text(compare_to)
 	if not effects_now.is_empty():
-		lines.append("Hiệu ứng: %s" % (effects_now if effects_now == effects_next else "%s → %s" % [effects_now, effects_next]))
+		lines.append("Hiệu ứng: %s" % (effects_now if effects_now == effects_next else "%s » %s" % [effects_now, effects_next]))
 	lines.append("Kiểu bắn: %s" % ("Tia (trúng ngay)" if data.attack_type == TowerData.AttackType.HITSCAN else "Đạn bay"))
 	lines.append("Mục tiêu: %s" % ("Mặt đất + Trên không" if data.can_hit_air else "Chỉ mặt đất"))
 	return "\n".join(lines)
@@ -54,7 +55,7 @@ static func _effects_text(data: TowerData) -> String:
 static func _compare(current: float, next_value: float) -> String:
 	if is_equal_approx(current, next_value):
 		return _num(current)
-	return "%s → %s" % [_num(current), _num(next_value)]
+	return "%s » %s" % [_num(current), _num(next_value)]
 
 
 ## Số nguyên thì bỏ ".0" (12 thay vì 12.0), số lẻ giữ tối đa 2 chữ số.
