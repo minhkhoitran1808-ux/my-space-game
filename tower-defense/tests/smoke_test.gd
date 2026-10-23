@@ -44,6 +44,7 @@ func _ready() -> void:
 	await _test_systems()
 	await _test_tower_management()
 	await _test_tower_mechanics()
+	await _test_new_enemies()
 	await _test_match_flow()
 	await _test_level_flow()
 	await _test_abilities_and_flying()
@@ -303,6 +304,57 @@ func _test_tower_mechanics() -> void:
 	frost._shoot(victims[0])
 	_check(in_range.size() >= 2 and in_range.all(func(enemy: Enemy) -> bool:
 			return enemy.health < enemy.max_health and enemy.status_effects.has_effect(&"slow")), "sóng toả: %d địch trong tầm đều trúng + chậm" % in_range.size())
+	await _free_main(main)
+
+
+# --- Phần 1p: địch mới + chống cày tiền -----------------------------------------------
+
+func _test_new_enemies() -> void:
+	print("[1p] Địch mới + chống cày tiền")
+	var main := await _new_main()
+	var waves: WaveManager = main.wave_manager
+	var path: Path2D = main.map.get_paths()[0]
+	for id in [&"wisp", &"splitter", &"splitling"]:
+		_check(waves.get_enemy_type(id) != null, "có loại địch '%s'" % id)
+
+	# Hồn ma kháng phép 60%.
+	var wisp := _spawn_test_enemy(path, waves.get_enemy_type(&"wisp"))
+	_check(is_equal_approx(wisp.take_damage(DamageInfo.new(100.0, DamageInfo.Type.MAGIC)), 40.0), "Hồn ma: phép 100 => 40")
+	wisp.queue_free()
+
+	# Vàng tăng 3% mỗi wave; quân sinh từ địch khác không cho vàng.
+	var early: Enemy = waves._spawn_enemy(waves.get_enemy_type(&"basic"), 1.0, 0.0, 300.0, 0)
+	var late: Enemy = waves._spawn_enemy(waves.get_enemy_type(&"basic"), 1.0, 0.0, 300.0, 9)
+	_check(early.get_reward() == 8 and late.get_reward() == roundi(8 * 1.27), "vàng hạ địch: wave 1 = 8, wave 10 = %d" % late.get_reward())
+	var gold_before := GameManager.gold
+	var splitter: Enemy = waves._spawn_enemy(waves.get_enemy_type(&"splitter"), 1.0, 0.0, 300.0)
+	splitter.take_damage(DamageInfo.new(9999.0, DamageInfo.Type.TRUE))
+	await get_tree().process_frame
+	var spawned := get_tree().get_nodes_in_group(Enemy.GROUP).filter(func(node: Node) -> bool: return node.data.id == &"splitling")
+	_check(spawned.size() == 3 and GameManager.gold == gold_before + 10, "Kẻ tách đôi chết: 3 mảnh tách, chỉ +10 vàng của con mẹ")
+	gold_before = GameManager.gold
+	for piece: Enemy in spawned:
+		piece.take_damage(DamageInfo.new(9999.0, DamageInfo.Type.TRUE))
+	_check(GameManager.gold == gold_before, "hạ mảnh tách: không cho vàng")
+
+	# Boss gọi 2 lính mỗi 8 giây (không cho vàng); làm chậm bị giới hạn.
+	var boss: Enemy = waves._spawn_enemy(waves.get_enemy_type(&"boss"), 1.0, 0.0, 500.0)
+	await get_tree().process_frame
+	var basics_before := get_tree().get_nodes_in_group(Enemy.GROUP).filter(func(node: Node) -> bool: return node.data.id == &"basic").size()
+	boss.get_node("SummonerAura").summon()
+	await get_tree().process_frame
+	var summoned := get_tree().get_nodes_in_group(Enemy.GROUP).filter(func(node: Node) -> bool: return node.data.id == &"basic")
+	_check(summoned.size() == basics_before + 2, "Boss gọi 2 lính")
+	_check(summoned.all(func(node: Enemy) -> bool: return node == early or node == late or node.get_reward() == 0), "lính Boss gọi không cho vàng")
+	var freeze: StatusEffectData = load("res://resources/effects/freeze.tres")
+	boss.status_effects.apply(freeze)
+	_check(is_equal_approx(boss.status_effects.get_speed_multiplier(), 1.0 - 0.4 * 0.5), "Boss: Băng giá chỉ làm chậm tối đa 20%% (%.2f)" % boss.status_effects.get_speed_multiplier())
+	var boss_children_gold := GameManager.gold
+	boss.take_damage(DamageInfo.new(999999.0, DamageInfo.Type.TRUE))
+	await get_tree().process_frame
+	var swarm_kids := get_tree().get_nodes_in_group(Enemy.GROUP).filter(func(node: Node) -> bool: return node.data.id == &"swarm")
+	_check(swarm_kids.size() == 8 and swarm_kids.all(func(node: Enemy) -> bool: return node.get_reward() == 0), "con của Boss không cho vàng")
+	_check(GameManager.gold > boss_children_gold, "hạ Boss vẫn cho vàng")
 	await _free_main(main)
 
 

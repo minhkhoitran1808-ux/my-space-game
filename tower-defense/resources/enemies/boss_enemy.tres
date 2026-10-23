@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="EnemyData" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/resources/EnemyData.gd" id="1_data"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/Enemy.tscn" id="2_scene"]
 [ext_resource type="Resource" path="res://resources/enemies/swarm_enemy.tres" id="3_child"]
+[ext_resource type="Resource" path="res://resources/enemies/basic_enemy.tres" id="4_summon"]
 
 [resource]
 script = ExtResource("1_data")
@@ -16,6 +17,10 @@ damage_to_base = 10
 armor = 0.3
 magic_resist = 0.3
 slow_resistance = 0.5
+max_slow = 0.4
+summon_enemy = ExtResource("4_summon")
+summon_count = 2
+summon_interval = 8.0
 spawn_on_death = ExtResource("3_child")
 spawn_on_death_count = 8
 color = Color(0.55, 0.1, 0.15, 1)

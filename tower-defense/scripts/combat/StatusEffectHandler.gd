@@ -44,6 +44,7 @@ func get_speed_multiplier() -> float:
 	var strongest_slow := 0.0
 	for entry: Dictionary in _active.values():
 		strongest_slow = maxf(strongest_slow, entry.data.slow_amount)
+	strongest_slow = minf(strongest_slow, _enemy.data.max_slow)
 	return 1.0 - strongest_slow * (1.0 - _enemy.data.slow_resistance)
 
 

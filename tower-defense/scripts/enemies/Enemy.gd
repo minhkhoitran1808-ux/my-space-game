@@ -17,6 +17,8 @@ signal health_changed(current: float, maximum: float)
 signal damaged(enemy: Enemy, amount: float, info: DamageInfo)
 ## Phát ra khi được hồi máu (vd bởi Thầy lang), với lượng máu THỰC được hồi.
 signal healed(enemy: Enemy, amount: float)
+## Địch gọi quân (Boss): WaveManager nghe để sinh quân tại chỗ (quân gọi ra không cho vàng).
+signal summon_requested(enemy: Enemy, summon_data: EnemyData, count: int)
 
 ## Tên group để tháp tìm mục tiêu.
 const GROUP := &"enemies"
@@ -29,6 +31,8 @@ var health: float = 0.0
 var base_speed: float = 0.0
 ## Hệ số máu của wave, để địch con sinh ra khi chết cũng mạnh tương ứng.
 var health_multiplier: float = 1.0
+## Hệ số vàng khi bị hạ (WaveManager gán: tăng 3% mỗi wave; quân sinh từ địch khác = 0).
+var reward_multiplier: float = 1.0
 ## Node gây đòn cuối cùng (dùng cho thống kê của tháp).
 var last_damage_source: Node = null
 ## Địch thuộc wave nào (WaveManager gán, dùng để biết khi nào từng wave kết thúc).
@@ -67,6 +71,11 @@ func _ready() -> void:
 	health_bar.track(self)
 	hit_feedback.track(self)
 	hit_feedback.changed.connect(queue_redraw)
+	if data.summon_interval > 0.0 and data.summon_enemy:
+		var summoner := SummonerAura.new()
+		summoner.name = "SummonerAura"
+		add_child(summoner)
+		summoner.setup(self)
 	if data.heal_radius > 0.0:
 		var aura := HealerAura.new()
 		aura.name = "HealerAura"
@@ -145,9 +154,14 @@ func heal(amount: float) -> float:
 	return gained
 
 
+## Vàng nhận được khi hạ con này.
+func get_reward() -> int:
+	return roundi(data.reward * reward_multiplier)
+
+
 func _die() -> void:
 	_is_dead = true
-	died.emit(self, data.reward)
+	died.emit(self, get_reward())
 	queue_free()
 
 
@@ -205,6 +219,13 @@ func _draw() -> void:
 				draw_colored_polygon(wing, body_color.darkened(0.25))
 			draw_circle(Vector2.ZERO, r * 0.6, body_color)
 			draw_arc(Vector2.ZERO, r * 0.6, 0.0, TAU, 24, outline, 2.0)
+		EnemyData.Shape.BLOB:
+			# Hồn ma: giọt bán trong suốt có đuôi.
+			var ghost := Color(body_color, 0.75)
+			draw_colored_polygon(PackedVector2Array([Vector2(-r * 0.7, r * 0.3), Vector2(0, r * 1.5), Vector2(r * 0.7, r * 0.3)]), ghost)
+			draw_circle(Vector2.ZERO, r, ghost)
+			for side in [-1.0, 1.0]:
+				draw_circle(Vector2(side * r * 0.35, -r * 0.1), r * 0.18, Color(0.1, 0.1, 0.2, 0.9))
 		EnemyData.Shape.CROSS:
 			# Thầy lang: thân tròn có dấu cộng trắng.
 			draw_circle(Vector2.ZERO, r, body_color)

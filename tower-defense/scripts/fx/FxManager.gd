@@ -157,7 +157,8 @@ func _on_enemy_healed(enemy: Enemy, _amount: float) -> void:
 
 func _on_enemy_died(enemy: Enemy, reward: int) -> void:
 	var origin := enemy.global_position
-	_add_text(origin + Vector2(0, -enemy.data.radius - 18.0), "+%d" % reward, Color(1.0, 0.85, 0.3), 16)
+	if reward > 0:
+		_add_text(origin + Vector2(0, -enemy.data.radius - 18.0), "+%d" % reward, Color(1.0, 0.85, 0.3), 16)
 	var count := 6 + int(enemy.data.radius * 0.4)
 	for i in count:
 		var direction := Vector2.from_angle(TAU * i / count + randf_range(-0.3, 0.3))

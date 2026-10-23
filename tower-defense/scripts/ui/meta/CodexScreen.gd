@@ -133,6 +133,9 @@ func _draw_enemy(canvas: Control, data: EnemyData, seen: bool) -> void:
 			canvas.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, r * 0.8), c + Vector2(-r, r * 0.8)]), color)
 		EnemyData.Shape.DIAMOND:
 			canvas.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)]), color)
+		EnemyData.Shape.BLOB:
+			canvas.draw_colored_polygon(PackedVector2Array([c + Vector2(-r * 0.7, r * 0.3), c + Vector2(0, r * 1.5), c + Vector2(r * 0.7, r * 0.3)]), Color(color, 0.75))
+			canvas.draw_circle(c, r, Color(color, 0.75))
 		EnemyData.Shape.BAT:
 			for side in [-1.0, 1.0]:
 				canvas.draw_colored_polygon(PackedVector2Array([c + Vector2(side * r * 0.3, -r * 0.2),

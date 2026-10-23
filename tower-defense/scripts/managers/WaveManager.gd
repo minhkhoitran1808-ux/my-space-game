@@ -46,6 +46,8 @@ var endless_seed: String = ""
 
 ## Khoảng cách (pixel trên đường đi) giữa các địch con sinh ra khi địch mẹ chết.
 const DEATH_SPAWN_SPACING := 14.0
+## Vàng hạ địch tăng thêm chừng này mỗi wave (máu địch tăng nhanh hơn => không lăn cầu tuyết).
+const REWARD_GROWTH_PER_WAVE := 0.03
 ## Thưởng gọi sớm = EARLY_CALL_BASE_BONUS + EARLY_CALL_BONUS_PER_WAVE * số thứ tự wave được gọi.
 const EARLY_CALL_BASE_BONUS := 10
 const EARLY_CALL_BONUS_PER_WAVE := 2
@@ -304,8 +306,11 @@ func _process_spawn_queue() -> void:
 
 
 ## wave_index < 0 nghĩa là "wave hiện tại"; path = null nghĩa là làn đầu tiên phù hợp.
+## spawned_by_enemy = true: quân sinh ra từ địch khác (tách đôi, Boss chết / gọi quân), không cho vàng
+## để không "cày" được tiền. Còn lại: vàng tăng 3% mỗi wave (chậm hơn máu địch).
 func _spawn_enemy(enemy_data: EnemyData, health_multiplier: float, speed_multiplier: float,
-		start_progress: float = 0.0, wave_index: int = -1, path: Path2D = null) -> Enemy:
+		start_progress: float = 0.0, wave_index: int = -1, path: Path2D = null,
+		spawned_by_enemy: bool = false) -> Enemy:
 	if wave_index < 0:
 		wave_index = maxi(_current_wave_index, 0)
 	if path == null:
@@ -313,7 +318,9 @@ func _spawn_enemy(enemy_data: EnemyData, health_multiplier: float, speed_multipl
 	var enemy := enemy_data.scene.instantiate() as Enemy
 	enemy.setup(enemy_data, health_multiplier, speed_multiplier)
 	enemy.wave_index = wave_index
+	enemy.reward_multiplier = 0.0 if spawned_by_enemy else 1.0 + REWARD_GROWTH_PER_WAVE * wave_index
 	enemy.died.connect(_on_enemy_died)
+	enemy.summon_requested.connect(_on_summon_requested)
 	enemy.reached_end.connect(_on_enemy_reached_end)
 	path.add_child(enemy)
 	enemy.progress = start_progress
@@ -332,11 +339,20 @@ func _on_enemy_died(enemy: Enemy, reward: int) -> void:
 			var same_lane := child_data.is_flying == enemy.data.is_flying
 			_spawn_enemy(child_data, enemy.health_multiplier, 1.0,
 					maxf(enemy.progress - i * DEATH_SPAWN_SPACING, 0.0) if same_lane else 0.0,
-					enemy.wave_index, enemy.get_parent() if same_lane else null)
+					enemy.wave_index, enemy.get_parent() if same_lane else null, true)
 
 	_alive_by_wave[enemy.wave_index] -= 1
 	GameManager.add_gold(reward)
 	_check_wave_completed(enemy.wave_index)
+
+
+## Boss gọi quân: sinh ngay sau lưng Boss, cùng làn, cùng hệ số máu, không cho vàng.
+func _on_summon_requested(enemy: Enemy, summon_data: EnemyData, count: int) -> void:
+	if not enemy.is_alive() or summon_data.scene == null:
+		return
+	for i in count:
+		_spawn_enemy(summon_data, enemy.health_multiplier, 1.0, maxf(enemy.progress - 24.0 - i * DEATH_SPAWN_SPACING, 0.0),
+				enemy.wave_index, enemy.get_parent(), true)
 
 
 func _on_enemy_reached_end(enemy: Enemy, damage: int) -> void:
