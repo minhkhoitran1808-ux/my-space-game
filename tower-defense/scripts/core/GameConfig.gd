@@ -12,6 +12,8 @@ const BUILD_AREA := Rect2(0, 64, 1280, 576)
 const PATH_WIDTH := 48.0
 ## Tâm ô cách đường đi nhỏ hơn khoảng này thì không được xây.
 const PATH_CLEARANCE := 56.0
+## Tỉ lệ hoàn tiền khi bán tháp (tính trên tổng tiền đã xây + nâng cấp).
+const SELL_REFUND_RATIO := 0.7
 
 
 ## Đổi vị trí trong thế giới sang toạ độ ô lưới.

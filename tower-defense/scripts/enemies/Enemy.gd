@@ -91,9 +91,13 @@ func take_damage(info: DamageInfo) -> float:
 	if _is_dead:
 		return 0.0
 
-	var amount := info.amount * (1.0 - data.get_resistance(info.type))
-	health = maxf(health - amount, 0.0)
+	# Không tính phần sát thương "thừa" vượt quá máu còn lại.
+	var amount := minf(info.amount * (1.0 - data.get_resistance(info.type)), health)
+	health -= amount
 	last_damage_source = info.source
+	# Báo cho nguồn gây sát thương (thường là Tower) để cộng thống kê.
+	if is_instance_valid(info.source) and info.source.has_method(&"record_damage"):
+		info.source.record_damage(amount, health <= 0.0)
 	_hit_flash = HIT_FLASH_TIME
 	for effect in info.effects:
 		status_effects.apply(effect, info.source)

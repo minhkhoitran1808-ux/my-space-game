@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/main/Main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/main/Ground.gd" id="2_ground"]
@@ -10,6 +10,7 @@
 [ext_resource type="Resource" path="res://resources/towers/mage_tower.tres" id="10_mage_tower"]
 [ext_resource type="Script" path="res://scripts/managers/WaveManager.gd" id="6_wave"]
 [ext_resource type="PackedScene" path="res://scenes/ui/HUD.tscn" id="7_hud"]
+[ext_resource type="Script" path="res://scripts/managers/SelectionManager.gd" id="11_selection"]
 
 [sub_resource type="Curve2D" id="Curve2D_path"]
 _data = {
@@ -40,6 +41,10 @@ tower_container = NodePath("../Towers")
 projectile_container = NodePath("../Projectiles")
 enemy_path = NodePath("../Enemies/EnemyPath")
 available_towers = Array[ExtResource("4_tower_data")]([ExtResource("5_basic_tower"), ExtResource("8_cannon_tower"), ExtResource("9_frost_tower"), ExtResource("10_mage_tower")])
+
+[node name="SelectionManager" type="Node" parent="." node_paths=PackedStringArray("build_manager")]
+script = ExtResource("11_selection")
+build_manager = NodePath("../BuildManager")
 
 [node name="WaveManager" type="Node" parent="." node_paths=PackedStringArray("enemy_path")]
 script = ExtResource("6_wave")

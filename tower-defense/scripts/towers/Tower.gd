@@ -1,6 +1,7 @@
 class_name Tower
 extends Node2D
 ## Tháp: tự chọn mục tiêu trong tầm rồi tấn công theo TowerData.
+## Nâng cấp = đổi sang TowerData cấp tiếp theo (data.next_level).
 ##
 ## - HITSCAN: trúng ngay, vẽ một tia sáng ngắn.
 ## - PROJECTILE: bắn ra một Projectile bay đuổi theo mục tiêu.
@@ -8,6 +9,10 @@ extends Node2D
 
 ## Phát ra mỗi lần bắn.
 signal fired(target: Enemy, damage: float)
+## Phát ra sau khi nâng cấp thành công.
+signal upgraded(tower: Tower)
+## Phát ra khi thống kê (sát thương, số địch hạ) thay đổi.
+signal stats_changed(tower: Tower)
 
 ## Cách chọn mục tiêu khi có nhiều địch trong tầm.
 enum TargetMode {
@@ -22,6 +27,7 @@ const BASE_SIZE := 44.0
 const BARREL_LENGTH := 24.0
 const SHOT_VISUAL_TIME := 0.08
 const AIM_SPEED := 15.0
+const UPGRADE_FX_TIME := 0.5
 
 @export var data: TowerData
 @export var target_mode: TargetMode = TargetMode.FIRST
@@ -30,25 +36,71 @@ const AIM_SPEED := 15.0
 var target: Enemy = null
 ## Node chứa đạn bắn ra (BuildManager gán). Để trống thì dùng node cha của tháp.
 var projectile_container: Node = null
-## Bật để vẽ vòng tròn tầm bắn (khi người chơi chọn tháp).
+## Bật để vẽ vòng tròn tầm bắn + viền chọn (khi người chơi chọn tháp).
 var show_range := false:
 	set(value):
 		show_range = value
 		queue_redraw()
+## Tổng số vàng đã bỏ ra (xây + nâng cấp), dùng để tính tiền bán lại.
+var total_invested: int = 0
+## Thống kê hiển thị trong bảng thông tin.
+var kills: int = 0
+var damage_dealt: float = 0.0
 
 var _cooldown := 0.0
 var _aim_angle := -PI * 0.5
 var _shot_timer := 0.0
 var _last_shot_position := Vector2.ZERO
+var _upgrade_fx := 0.0
 
 
 func _ready() -> void:
 	assert(data != null, "Tower cần TowerData: hãy gán data trước khi add_child().")
+	if total_invested == 0:
+		total_invested = data.cost
+
+
+func get_level() -> int:
+	return data.level
+
+
+func can_upgrade() -> bool:
+	return data.can_upgrade()
+
+
+## Giá nâng cấp lên cấp tiếp theo (0 nếu đã tối đa).
+func get_upgrade_cost() -> int:
+	return data.next_level.cost if data.can_upgrade() else 0
+
+
+## Số vàng nhận lại nếu bán tháp lúc này.
+func get_sell_value() -> int:
+	return int(total_invested * GameConfig.SELL_REFUND_RATIO)
+
+
+## Đổi sang bộ chỉ số cấp tiếp theo. Việc trừ vàng do BuildManager lo.
+func upgrade() -> void:
+	if not data.can_upgrade():
+		return
+	data = data.next_level
+	total_invested += data.cost
+	_upgrade_fx = UPGRADE_FX_TIME
+	upgraded.emit(self)
+	queue_redraw()
+
+
+## Enemy gọi hàm này (qua DamageInfo.source) mỗi khi tháp gây sát thương.
+func record_damage(amount: float, killed: bool) -> void:
+	damage_dealt += amount
+	if killed:
+		kills += 1
+	stats_changed.emit(self)
 
 
 func _process(delta: float) -> void:
 	_cooldown = maxf(_cooldown - delta, 0.0)
 	_shot_timer = maxf(_shot_timer - delta, 0.0)
+	_upgrade_fx = maxf(_upgrade_fx - delta, 0.0)
 
 	# Chọn lại mục tiêu mỗi frame để luôn theo đúng TargetMode.
 	target = _find_target()
@@ -119,15 +171,21 @@ func _spawn_projectile(enemy: Enemy, info: DamageInfo) -> void:
 # --- Hiển thị tạm (chưa có sprite) ---------------------------------------------
 
 func _draw() -> void:
+	var half := BASE_SIZE * 0.5
 	if show_range:
 		draw_circle(Vector2.ZERO, data.attack_range, Color(data.color, 0.08))
 		draw_arc(Vector2.ZERO, data.attack_range, 0.0, TAU, 64, Color(data.color, 0.6), 2.0)
+		draw_rect(Rect2(-half - 4.0, -half - 4.0, BASE_SIZE + 8.0, BASE_SIZE + 8.0), Color(1, 1, 1, 0.9), false, 2.0)
 
-	# Đế tháp + thân + nòng súng (nòng to hơn với tháp nổ lan).
-	var half := BASE_SIZE * 0.5
+	# Đế tháp + thân + nòng súng (nòng to hơn với tháp nổ lan, thân to dần theo cấp).
 	draw_rect(Rect2(-half, -half, BASE_SIZE, BASE_SIZE), Color(0.25, 0.27, 0.32))
 	draw_rect(Rect2(-half, -half, BASE_SIZE, BASE_SIZE), Color(0.1, 0.1, 0.12), false, 2.0)
-	draw_circle(Vector2.ZERO, 14.0, data.color)
+	draw_circle(Vector2.ZERO, 12.0 + data.level * 2.0, data.color)
+
+	# Chấm vàng thể hiện cấp.
+	for i in data.level:
+		var pip := Vector2((i - (data.level - 1) * 0.5) * 9.0, half - 6.0)
+		draw_circle(pip, 3.0, Color(1.0, 0.85, 0.3))
 	var barrel_tip := Vector2.from_angle(_aim_angle) * BARREL_LENGTH
 	var barrel_width := 11.0 if data.splash_radius > 0.0 else 7.0
 	draw_line(Vector2.ZERO, barrel_tip, data.color.darkened(0.3), barrel_width)
@@ -139,3 +197,8 @@ func _draw() -> void:
 		draw_line(barrel_tip, beam_end, Color(data.color.lightened(0.5), alpha), 3.0)
 		if data.splash_radius > 0.0:
 			draw_arc(beam_end, data.splash_radius, 0.0, TAU, 24, Color(data.color, alpha * 0.8), 2.0)
+
+	# Vòng sáng lan ra khi vừa nâng cấp.
+	if _upgrade_fx > 0.0:
+		var t := 1.0 - _upgrade_fx / UPGRADE_FX_TIME
+		draw_arc(Vector2.ZERO, half + t * 30.0, 0.0, TAU, 32, Color(1.0, 0.85, 0.3, 1.0 - t), 3.0)

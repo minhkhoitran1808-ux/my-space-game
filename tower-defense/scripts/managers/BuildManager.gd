@@ -1,18 +1,20 @@
 class_name BuildManager
 extends Node2D
-## Xử lý việc đặt tháp bằng chuột.
+## Quản lý vòng đời tháp: xây, nâng cấp, bán, và ô lưới nào đang có tháp.
 ##
 ## - Chọn loại tháp (nút trên HUD hoặc phím 1-9) để vào chế độ xây.
 ## - Di chuột: hiện bóng tháp + tầm bắn (xanh = đặt được, đỏ = không).
 ## - Chuột trái: đặt tháp. Chuột phải / Esc: thoát chế độ xây.
-## - Khi không ở chế độ xây, click vào tháp để xem tầm bắn của nó.
+## Việc click chọn tháp có sẵn do SelectionManager lo.
 ##
 ## Dùng _unhandled_input nên click lên các nút UI sẽ không vô tình đặt tháp.
 
 ## Phát ra khi đổi loại tháp đang chọn (null = thoát chế độ xây).
 signal build_mode_changed(tower_data: TowerData)
 signal tower_placed(tower: Tower)
-## Phát ra khi đặt tháp thất bại, kèm lý do để hiện lên UI.
+signal tower_upgraded(tower: Tower)
+signal tower_sold(tower: Tower, refund: int)
+## Phát ra khi đặt / nâng cấp tháp thất bại, kèm lý do để hiện lên UI.
 signal placement_failed(reason: String)
 
 @export var tower_container: Node2D
@@ -27,13 +29,11 @@ var selected_tower_data: TowerData = null
 
 var _occupied_cells: Dictionary = {} # Vector2i -> Tower
 var _hover_cell := Vector2i(-1, -1)
-var _inspected_tower: Tower = null
 
 
 func select_tower(tower_data: TowerData) -> void:
 	# Bấm lại đúng loại đang chọn => huỷ chọn.
 	selected_tower_data = null if tower_data == selected_tower_data else tower_data
-	_set_inspected_tower(null)
 	build_mode_changed.emit(selected_tower_data)
 	queue_redraw()
 
@@ -71,6 +71,7 @@ func try_place_tower(cell: Vector2i) -> Tower:
 
 	var tower := tower_data.scene.instantiate() as Tower
 	tower.data = tower_data
+	tower.total_invested = tower_data.cost
 	tower.projectile_container = projectile_container
 	tower.position = GameConfig.cell_to_world(cell)
 	tower_container.add_child(tower)
@@ -78,6 +79,43 @@ func try_place_tower(cell: Vector2i) -> Tower:
 	tower_placed.emit(tower)
 	queue_redraw()
 	return tower
+
+
+func get_tower_at(cell: Vector2i) -> Tower:
+	return _occupied_cells.get(cell)
+
+
+func get_towers() -> Array[Tower]:
+	var towers: Array[Tower] = []
+	towers.assign(_occupied_cells.values())
+	return towers
+
+
+## Nâng cấp tháp nếu còn cấp và đủ vàng. Trả về true nếu thành công.
+func upgrade_tower(tower: Tower) -> bool:
+	if not tower.can_upgrade():
+		placement_failed.emit("Tháp đã đạt cấp tối đa")
+		return false
+	if not GameManager.spend_gold(tower.get_upgrade_cost()):
+		placement_failed.emit("Không đủ vàng (cần %d)" % tower.get_upgrade_cost())
+		return false
+	tower.upgrade()
+	tower_upgraded.emit(tower)
+	return true
+
+
+## Bán tháp, hoàn lại một phần vàng và giải phóng ô. Trả về số vàng nhận được.
+func sell_tower(tower: Tower) -> int:
+	var cell := GameConfig.world_to_cell(tower.position)
+	if _occupied_cells.get(cell) != tower:
+		return 0
+	var refund := tower.get_sell_value()
+	_occupied_cells.erase(cell)
+	GameManager.add_gold(refund)
+	tower_sold.emit(tower, refund)
+	tower.queue_free()
+	queue_redraw()
+	return refund
 
 
 func _is_on_path(world_pos: Vector2) -> bool:
@@ -88,14 +126,6 @@ func _is_on_path(world_pos: Vector2) -> bool:
 	return local_pos.distance_to(closest) < GameConfig.PATH_CLEARANCE
 
 
-func _set_inspected_tower(tower: Tower) -> void:
-	if is_instance_valid(_inspected_tower):
-		_inspected_tower.show_range = false
-	_inspected_tower = tower
-	if tower:
-		tower.show_range = true
-
-
 # --- Input ----------------------------------------------------------------------
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -103,28 +133,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventMouseMotion:
-		var cell := _event_to_cell(event)
+		var cell := event_to_cell(event)
 		if cell != _hover_cell:
 			_hover_cell = cell
 			queue_redraw()
 
-	elif event is InputEventMouseButton and event.pressed:
-		var cell := _event_to_cell(event)
+	elif event is InputEventMouseButton and event.pressed and is_building():
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			if is_building():
-				try_place_tower(cell)
-			else:
-				# Click vào tháp đang có => xem tầm bắn; click chỗ trống => bỏ chọn.
-				var tower: Tower = _occupied_cells.get(cell)
-				_set_inspected_tower(null if tower == _inspected_tower else tower)
+			try_place_tower(event_to_cell(event))
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			cancel_build()
-			_set_inspected_tower(null)
 			get_viewport().set_input_as_handled()
 
 	elif event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_ESCAPE:
+		if event.keycode == KEY_ESCAPE and is_building():
 			cancel_build()
 			get_viewport().set_input_as_handled()
 		elif event.keycode >= KEY_1 and event.keycode <= KEY_9:
@@ -135,7 +158,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 ## Đổi vị trí chuột của event sang ô lưới (tính cả camera / stretch của viewport).
-func _event_to_cell(event: InputEventMouse) -> Vector2i:
+func event_to_cell(event: InputEventMouse) -> Vector2i:
 	var local_event := make_input_local(event) as InputEventMouse
 	return GameConfig.world_to_cell(to_global(local_event.position))
 

@@ -1,7 +1,7 @@
 class_name HUD
 extends Control
-## Giao diện trong trận: vàng, mạng sống, wave, nút chọn tháp, nút bắt đầu wave
-## và bảng kết thúc ván.
+## Giao diện trong trận: vàng, mạng sống, wave, nút chọn tháp (kèm tooltip chỉ số),
+## nút bắt đầu wave, bảng thông tin tháp và bảng kết thúc ván.
 ##
 ## HUD tự lắng nghe GameManager để cập nhật số liệu. Các hành động của người chơi
 ## được phát ra bằng signal; Main sẽ nối chúng tới hệ thống tương ứng.
@@ -21,6 +21,7 @@ const MESSAGE_DURATION := 1.6
 @onready var game_over_panel: PanelContainer = %GameOverPanel
 @onready var result_label: Label = %ResultLabel
 @onready var restart_button: Button = %RestartButton
+@onready var tower_info_panel: TowerInfoPanel = %TowerInfoPanel
 
 var _buttons_by_tower: Dictionary = {} # TowerData -> Button
 var _message_tween: Tween
@@ -53,6 +54,7 @@ func setup_tower_buttons(towers: Array[TowerData]) -> void:
 		button.icon = _make_color_icon(tower_data.color)
 		button.custom_minimum_size = Vector2(150, 0)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.tooltip_text = TowerStats.tooltip(tower_data)
 		button.toggle_mode = true
 		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(tower_selected.emit.bind(tower_data))

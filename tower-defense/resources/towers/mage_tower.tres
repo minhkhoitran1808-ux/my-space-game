@@ -1,20 +1,24 @@
-[gd_resource type="Resource" script_class="TowerData" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="TowerData" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/resources/TowerData.gd" id="1_data"]
 [ext_resource type="PackedScene" path="res://scenes/towers/Tower.tscn" id="2_scene"]
-[ext_resource type="Resource" path="res://resources/effects/burn.tres" id="3_burn"]
-[ext_resource type="Script" path="res://scripts/resources/StatusEffectData.gd" id="4_effect_script"]
+[ext_resource type="Resource" path="res://resources/towers/mage_tower_lv2.tres" id="3_next"]
+[ext_resource type="Resource" path="res://resources/effects/burn.tres" id="4_effect"]
+[ext_resource type="Script" path="res://scripts/resources/StatusEffectData.gd" id="5_effect_script"]
 
 [resource]
 script = ExtResource("1_data")
 id = &"mage"
 display_name = "Phép"
+description = "Sát thương phép cao kèm thiêu đốt, xuyên giáp Bọc thép."
 cost = 120
+level = 1
+next_level = ExtResource("3_next")
 attack_type = 0
 damage_type = 1
 damage = 42.0
 fire_rate = 0.8
 attack_range = 190.0
-on_hit_effects = Array[ExtResource("4_effect_script")]([ExtResource("3_burn")])
+on_hit_effects = Array[ExtResource("5_effect_script")]([ExtResource("4_effect")])
 color = Color(0.75, 0.4, 1, 1)
 scene = ExtResource("2_scene")

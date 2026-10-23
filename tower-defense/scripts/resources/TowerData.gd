@@ -6,6 +6,9 @@ extends Resource
 ## nổ lan, hiệu ứng...), nên tháp mới thường chỉ là một file .tres mới.
 ## Muốn thêm loại tháp: tạo .tres trong res://resources/towers/ rồi thêm vào mảng
 ## "Available Towers" của node BuildManager trong Main.tscn.
+##
+## Nâng cấp là một chuỗi .tres: cấp 1 trỏ next_level tới cấp 2, cấp 2 trỏ tới cấp 3.
+## Nâng cấp tháp = thay data của nó bằng next_level.
 
 enum AttackType {
 	HITSCAN, ## Trúng ngay lập tức (tia sáng).
@@ -14,7 +17,16 @@ enum AttackType {
 
 @export var id: StringName = &"basic"
 @export var display_name: String = "Tháp"
+## Mô tả ngắn hiện trong tooltip của nút xây.
+@export_multiline var description: String = ""
+## Giá xây (cấp 1) hoặc giá nâng cấp lên cấp này (cấp 2, 3...).
 @export var cost: int = 50
+
+@export_group("Nâng cấp")
+## Cấp của bộ chỉ số này (1, 2, 3...).
+@export var level: int = 1
+## Bộ chỉ số của cấp tiếp theo (để trống = đã tối đa).
+@export var next_level: TowerData
 
 @export_group("Chiến đấu")
 @export var attack_type: AttackType = AttackType.PROJECTILE
@@ -42,3 +54,7 @@ enum AttackType {
 @export_group("Scene")
 ## Scene sẽ được instantiate khi đặt tháp (gốc phải là Tower).
 @export var scene: PackedScene
+
+
+func can_upgrade() -> bool:
+	return next_level != null

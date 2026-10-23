@@ -7,8 +7,9 @@ extends Node
 ## Kết thúc với exit code 0 nếu tất cả đều đạt, 1 nếu có lỗi.
 ##
 ## Gồm 3 phần, mỗi phần dùng một bản Main mới:
-##   1. Kiểm tra từng hệ thống (kháng sát thương, làm chậm, đặt tháp, dữ liệu wave...).
-##   2. Bot đặt tháp theo kế hoạch và phải THẮNG đủ mọi wave.
+##   1. Kiểm tra từng hệ thống (kháng sát thương, làm chậm, đặt tháp, dữ liệu wave,
+##      nâng cấp / bán, chọn tháp bằng chuột và phím tắt...).
+##   2. Bot đặt tháp theo kế hoạch, nâng cấp khi dư tiền, và phải THẮNG đủ mọi wave.
 ##   3. Không đặt tháp nào thì phải THUA (đảm bảo game không quá dễ).
 
 const MAIN_SCENE := preload("res://scenes/main/Main.tscn")
@@ -32,6 +33,7 @@ var _failures := PackedStringArray()
 func _ready() -> void:
 	print("=== SMOKE TEST ===")
 	await _test_systems()
+	await _test_tower_management()
 	await _test_bot_playthrough()
 	await _test_defeat_without_towers()
 
@@ -105,6 +107,67 @@ func _test_systems() -> void:
 	await _free_main(main)
 
 
+# --- Phần 1b: quản lý tháp (nâng cấp, bán, chọn) -------------------------------
+
+func _test_tower_management() -> void:
+	print("[1b] Quản lý tháp")
+	var main := await _new_main()
+	var build: BuildManager = main.build_manager
+	var selection: SelectionManager = main.selection_manager
+	var panel: TowerInfoPanel = main.tower_info_panel
+	GameManager.add_gold(1000)
+
+	# Xây + giá bán
+	build.select_tower(build.available_towers[0]) if build.selected_tower_data != build.available_towers[0] else null
+	var cell := Vector2i(4, 4)
+	var tower := build.try_place_tower(cell)
+	_check(tower != null and tower.get_level() == 1, "xây được tháp cấp 1")
+	_check(tower.get_sell_value() == 35, "giá bán = 70%% giá xây (%d)" % tower.get_sell_value())
+
+	# Click chuột vào tháp khi đang ở chế độ xây => chọn tháp, thoát chế độ xây.
+	_click(GameConfig.cell_to_world(cell), MOUSE_BUTTON_LEFT)
+	await get_tree().process_frame
+	_check(selection.selected_tower == tower, "click vào tháp thì chọn tháp")
+	_check(not build.is_building(), "chọn tháp thì thoát chế độ xây")
+	_check(panel.visible, "bảng thông tin hiện khi chọn tháp")
+	_check(tower.show_range, "tháp đang chọn hiện tầm bắn")
+
+	# Phím U: nâng cấp; phím T: đổi mục tiêu.
+	var gold_before := GameManager.gold
+	_press_key(KEY_U)
+	await get_tree().process_frame
+	_check(tower.get_level() == 2 and GameManager.gold == gold_before - 60, "phím U nâng cấp lên cấp 2, trừ 60 vàng")
+	_check(tower.data.damage > 18.0, "cấp 2 mạnh hơn cấp 1")
+	_press_key(KEY_T)
+	_check(tower.target_mode == Tower.TargetMode.LAST, "phím T đổi cách chọn mục tiêu")
+	build.upgrade_tower(tower)
+	_check(tower.get_level() == 3 and not tower.can_upgrade(), "nâng tối đa cấp 3")
+	_check(not build.upgrade_tower(tower), "không nâng quá cấp tối đa")
+	_check(tower.get_sell_value() == int((50 + 60 + 100) * 0.7), "giá bán tính cả tiền nâng cấp (%d)" % tower.get_sell_value())
+
+	# Bán: hoàn tiền, giải phóng ô, tự bỏ chọn.
+	gold_before = GameManager.gold
+	var refund := build.sell_tower(tower)
+	await get_tree().process_frame
+	_check(GameManager.gold == gold_before + refund and refund == 147, "bán tháp hoàn 147 vàng")
+	_check(build.get_tower_at(cell) == null, "bán xong ô trống lại")
+	_check(not selection.has_selection() and not panel.visible, "bán xong thì bỏ chọn, ẩn bảng")
+	build.select_tower(build.available_towers[1])
+	_check(build.try_place_tower(cell) != null, "xây lại được ở ô vừa bán")
+
+	# Chuột phải: bỏ chọn.
+	build.cancel_build()
+	selection.select(build.get_tower_at(cell))
+	_click(Vector2(640, 400), MOUSE_BUTTON_RIGHT)
+	await get_tree().process_frame
+	_check(not selection.has_selection(), "chuột phải bỏ chọn tháp")
+
+	# Tooltip nút xây có mô tả + chỉ số.
+	var tooltip := TowerStats.tooltip(build.available_towers[2])
+	_check(tooltip.contains("Làm chậm") and tooltip.contains("Tầm bắn"), "tooltip có hiệu ứng và chỉ số")
+	await _free_main(main)
+
+
 # --- Phần 2: bot chơi hết game --------------------------------------------------
 
 func _test_bot_playthrough() -> void:
@@ -113,6 +176,7 @@ func _test_bot_playthrough() -> void:
 	var build: BuildManager = main.build_manager
 	var waves: WaveManager = main.wave_manager
 	var next_build := 0
+	var upgrades := 0
 	var frames := 0
 
 	while GameManager.is_playing() and frames < MAX_FRAMES_PER_RUN:
@@ -126,6 +190,16 @@ func _test_bot_playthrough() -> void:
 			_check(build.try_place_tower(order[1]) != null, "bot đặt %s tại %s" % [tower_data.display_name, order[1]])
 			next_build += 1
 
+		# Xây hết kế hoạch rồi thì dùng tiền thừa nâng cấp tháp có giá nâng cấp rẻ nhất.
+		if next_build >= BOT_BUILD_ORDER.size():
+			var cheapest: Tower = null
+			for tower in build.get_towers():
+				if tower.can_upgrade() and (cheapest == null or tower.get_upgrade_cost() < cheapest.get_upgrade_cost()):
+					cheapest = tower
+			if cheapest and GameManager.can_afford(cheapest.get_upgrade_cost()):
+				build.upgrade_tower(cheapest)
+				upgrades += 1
+
 		if waves.can_start_next_wave():
 			if waves.get_current_wave_number() > 0:
 				print("    sau wave %2d: máu=%2d vàng=%4d tháp=%d" \
@@ -134,7 +208,12 @@ func _test_bot_playthrough() -> void:
 		await get_tree().process_frame
 		frames += 1
 
-	print("    kết thúc: %s, máu còn %d, %d tháp" % [GameManager.GameState.keys()[GameManager.state], GameManager.lives, next_build])
+	print("    kết thúc: %s, máu còn %d, %d tháp, %d lần nâng cấp" \
+			% [GameManager.GameState.keys()[GameManager.state], GameManager.lives, next_build, upgrades])
+	var total_kills := 0
+	for tower in build.get_towers():
+		total_kills += tower.kills
+	_check(total_kills > 100, "tháp ghi nhận số địch hạ (%d)" % total_kills)
 	_check(GameManager.state == GameManager.GameState.VICTORY, "bot thắng cả %d wave" % waves.get_total_waves())
 	_check(main.hud.game_over_panel.visible, "hiện bảng kết thúc khi thắng")
 	await _free_main(main)
@@ -171,6 +250,23 @@ func _free_main(main: Node) -> void:
 	get_tree().paused = false
 	main.queue_free()
 	await get_tree().process_frame
+
+
+## Giả lập click chuột tại một vị trí trong thế giới (toạ độ viewport).
+func _click(position: Vector2, button: MouseButton) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.pressed = true
+	event.position = position
+	event.global_position = position
+	get_viewport().push_input(event, true)
+
+
+func _press_key(keycode: Key) -> void:
+	var event := InputEventKey.new()
+	event.keycode = keycode
+	event.pressed = true
+	get_viewport().push_input(event, true)
 
 
 ## Tạo địch trực tiếp (không qua WaveManager) để kiểm tra chỉ số.
