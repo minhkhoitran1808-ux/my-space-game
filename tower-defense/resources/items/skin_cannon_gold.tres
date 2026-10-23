@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/ItemDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"skin_cannon_gold"
+display_name = "Pháo Hoàng kim"
+description = "Đúc bằng vàng ròng. Không bắn mạnh hơn, chỉ đẹp hơn."
+kind = 0
+rarity = 4
+tower_id = &"cannon"
+skin_color = Color(1.000, 0.780, 0.173, 1)
+skin_accent = Color(0.722, 0.525, 0.043, 1)
+pattern = 4

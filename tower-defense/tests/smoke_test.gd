@@ -52,6 +52,7 @@ func _ready() -> void:
 	await _test_enemy_feedback()
 	await _test_meta_foundation()
 	await _test_achievements()
+	await _test_inventory()
 	for level in GameManager.LEVEL_CATALOG.levels:
 		await _test_bot_playthrough(level)
 	for level in GameManager.LEVEL_CATALOG.levels:
@@ -863,6 +864,108 @@ func _test_achievements() -> void:
 	SaveManager.reset_progress()
 
 
+# --- Phần 1l: vật phẩm, kho đồ, skin, đồ tiêu hao, đồ rơi ----------------------------
+
+func _test_inventory() -> void:
+	print("[1l] Vật phẩm + kho đồ")
+	SaveManager.reset_progress()
+	var defs := InventoryManager.defs
+	var tiers := {}
+	for def: ItemDef in defs.values():
+		tiers[def.rarity] = true
+		if def.kind == ItemDef.Kind.SKIN:
+			_check(ItemSlot.get_tower_data(def.tower_id) != null, "skin '%s' trỏ tới tháp có thật" % def.id)
+		_check(not def.tradeable_p2p, "'%s' không trao đổi giữa người chơi" % def.id)
+	_check(defs.size() >= 12 and tiers.size() == 5, "có %d vật phẩm, đủ 5 độ hiếm" % defs.size())
+
+	# Nhận / bớt / trùng / phân rã.
+	InventoryManager.grant(&"steel_shard", 3, "test")
+	_check(InventoryManager.count(&"steel_shard") == 3 and InventoryManager.is_new(&"steel_shard"), "nhận 3 Mảnh thép (đánh dấu NEW)")
+	_check(InventoryManager.consume(&"steel_shard", 2, "test") and InventoryManager.count(&"steel_shard") == 1, "dùng 2 còn 1")
+	_check(not InventoryManager.consume(&"steel_shard", 5, "test"), "không đủ thì không bớt")
+	var first := InventoryManager.grant(&"skin_frost_crystal", 1, "test")
+	var dup := InventoryManager.grant(&"skin_frost_crystal", 1, "test")
+	_check(not first.duplicate and dup.duplicate and dup.dust == Rarity.DUST_VALUES[Rarity.Tier.UNCOMMON]
+			and InventoryManager.count(&"skin_frost_crystal") == 1, "skin trùng tự đổi thành %d Bụi" % dup.dust)
+	_check(InventoryManager.salvage(&"steel_shard") == Rarity.DUST_VALUES[Rarity.Tier.COMMON] and not InventoryManager.owns(&"steel_shard"), "phân rã thành Bụi")
+	_check(EconomyManager.get_amount(EconomyManager.DUST) == 15 + 5, "tổng Bụi = 20")
+
+	# Đồ rơi: theo trọng số độ hiếm, không rơi đồ độc quyền thành tựu.
+	InventoryManager.rng.seed = 1808
+	var counts := [0, 0, 0, 0, 0]
+	var exclusive_dropped := false
+	for i in 2000:
+		var drop := InventoryManager.roll_drop()
+		counts[drop.rarity] += 1
+		exclusive_dropped = exclusive_dropped or not drop.droppable
+	_check(counts[0] > counts[1] and counts[1] > counts[2] and counts[2] > counts[3] and counts[0] > 1000, "tỉ lệ rơi giảm dần theo độ hiếm %s" % [counts])
+	_check(not exclusive_dropped, "không rơi đồ độc quyền thành tựu")
+	var won := {"won": true, "endless": false, "waves_survived": 10, "total_waves": 10}
+	var lost_early := {"won": false, "endless": false, "waves_survived": 0, "total_waves": 10}
+	_check(InventoryManager.grant_match_drops(won).size() == 2, "thắng: rơi 2 món")
+	_check(InventoryManager.grant_match_drops(lost_early).is_empty(), "thua trắng (0 wave): không rơi đồ")
+
+	# Thành tựu tặng skin độc quyền.
+	AchievementManager.unlock(&"perfect_clear")
+	AchievementManager.claim(&"perfect_clear")
+	_check(InventoryManager.owns(&"skin_archer_silver"), "thành tựu 'Không một vết xước' tặng skin Thép Bạc")
+
+	# Skin: trang bị rồi xây tháp => tháp dùng skin; ghost cũng vẽ được.
+	_check(InventoryManager.equip_skin(&"skin_archer_silver") and InventoryManager.is_equipped(&"skin_archer_silver"), "trang bị skin")
+	_check(not InventoryManager.equip_skin(&"skin_mage_void"), "không trang bị skin chưa có")
+
+	# Đồ tiêu hao: chuẩn bị ở kho, dùng khi vào ván.
+	InventoryManager.grant(&"gold_pouch_small", 1, "test")
+	InventoryManager.grant(&"brick_patch", 1, "test")
+	InventoryManager.grant(&"guardian_charm", 1, "test")
+	# (Đồ rơi ngẫu nhiên ở trên có thể trùng các món này, nên so sánh theo số lượng trước / sau.)
+	var pouches_before := InventoryManager.count(&"gold_pouch_small")
+	var charms := InventoryManager.count(&"guardian_charm")
+	_check(InventoryManager.toggle_prepared(&"gold_pouch_small") and InventoryManager.toggle_prepared(&"brick_patch"), "chuẩn bị 2 món")
+	_check(not InventoryManager.toggle_prepared(&"guardian_charm"), "tối đa %d món mỗi ván" % InventoryManager.MAX_PREPARED)
+	SaveManager.set_flag(TutorialManager.DONE_FLAG, true)
+	GameManager.current_level = GameManager.LEVEL_CATALOG.levels[0]
+	var main := await _new_main()
+	var level: LevelData = main.level
+	_check(GameManager.gold == level.starting_gold + roundi(level.starting_gold * 0.1) and GameManager.lives == level.starting_lives + 2,
+			"vào ván: +10%% vàng (%d) và +2 máu (%d)" % [GameManager.gold, GameManager.lives])
+	_check(InventoryManager.count(&"gold_pouch_small") == pouches_before - 1, "đồ tiêu hao đã dùng thì trừ đi 1")
+	var tower: Tower = main.build_manager.try_place_tower(Vector2i(4, 4))
+	_check(tower != null and tower.skin != null and tower.skin.id == &"skin_archer_silver", "tháp mới xây dùng skin đã trang bị")
+	await _free_main(main)
+	GameManager.current_level = null
+
+	# Lưu / đọc lại.
+	SaveManager.flush()
+	SaveManager.save_path = TEST_SAVE_PATH
+	_check(InventoryManager.count(&"guardian_charm") == charms and typeof(InventoryManager.count(&"guardian_charm")) == TYPE_INT
+			and InventoryManager.is_equipped(&"skin_archer_silver"), "đọc lại: giữ kho đồ + skin đang dùng")
+
+	# Màn hình Kho đồ.
+	var menu := MAIN_MENU_SCENE.instantiate()
+	add_child(menu)
+	await get_tree().process_frame
+	_check(menu._inventory_dot.count == InventoryManager.get_new_count() and menu._inventory_dot.count > 0, "chấm đỏ đếm đồ mới")
+	menu.inventory_button.pressed.emit()
+	var screen: InventoryScreen = menu.inventory_screen
+	_check(screen.visible and screen.slots.size() == InventoryManager.get_owned().size(), "Kho đồ hiện %d ô" % screen.slots.size())
+	screen.slots[&"skin_frost_crystal"].pressed.emit()
+	_check(screen.selected_item.id == &"skin_frost_crystal" and not InventoryManager.is_new(&"skin_frost_crystal"), "chọn ô: xem chi tiết, bỏ NEW")
+	screen.equip_button.pressed.emit()
+	_check(InventoryManager.is_equipped(&"skin_frost_crystal"), "bấm Trang bị")
+	screen.slots[&"guardian_charm"].pressed.emit()
+	screen.prepare_button.pressed.emit()
+	_check(InventoryManager.is_prepared(&"guardian_charm"), "bấm Dùng ở ván sau")
+	var dust_before := EconomyManager.get_amount(EconomyManager.DUST)
+	screen.salvage_button.pressed.emit()
+	_check(InventoryManager.count(&"guardian_charm") == charms - 1 and EconomyManager.get_amount(EconomyManager.DUST) == dust_before + 150, "bấm Phân rã: +150 Bụi")
+	screen.close()
+	menu.queue_free()
+	await get_tree().process_frame
+	ToastLayer.clear()
+	SaveManager.reset_progress()
+
+
 # --- Phần 2: bot chơi hết từng màn ----------------------------------------------
 
 func _test_bot_playthrough(level: LevelData) -> void:
@@ -917,6 +1020,7 @@ func _test_bot_playthrough(level: LevelData) -> void:
 			"%s: thắng nhận %d xu (gồm thưởng thắng 40%%)" % [level.display_name, main.last_rewards.get("coins", -1)])
 	_check(main.hud.reward_summary.visible, "%s: bảng kết quả hiện phần thưởng" % level.display_name)
 	_check(AchievementManager.is_unlocked(&"first_victory"), "%s: thắng thật => mở thành tựu 'Phòng tuyến đầu tiên'" % level.display_name)
+	_check(main.last_rewards.get("drops", []).size() == 2, "%s: thắng rơi 2 vật phẩm" % level.display_name)
 	var ground_lanes_used := 0
 	for lane in main.map.get_paths():
 		if spawns_per_lane.has(lane):

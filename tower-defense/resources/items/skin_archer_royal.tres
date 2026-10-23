@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/ItemDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"skin_archer_royal"
+display_name = "Cung thủ Hoàng gia"
+description = "Tím hoàng gia viền vàng."
+kind = 0
+rarity = 3
+tower_id = &"archer"
+skin_color = Color(0.416, 0.298, 0.576, 1)
+skin_accent = Color(1.000, 0.780, 0.173, 1)
+pattern = 3

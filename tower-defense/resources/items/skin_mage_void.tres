@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/ItemDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"skin_mage_void"
+display_name = "Phép Hư không"
+description = "Một mảnh bầu trời đêm trên tháp Phép."
+kind = 0
+rarity = 4
+tower_id = &"mage"
+skin_color = Color(0.169, 0.098, 0.239, 1)
+skin_accent = Color(0.780, 0.490, 1.000, 1)
+pattern = 4

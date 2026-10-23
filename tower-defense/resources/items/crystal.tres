@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/ItemDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"crystal"
+display_name = "Tinh thể"
+description = "Nguyên liệu quý. Đổi với thương nhân."
+kind = 2
+rarity = 2

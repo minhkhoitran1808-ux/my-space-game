@@ -43,6 +43,11 @@ var show_range := false:
 		queue_redraw()
 ## Tổng số vàng đã bỏ ra (xây + nâng cấp), dùng để tính tiền bán lại.
 var total_invested: int = 0
+## Skin đang dùng (ItemDef, chỉ đổi ngoại hình). null = màu mặc định của TowerData.
+var skin: ItemDef = null:
+	set(value):
+		skin = value
+		queue_redraw()
 ## Thống kê hiển thị trong bảng thông tin.
 var kills: int = 0
 var damage_dealt: float = 0.0
@@ -177,21 +182,39 @@ func _spawn_projectile(enemy: Enemy, info: DamageInfo) -> void:
 ## Dùng chung cho tháp thật và ghost khi đặt tháp, nên ghost luôn trông giống hệt tháp sẽ xây.
 ## tint: màu pha vào mọi phần (tint.a = mức pha, 0 = không pha); alpha: độ trong suốt.
 static func draw_body(canvas: CanvasItem, tower_data: TowerData, aim_angle: float,
-		tint: Color = Color(0, 0, 0, 0), alpha: float = 1.0) -> void:
+		tint: Color = Color(0, 0, 0, 0), alpha: float = 1.0, tower_skin: ItemDef = null) -> void:
 	var paint := func(color: Color) -> Color:
 		var mixed := color.lerp(Color(tint, 1.0), tint.a)
 		return Color(mixed, color.a * alpha)
+	var body_color := tower_skin.skin_color if tower_skin else tower_data.color
+	var accent := tower_skin.skin_accent if tower_skin else tower_data.color.darkened(0.3)
+	var body_radius := 12.0 + tower_data.level * 2.0
 	var half := BASE_SIZE * 0.5
+	if tower_skin and tower_skin.pattern == ItemDef.Pattern.GLOW:
+		canvas.draw_circle(Vector2.ZERO, half + 4.0, paint.call(Color(body_color, 0.25)))
 	canvas.draw_rect(Rect2(-half, -half, BASE_SIZE, BASE_SIZE), paint.call(Color(0.25, 0.27, 0.32)))
 	canvas.draw_rect(Rect2(-half, -half, BASE_SIZE, BASE_SIZE), paint.call(Color(0.1, 0.1, 0.12)), false, 2.0)
-	canvas.draw_circle(Vector2.ZERO, 12.0 + tower_data.level * 2.0, paint.call(tower_data.color))
+	if tower_skin and tower_skin.pattern == ItemDef.Pattern.STRIPES:
+		for x in [-half + 5.0, half - 9.0]:
+			canvas.draw_rect(Rect2(x, -half + 3.0, 4.0, BASE_SIZE - 6.0), paint.call(accent))
+	canvas.draw_circle(Vector2.ZERO, body_radius, paint.call(body_color))
+	if tower_skin:
+		match tower_skin.pattern:
+			ItemDef.Pattern.RING, ItemDef.Pattern.GLOW:
+				canvas.draw_arc(Vector2.ZERO, body_radius - 2.0, 0.0, TAU, 32, paint.call(accent), 3.0, true)
+			ItemDef.Pattern.STAR:
+				var star := PackedVector2Array()
+				for i in 10:
+					var r := body_radius * (0.55 if i % 2 == 0 else 0.25)
+					star.append(Vector2.from_angle(-PI * 0.5 + i * PI / 5.0) * r)
+				canvas.draw_colored_polygon(star, paint.call(accent))
 	# Chấm vàng thể hiện cấp.
 	for i in tower_data.level:
 		var pip := Vector2((i - (tower_data.level - 1) * 0.5) * 9.0, half - 6.0)
 		canvas.draw_circle(pip, 3.0, paint.call(Color(1.0, 0.85, 0.3)))
 	var barrel_tip := Vector2.from_angle(aim_angle) * BARREL_LENGTH
 	var barrel_width := 11.0 if tower_data.splash_radius > 0.0 else 7.0
-	canvas.draw_line(Vector2.ZERO, barrel_tip, paint.call(tower_data.color.darkened(0.3)), barrel_width)
+	canvas.draw_line(Vector2.ZERO, barrel_tip, paint.call(accent), barrel_width)
 
 
 func _draw() -> void:
@@ -200,7 +223,7 @@ func _draw() -> void:
 	if show_range:
 		draw_rect(Rect2(-half - 4.0, -half - 4.0, BASE_SIZE + 8.0, BASE_SIZE + 8.0), Color(1, 1, 1, 0.9), false, 2.0)
 
-	draw_body(self, data, _aim_angle)
+	draw_body(self, data, _aim_angle, Color(0, 0, 0, 0), 1.0, skin)
 	var barrel_tip := Vector2.from_angle(_aim_angle) * BARREL_LENGTH
 
 	# Tia bắn tức thời (chỉ với HITSCAN).

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/ItemDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"brick_patch"
+display_name = "Gạch vá tường"
+description = "Dùng ở ván sau: nhà chính thêm máu."
+kind = 1
+rarity = 1
+effect = &"bonus_lives"
+effect_value = 2.0

@@ -106,6 +106,8 @@ func claim(id: StringName) -> bool:
 	EconomyManager.add(EconomyManager.COINS, def.reward_coins, "achievement_%s" % id)
 	if not def.reward_title.is_empty():
 		ProgressionManager.grant_title(def.reward_title)
+	if def.reward_item != &"":
+		InventoryManager.grant(def.reward_item, 1, "achievement_%s" % id)
 	SaveManager.request_save()
 	Events.claimables_changed.emit()
 	return true

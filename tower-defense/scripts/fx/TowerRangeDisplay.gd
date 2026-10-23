@@ -242,7 +242,8 @@ func _draw_ghost() -> void:
 	_ghost.draw_rect(Rect2(-cell * 0.5 + Vector2.ONE, cell - Vector2.ONE * 2.0), Color(state_color, 0.9), false, 2.0)
 	_draw_ellipse(_ghost, Vector2(0, 18), Vector2(24, 8), Color(0, 0, 0, 0.25))
 	# Hình tháp thật, trong suốt và pha màu trạng thái.
-	Tower.draw_body(_ghost, data, -PI * 0.5, Color(state_color, GHOST_TINT), GHOST_ALPHA)
+	Tower.draw_body(_ghost, data, -PI * 0.5, Color(state_color, GHOST_TINT), GHOST_ALPHA,
+			InventoryManager.get_equipped_skin(data.id))
 
 	# Không đặt được: thêm ✕ ở tâm (không chỉ dựa vào màu).
 	if not valid:

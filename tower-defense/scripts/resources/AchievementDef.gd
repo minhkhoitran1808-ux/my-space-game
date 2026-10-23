@@ -47,5 +47,6 @@ func reward_text() -> String:
 	if not reward_title.is_empty():
 		parts.append("Danh hiệu \"%s\"" % reward_title)
 	if reward_item != &"":
-		parts.append(String(reward_item))
+		var item := InventoryManager.get_def(reward_item)
+		parts.append(item.display_name if item else String(reward_item))
 	return ", ".join(parts)

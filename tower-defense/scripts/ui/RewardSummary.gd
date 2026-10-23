@@ -1,7 +1,9 @@
 class_name RewardSummary
 extends VBoxContainer
 ## Khối "phần thưởng" trong bảng kết thúc ván: xu và KN đếm lên, thanh KN chạy tới mức mới
-## (lên cấp thì chạy đầy, báo "LÊN CẤP", rồi chạy tiếp), và danh sách vật phẩm rơi.
+## (lên cấp thì chạy đầy, báo "LÊN CẤP", rồi chạy tiếp), rồi lật lần lượt các vật phẩm rơi theo
+## độ hiếm tăng dần. Mỗi món ghi tên + tên bậc + màu bậc; Hiếm trở lên nảy nhẹ, Huyền thoại có
+## thêm thông báo nổi. Đồ trùng ghi "trùng -> +N Bụi".
 ## Dựng hoàn toàn bằng code; HUD chèn vào thẻ kết quả. Tween chạy cả khi game đang pause.
 
 const COLOR_COINS := Color("#FFC72C")
@@ -12,7 +14,7 @@ const BAR_TIME := 0.5
 var _currency_label: Label
 var _level_label: Label
 var _exp_label: Label
-var _items_label: Label
+var _items_box: HFlowContainer
 var _bar: Control
 ## Tỉ lệ thanh KN đang vẽ (0..1).
 var _fill := 0.0
@@ -36,18 +38,20 @@ func _ready() -> void:
 	_bar.draw.connect(_draw_bar)
 	add_child(_bar)
 
-	_items_label = _make_label(14, Color(1, 1, 1, 0.85), HORIZONTAL_ALIGNMENT_CENTER)
-	_items_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_child(_items_label)
+	_items_box = HFlowContainer.new()
+	_items_box.alignment = FlowContainer.ALIGNMENT_CENTER
+	_items_box.add_theme_constant_override("h_separation", 12)
+	add_child(_items_box)
 	hide()
 
 
-## rewards: ProgressionManager.grant_match_rewards() (+ "items": tên vật phẩm rơi, nếu có).
+## rewards: ProgressionManager.grant_match_rewards() (+ "drops": kết quả InventoryManager.grant()).
 func play(rewards: Dictionary) -> void:
 	show()
-	var items: Array = rewards.get("items", [])
-	_items_label.visible = not items.is_empty()
-	_items_label.text = "Nhận được: " + ", ".join(items)
+	for child in _items_box.get_children():
+		child.queue_free()
+	var drops: Array = rewards.get("drops", []).filter(func(drop: Dictionary) -> bool: return drop.has("item"))
+	drops.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.item.rarity < b.item.rarity)
 	_set_level_text(rewards.level_before, rewards.exp_before)
 	_fill = float(rewards.exp_before) / ProgressionManager.exp_to_next(rewards.level_before)
 	_bar.queue_redraw()
@@ -69,6 +73,23 @@ func play(rewards: Dictionary) -> void:
 	var target := float(rewards.exp_after) / ProgressionManager.exp_to_next(rewards.level_after)
 	tween.tween_method(_set_fill, _fill if rewards.levels_gained == 0 else 0.0, target, BAR_TIME)
 	tween.tween_callback(_set_level_text.bind(rewards.level_after, rewards.exp_after))
+	for drop in drops:
+		tween.tween_interval(0.25)
+		tween.tween_callback(_reveal_drop.bind(drop))
+
+
+func _reveal_drop(drop: Dictionary) -> void:
+	var item: ItemDef = drop.item
+	var text := "%s (%s)" % [item.display_name, Rarity.display_name(item.rarity)]
+	if drop.duplicate:
+		text += " trùng » +%d Bụi" % drop.dust
+	var label := _make_label(14, Rarity.color(item.rarity).lightened(0.15), HORIZONTAL_ALIGNMENT_CENTER)
+	label.text = text
+	_items_box.add_child(label)
+	if item.rarity >= Rarity.Tier.RARE:
+		UiFx.pulse(label, 1.1 + 0.1 * (item.rarity - Rarity.Tier.RARE), 0.35)
+	if item.rarity >= Rarity.Tier.LEGENDARY and not drop.duplicate:
+		ToastLayer.push("VẬT PHẨM HUYỀN THOẠI", item.display_name, item.description, Rarity.color(item.rarity))
 
 
 func _set_level_text(level: int, exp: int) -> void:

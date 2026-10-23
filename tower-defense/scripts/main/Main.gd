@@ -30,11 +30,14 @@ var map: GameMap
 var tracker: MatchTracker
 ## Phần thưởng của ván vừa kết thúc (test đọc để kiểm tra).
 var last_rewards: Dictionary = {}
+## Vàng / máu thêm đầu ván nhờ đồ tiêu hao (test đọc để kiểm tra).
+var meta_bonuses: Dictionary = {}
 
 
 func _ready() -> void:
 	_load_level(GameManager.get_current_level())
 	GameManager.reset(wave_manager.get_total_waves(), level.starting_gold, level.starting_lives)
+	_apply_meta_bonuses()
 	tracker = MatchTracker.new()
 	tracker.name = "MatchTracker"
 	add_child(tracker)
@@ -118,6 +121,8 @@ func _ready() -> void:
 	_refresh_wave_button()
 	var intro := "%s - Vô tận" % level.display_name if GameManager.endless_mode \
 			else "%s - %d wave" % [level.display_name, wave_manager.get_total_waves()]
+	if not meta_bonuses.names.is_empty():
+		intro += "  ·  Đã dùng: %s" % ", ".join(meta_bonuses.names)
 	hud.show_message(intro, Color(0.6, 0.85, 1.0))
 
 
@@ -133,6 +138,18 @@ func _load_level(p_level: LevelData) -> void:
 		wave_manager.setup_endless(String(level.id), paths, map.get_air_paths())
 	else:
 		wave_manager.setup(level.waves_file, paths, map.get_air_paths())
+
+
+## Đồ tiêu hao đã chuẩn bị ở Kho đồ: dùng ngay khi vào ván (+vàng / +máu đầu ván).
+func _apply_meta_bonuses() -> void:
+	var effects := InventoryManager.use_prepared()
+	var bonus_gold := roundi(level.starting_gold * effects.bonus_gold_pct / 100.0)
+	var bonus_lives := roundi(effects.bonus_lives)
+	if bonus_gold > 0:
+		GameManager.add_gold(bonus_gold)
+	if bonus_lives > 0:
+		GameManager.lives += bonus_lives
+	meta_bonuses = {"gold": bonus_gold, "lives": bonus_lives, "names": effects.names}
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -232,6 +249,7 @@ func _on_ability_cast(ability: AbilityData, cast_position: Vector2) -> void:
 
 
 func _on_tower_placed(tower: Tower) -> void:
+	tower.skin = InventoryManager.get_equipped_skin(tower.data.id)
 	fx_manager.track_tower(tower)
 	AudioManager.play(&"build")
 
@@ -285,6 +303,7 @@ func _on_game_state_changed(state: GameManager.GameState) -> void:
 	# Meta-progression: thưởng xu + KN (kể cả khi thua), rồi báo cho thống kê / thành tựu.
 	var result := tracker.build_result(victory, stars)
 	last_rewards = ProgressionManager.grant_match_rewards(result, level.coin_reward)
+	last_rewards["drops"] = InventoryManager.grant_match_drops(result)
 	Events.match_ended.emit(result)
 	hud.show_match_rewards(last_rewards)
 	AudioManager.play(&"victory" if victory else &"defeat")

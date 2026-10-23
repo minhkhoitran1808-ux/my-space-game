@@ -13,6 +13,9 @@ extends Control
 var achievements_screen: AchievementsScreen
 var achievements_button: Button
 var _achievements_dot: NotificationDot
+var inventory_screen: InventoryScreen
+var inventory_button: Button
+var _inventory_dot: NotificationDot
 var _last_meta_button: Button
 
 
@@ -28,6 +31,10 @@ func _ready() -> void:
 	add_child(achievements_screen)
 	achievements_button = _add_menu_button("Thành tựu", achievements_screen)
 	_achievements_dot = NotificationDot.attach(achievements_button)
+	inventory_screen = InventoryScreen.new()
+	add_child(inventory_screen)
+	inventory_button = _add_menu_button("Kho đồ", inventory_screen)
+	_inventory_dot = NotificationDot.attach(inventory_button)
 
 	SaveManager.progress_changed.connect(_refresh)
 	Events.claimables_changed.connect(_refresh)
@@ -39,6 +46,7 @@ func _ready() -> void:
 func _refresh() -> void:
 	var max_stars := GameManager.LEVEL_CATALOG.levels.size() * 3
 	_achievements_dot.count = AchievementManager.get_unclaimed_count()
+	_inventory_dot.count = InventoryManager.get_new_count()
 	stars_label.text = "Tổng số sao: %d / %d    ·    Cấp %d    ·    %d Xu" % [SaveManager.get_total_stars(), max_stars,
 			ProgressionManager.get_level(), EconomyManager.get_amount(EconomyManager.COINS)]
 
