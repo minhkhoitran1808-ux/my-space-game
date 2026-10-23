@@ -78,5 +78,36 @@ func grant_match_rewards(result: Dictionary, coin_reward: int) -> Dictionary:
 	return rewards
 
 
+# --- Danh hiệu ----------------------------------------------------------------------
+
+## Các danh hiệu đã có (theo thứ tự nhận).
+func get_titles() -> Array:
+	var titles: Variant = _player().get("titles", [])
+	return titles if titles is Array else []
+
+
+func grant_title(title: String) -> void:
+	var titles := get_titles()
+	if title in titles:
+		return
+	titles.append(title)
+	_player()["titles"] = titles
+	if get_active_title().is_empty():
+		set_active_title(title)
+	SaveManager.request_save()
+
+
+## Danh hiệu đang đeo (hiện cạnh cấp ở menu chính).
+func get_active_title() -> String:
+	return str(_player().get("active_title", ""))
+
+
+func set_active_title(title: String) -> void:
+	if title.is_empty() or title in get_titles():
+		_player()["active_title"] = title
+		SaveManager.request_save()
+		SaveManager.progress_changed.emit()
+
+
 func _player() -> Dictionary:
 	return SaveManager.section("player")

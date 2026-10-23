@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AchievementDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/AchievementDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"one_type"
+title = "Chuyên gia"
+description = "Thắng một màn mà chỉ dùng một loại tháp."
+category = 1
+order = 100
+target = 1
+challenge = &"one_type"
+reward_coins = 400

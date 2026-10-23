@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AchievementDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/AchievementDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"waves_100"
+title = "Bức tường thép I"
+description = "Sống sót tổng cộng 100 wave."
+category = 0
+order = 50
+stat_key = &"waves_survived"
+target = 100
+reward_coins = 200

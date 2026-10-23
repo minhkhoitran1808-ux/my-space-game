@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AchievementDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/AchievementDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"all_stars"
+title = "Bậc thầy phòng thủ"
+description = "Đạt 3 sao ở mọi màn."
+category = 1
+order = 140
+target = 1
+challenge = &"all_stars"
+reward_coins = 1000
+reward_title = "Bậc Thầy Phòng Thủ"

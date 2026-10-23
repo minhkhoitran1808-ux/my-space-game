@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AchievementDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/AchievementDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"first_victory"
+title = "Phòng tuyến đầu tiên"
+description = "Thắng một màn bất kỳ."
+category = 0
+order = 0
+stat_key = &"wins"
+target = 1
+reward_coins = 100

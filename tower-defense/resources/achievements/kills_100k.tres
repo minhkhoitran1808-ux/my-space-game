@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AchievementDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/AchievementDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"kills_100k"
+title = "Kẻ huỷ diệt III"
+description = "Hạ tổng cộng 100.000 địch."
+category = 0
+order = 40
+stat_key = &"enemies_killed"
+target = 100000
+reward_coins = 2000
+reward_title = "Kẻ Huỷ Diệt"

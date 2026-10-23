@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AchievementDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/AchievementDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"no_upgrade"
+title = "Nguyên bản"
+description = "Thắng một màn mà không nâng cấp tháp nào."
+category = 1
+order = 110
+target = 1
+challenge = &"no_upgrade"
+reward_coins = 500

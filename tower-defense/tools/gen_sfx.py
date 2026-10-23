@@ -251,6 +251,12 @@ def ability_freeze():
     return mix(0.5 * shimmer * envelope(n, attack=0.02, decay=0.88), 0.35 * hiss)
 
 
+def achievement():
+    notes = [(G5, 0, 1), (C6, 1, 1), (E5 * 2, 2, 3)]
+    sparkle = highpass(noise(0.6), 6000) * exp_decay(int(RATE * 0.6), 0.15)
+    return mix(0.5 * melody(notes, 0.08, 0.6, "sine", 0.18), 0.12 * sparkle)
+
+
 # Âm nào phát dày thì nhỏ hơn (đỉnh tính theo dBFS).
 SOUNDS = {
     "shoot_archer": (shoot_archer, -14.0),
@@ -269,6 +275,7 @@ SOUNDS = {
     "defeat": (defeat, -4.0),
     "ability_meteor": (ability_meteor, -4.0),
     "ability_freeze": (ability_freeze, -6.0),
+    "achievement": (achievement, -7.0),
 }
 
 

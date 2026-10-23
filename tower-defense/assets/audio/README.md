@@ -24,5 +24,6 @@ Muốn thay bằng âm thanh của bạn: thả file (`.ogg`, `.wav` hoặc `.mp
 | `defeat` | Thua màn |
 | `ability_meteor` | Dùng kỹ năng Thiên thạch |
 | `ability_freeze` | Dùng kỹ năng Băng giá |
+| `achievement` | Mở khoá thành tựu |
 
 Ví dụ: `assets/audio/enemy_death.wav`. Danh sách này cũng nằm trong `AudioManager.SOUND_NAMES`.

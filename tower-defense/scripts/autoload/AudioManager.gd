@@ -12,7 +12,7 @@ const SOUND_NAMES := [
 	"shoot_archer", "shoot_cannon", "shoot_frost", "shoot_mage", "explosion",
 	"enemy_death", "base_hit", "build", "upgrade", "sell",
 	"wave_start", "wave_complete", "victory", "defeat",
-	"ability_meteor", "ability_freeze",
+	"ability_meteor", "ability_freeze", "achievement",
 ]
 const AUDIO_FOLDER := "res://assets/audio"
 const EXTENSIONS := ["ogg", "wav", "mp3"]

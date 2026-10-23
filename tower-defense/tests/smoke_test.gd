@@ -51,6 +51,7 @@ func _ready() -> void:
 	await _test_range_display()
 	await _test_enemy_feedback()
 	await _test_meta_foundation()
+	await _test_achievements()
 	for level in GameManager.LEVEL_CATALOG.levels:
 		await _test_bot_playthrough(level)
 	for level in GameManager.LEVEL_CATALOG.levels:
@@ -786,6 +787,82 @@ func _test_meta_foundation() -> void:
 	_check(ProgressionManager.get_level() == 1 and EconomyManager.get_amount(EconomyManager.COINS) == 0, "xoá tiến độ: về cấp 1, 0 xu")
 
 
+# --- Phần 1k: thành tựu, danh hiệu, thông báo, màn hình Thành tựu --------------------
+
+func _test_achievements() -> void:
+	print("[1k] Thành tựu")
+	SaveManager.reset_progress()
+	ToastLayer.clear()
+	var defs := AchievementManager.defs
+	_check(defs.size() >= 15, "có %d thành tựu" % defs.size())
+	var categories := {}
+	for def: AchievementDef in defs.values():
+		categories[def.category] = true
+		_check(def.stat_key != &"" or def.challenge != &"", "'%s' có điều kiện" % def.id)
+	_check(categories.size() == 4, "đủ 4 loại thành tựu (cột mốc / thử thách / khám phá / ẩn)")
+
+	# Theo bộ đếm: mở khoá + thông báo, chưa tự cộng thưởng.
+	StatsManager.increment(StatsManager.WINS)
+	_check(AchievementManager.is_unlocked(&"first_victory") and not AchievementManager.is_claimed(&"first_victory"), "thắng lần đầu => mở 'Phòng tuyến đầu tiên'")
+	_check(ToastLayer.is_showing(), "mở thành tựu => hiện thông báo")
+	_check(EconomyManager.get_amount(EconomyManager.COINS) == 0, "chưa bấm Nhận thì chưa cộng xu")
+	_check(AchievementManager.get_unclaimed_count() == 1, "1 thưởng đang chờ nhận")
+
+	# Nhận thưởng idempotent.
+	_check(AchievementManager.claim(&"first_victory"), "nhận thưởng")
+	_check(not AchievementManager.claim(&"first_victory") and not AchievementManager.unlock(&"first_victory"), "nhận / mở lần hai không có tác dụng")
+	_check(EconomyManager.get_amount(EconomyManager.COINS) == 100, "chỉ cộng 100 xu đúng một lần")
+	_check(not AchievementManager.claim(&"kills_1k"), "chưa mở thì không nhận được")
+
+	# Thử thách: kiểm tra khi kết thúc ván.
+	Events.match_ended.emit({"won": true, "endless": false, "lives_lost": 0, "lives_left": 20, "towers_built": 3,
+			"tower_types": [&"archer"], "upgrades": 0, "waves_survived": 10, "total_waves": 10})
+	for id in [&"perfect_clear", &"minimalist", &"one_type", &"no_upgrade"]:
+		_check(AchievementManager.is_unlocked(id), "thử thách '%s' mở khi đạt điều kiện" % id)
+	_check(not AchievementManager.is_unlocked(&"last_hp"), "'Sát nút' (ẩn) chưa mở khi còn 20 máu")
+	Events.boss_killed.emit(&"boss", 25.0)
+	_check(not AchievementManager.is_unlocked(&"boss_fast"), "hạ Boss sau 25s: chưa đạt 'Đồ tể'")
+	Events.boss_killed.emit(&"boss", 6.0)
+	_check(AchievementManager.is_unlocked(&"boss_fast"), "hạ Boss trong 6s: đạt 'Đồ tể'")
+
+	# Danh hiệu.
+	AchievementManager.claim(&"minimalist")
+	_check("Tối Giản" in ProgressionManager.get_titles() and ProgressionManager.get_active_title() == "Tối Giản", "nhận danh hiệu và tự đeo danh hiệu đầu tiên")
+
+	# Lưu / đọc lại giữ trạng thái mở / đã nhận.
+	SaveManager.flush()
+	SaveManager.save_path = TEST_SAVE_PATH
+	_check(AchievementManager.is_claimed(&"minimalist") and AchievementManager.is_unlocked(&"boss_fast")
+			and not AchievementManager.is_claimed(&"boss_fast"), "đọc lại hồ sơ: giữ trạng thái thành tựu")
+
+	# Màn hình Thành tựu trong menu chính.
+	var menu := MAIN_MENU_SCENE.instantiate()
+	add_child(menu)
+	await get_tree().process_frame
+	_check(menu._achievements_dot.visible and menu._achievements_dot.count == AchievementManager.get_unclaimed_count(), "chấm đỏ đếm thưởng chưa nhận (%d)" % menu._achievements_dot.count)
+	menu.achievements_button.pressed.emit()
+	var screen: AchievementsScreen = menu.achievements_screen
+	_check(screen.visible and screen.claim_buttons.size() == defs.size(), "mở màn hình Thành tựu, đủ %d thẻ" % defs.size())
+	var coins_before := EconomyManager.get_amount(EconomyManager.COINS)
+	screen.claim_buttons[&"boss_fast"].pressed.emit()
+	_check(AchievementManager.is_claimed(&"boss_fast") and EconomyManager.get_amount(EconomyManager.COINS) == coins_before + 300, "bấm Nhận trên thẻ: +300 xu")
+	screen.filter = AchievementsScreen.Filter.HIDDEN
+	screen.refresh()
+	var hidden_count := 0
+	for def: AchievementDef in defs.values():
+		if def.is_hidden():
+			hidden_count += 1
+	_check(screen.claim_buttons.size() == hidden_count and screen.claim_buttons[&"last_hp"].text == "Chưa xong", "tab Ẩn: chỉ thành tựu ẩn, chưa mở thì 'Chưa xong'")
+	screen.claim_all_button.pressed.emit()
+	_check(AchievementManager.get_unclaimed_count() == 0, "Nhận tất cả")
+	_press_key(KEY_ESCAPE)
+	_check(not screen.visible and not menu._achievements_dot.visible, "Esc đóng màn hình; hết thưởng thì ẩn chấm đỏ")
+	menu.queue_free()
+	await get_tree().process_frame
+	ToastLayer.clear()
+	SaveManager.reset_progress()
+
+
 # --- Phần 2: bot chơi hết từng màn ----------------------------------------------
 
 func _test_bot_playthrough(level: LevelData) -> void:
@@ -839,6 +916,7 @@ func _test_bot_playthrough(level: LevelData) -> void:
 	_check(main.last_rewards.get("coins", -1) == expected.coins and expected.coins >= roundi(level.coin_reward * 1.4) - 1,
 			"%s: thắng nhận %d xu (gồm thưởng thắng 40%%)" % [level.display_name, main.last_rewards.get("coins", -1)])
 	_check(main.hud.reward_summary.visible, "%s: bảng kết quả hiện phần thưởng" % level.display_name)
+	_check(AchievementManager.is_unlocked(&"first_victory"), "%s: thắng thật => mở thành tựu 'Phòng tuyến đầu tiên'" % level.display_name)
 	var ground_lanes_used := 0
 	for lane in main.map.get_paths():
 		if spawns_per_lane.has(lane):
