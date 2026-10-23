@@ -46,6 +46,7 @@ func _ready() -> void:
 	await _test_tower_mechanics()
 	await _test_new_enemies()
 	await _test_wave_pacing()
+	await _test_difficulty()
 	await _test_match_flow()
 	await _test_level_flow()
 	await _test_abilities_and_flying()
@@ -417,6 +418,61 @@ func _test_wave_pacing() -> void:
 	main.hud.set_next_wave_preview(6, waves.get_wave_composition(6), waves.get_wave_label(6))
 	_check(main.hud.next_wave_label.text.begins_with("Wave giáp nặng:"), "xem trước wave tô nhãn kiểm tra")
 	await _free_main(main)
+
+
+# --- Phần 1r: độ khó Dễ / Thường / Khó ----------------------------------------------
+
+func _test_difficulty() -> void:
+	print("[1r] Độ khó")
+	SaveManager.reset_progress()
+	SaveManager.set_flag(TutorialManager.DONE_FLAG, true)
+	GameManager.current_level = GameManager.LEVEL_CATALOG.levels[0]
+	var expected_lives := [30, 20, 10]
+	var expected_hp := [48.0, 60.0, 78.0]
+	for difficulty in GameManager.Difficulty.size():
+		GameManager.difficulty = difficulty
+		var main := await _new_main()
+		var enemy: Enemy = main.wave_manager._spawn_enemy(main.wave_manager.get_enemy_type(&"basic"), 1.0, 0.0, 300.0)
+		_check(GameManager.lives == expected_lives[difficulty] and is_equal_approx(enemy.max_health, expected_hp[difficulty]),
+				"%s: máu nhà %d, Lính thường %d máu" % [GameManager.DIFFICULTY_NAMES[difficulty], GameManager.lives, roundi(enemy.max_health)])
+		await _free_main(main)
+
+	# Thưởng meta nhân theo độ khó.
+	var won := {"won": true, "endless": false, "waves_survived": 10, "total_waves": 10, "difficulty": GameManager.Difficulty.HARD}
+	_check(ProgressionManager.calculate_match_rewards(won, 150) == {"coins": roundi(210 * 1.7), "exp": 68}, "thưởng ở Khó ×1.7 (%s)" % ProgressionManager.calculate_match_rewards(won, 150))
+
+	# Sao lưu riêng từng độ khó; mở màn sau theo sao tốt nhất.
+	SaveManager.record_result(&"level_01", 3, GameManager.Difficulty.EASY)
+	SaveManager.record_result(&"level_01", 1, GameManager.Difficulty.HARD)
+	_check(SaveManager.get_stars_for(&"level_01", GameManager.Difficulty.EASY) == 3 and SaveManager.get_stars_for(&"level_01", GameManager.Difficulty.HARD) == 1
+			and SaveManager.get_stars_for(&"level_01", GameManager.Difficulty.NORMAL) == 0, "sao lưu riêng theo độ khó")
+	_check(SaveManager.get_stars(&"level_01") == 3 and SaveManager.get_total_stars() == 3, "tổng sao lấy mức tốt nhất mỗi màn")
+
+	# Hồ sơ phiên bản 1 (sao chưa có độ khó) được chuyển sang phiên bản 2 = Thường.
+	var old_profile := {"save_version": 1, "stars": {"level_02": 2}}
+	var migrated: Dictionary = SaveManager._migrate(old_profile)
+	_check(migrated.save_version == 2 and migrated.stars == {"level_02:1": 2}, "nâng save v1 -> v2: sao cũ thành độ khó Thường")
+
+	# Thành tựu độ khó Khó.
+	Events.match_ended.emit({"won": true, "endless": false, "difficulty": GameManager.Difficulty.HARD, "lives_lost": 3, "lives_left": 7,
+			"towers_built": 9, "tower_types": [&"archer", &"mage"], "upgrades": 4})
+	_check(AchievementManager.is_unlocked(&"hard_win") and not AchievementManager.is_unlocked(&"hard_all"), "thắng 1 màn ở Khó: 'Không nao núng'")
+
+	# Màn chọn màn: đổi độ khó, nhớ lựa chọn, thẻ hiện sao của độ khó đó.
+	var select := LEVEL_SELECT_SCENE.instantiate()
+	add_child(select)
+	await get_tree().process_frame
+	select.set_difficulty(GameManager.Difficulty.EASY)
+	await get_tree().process_frame
+	_check(GameManager.difficulty == GameManager.Difficulty.EASY and SaveManager.read_int(SaveManager.section("player"), "difficulty") == 0,
+			"chọn Dễ: nhớ vào hồ sơ")
+	_check(select.difficulty_buttons.size() == 3 and select.play_buttons[0].text == "Chơi lại", "thẻ màn 1 ở Dễ đã có sao")
+	select.queue_free()
+	await get_tree().process_frame
+	GameManager.difficulty = GameManager.Difficulty.NORMAL
+	GameManager.current_level = null
+	ToastLayer.clear()
+	SaveManager.reset_progress()
 
 
 # --- Phần 1c: nhịp trận (tốc độ, tạm dừng, xem trước, gọi sớm, hiệu ứng) -------

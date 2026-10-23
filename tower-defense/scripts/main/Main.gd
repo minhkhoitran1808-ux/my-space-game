@@ -36,7 +36,7 @@ var meta_bonuses: Dictionary = {}
 
 func _ready() -> void:
 	_load_level(GameManager.get_current_level())
-	GameManager.reset(wave_manager.get_total_waves(), level.starting_gold, level.starting_lives)
+	GameManager.reset(wave_manager.get_total_waves(), level.starting_gold, GameManager.get_starting_lives(level))
 	_apply_meta_bonuses()
 	tracker = MatchTracker.new()
 	tracker.name = "MatchTracker"
@@ -122,6 +122,7 @@ func _ready() -> void:
 	_refresh_wave_button()
 	var intro := "%s - Vô tận" % level.display_name if GameManager.endless_mode \
 			else "%s - %d wave" % [level.display_name, wave_manager.get_total_waves()]
+	intro += "  ·  %s" % GameManager.DIFFICULTY_NAMES[GameManager.difficulty]
 	if not meta_bonuses.names.is_empty():
 		intro += "  ·  Đã dùng: %s" % ", ".join(meta_bonuses.names)
 	hud.show_message(intro, Color(0.6, 0.85, 1.0))
@@ -303,7 +304,7 @@ func _on_game_state_changed(state: GameManager.GameState) -> void:
 	var victory := state == GameManager.GameState.VICTORY
 	var stars := GameManager.calculate_stars()
 	if victory:
-		SaveManager.record_result(level.id, stars)
+		SaveManager.record_result(level.id, stars, GameManager.difficulty)
 	build_manager.cancel_build()
 	selection_manager.deselect()
 	ability_manager.cancel_targeting()

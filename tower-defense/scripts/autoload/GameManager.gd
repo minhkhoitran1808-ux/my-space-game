@@ -22,6 +22,14 @@ signal state_changed(state: GameState)
 signal game_speed_changed(speed: float)
 
 enum GameState { PLAYING, VICTORY, DEFEAT }
+## Độ khó: nhân máu địch, đổi máu nhà chính và hệ số thưởng meta.
+enum Difficulty { EASY, NORMAL, HARD }
+
+const DIFFICULTY_NAMES := ["Dễ", "Thường", "Khó"]
+const DIFFICULTY_HP := [0.8, 1.0, 1.3]
+## Máu nhà chính so với LevelData.starting_lives (20 -> 30 / 20 / 10).
+const DIFFICULTY_LIVES := [1.5, 1.0, 0.5]
+const DIFFICULTY_REWARD := [1.0, 1.3, 1.7]
 
 const STARTING_GOLD := 200
 const STARTING_LIVES := 20
@@ -47,6 +55,8 @@ var starting_lives: int = STARTING_LIVES
 var current_level: LevelData = null
 ## true = đang chơi chế độ vô tận của current_level.
 var endless_mode: bool = false
+## Độ khó của ván (màn chọn màn đặt trước khi vào trận).
+var difficulty: Difficulty = Difficulty.NORMAL
 
 ## Test hook: true thì các hàm chuyển cảnh chỉ ghi lại scene được yêu cầu, không đổi thật.
 var block_scene_changes := false
@@ -134,6 +144,16 @@ func get_current_level() -> LevelData:
 
 func get_next_level() -> LevelData:
 	return LEVEL_CATALOG.get_next_level(get_current_level())
+
+
+## Hệ số máu địch của độ khó hiện tại.
+func get_hp_multiplier() -> float:
+	return DIFFICULTY_HP[difficulty]
+
+
+## Máu nhà chính của một màn ở độ khó hiện tại.
+func get_starting_lives(level: LevelData) -> int:
+	return maxi(roundi(level.starting_lives * DIFFICULTY_LIVES[difficulty]), 1)
 
 
 func start_level(level: LevelData, endless: bool = false) -> void:

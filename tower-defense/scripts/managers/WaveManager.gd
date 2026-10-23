@@ -370,6 +370,9 @@ func _spawn_enemy(enemy_data: EnemyData, health_multiplier: float, speed_multipl
 	if path == null:
 		path = air_paths[0] if enemy_data.is_flying and not air_paths.is_empty() else paths[0]
 	var enemy := enemy_data.scene.instantiate() as Enemy
+	# Độ khó nhân máu địch (quân sinh từ địch khác đã kế thừa hệ số của địch mẹ).
+	if not spawned_by_enemy:
+		health_multiplier *= GameManager.get_hp_multiplier()
 	enemy.setup(enemy_data, health_multiplier, speed_multiplier)
 	enemy.wave_index = wave_index
 	enemy.reward_multiplier = 0.0 if spawned_by_enemy else 1.0 + REWARD_GROWTH_PER_WAVE * wave_index

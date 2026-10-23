@@ -14,10 +14,51 @@ const CARD_GAP := 24.0
 var play_buttons: Array[Button] = []
 ## Nút "Vô tận" của từng màn, theo thứ tự trong catalog.
 var endless_buttons: Array[Button] = []
+## Nút chọn độ khó Dễ / Thường / Khó (theo thứ tự GameManager.Difficulty).
+var difficulty_buttons: Array[Button] = []
 
 
 func _ready() -> void:
 	back_button.pressed.connect(GameManager.go_to_main_menu)
+	# Độ khó chọn lần trước được nhớ trong hồ sơ.
+	GameManager.difficulty = clampi(SaveManager.read_int(SaveManager.section("player"), "difficulty",
+			GameManager.Difficulty.NORMAL), 0, GameManager.Difficulty.size() - 1) as GameManager.Difficulty
+	_build_difficulty_row()
+	_build_cards()
+
+
+## Hàng chọn độ khó ngay trên các thẻ màn: máu địch, máu nhà và hệ số thưởng của từng mức.
+func _build_difficulty_row() -> void:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 10)
+	var caption := Label.new()
+	caption.text = "Độ khó:"
+	row.add_child(caption)
+	var group := ButtonGroup.new()
+	for i in GameManager.Difficulty.size():
+		var button := Button.new()
+		button.toggle_mode = true
+		button.button_group = group
+		button.custom_minimum_size = Vector2(130, 40)
+		button.text = GameManager.DIFFICULTY_NAMES[i]
+		button.tooltip_text = "Máu địch ×%s · Máu nhà %d · Thưởng ×%s" % [GameManager.DIFFICULTY_HP[i],
+				roundi(20 * GameManager.DIFFICULTY_LIVES[i]), GameManager.DIFFICULTY_REWARD[i]]
+		button.button_pressed = i == GameManager.difficulty
+		button.pressed.connect(set_difficulty.bind(i))
+		UiFx.setup_button(button)
+		row.add_child(button)
+		difficulty_buttons.append(button)
+	cards_container.get_parent().add_sibling(row)
+	cards_container.get_parent().get_parent().move_child(row, cards_container.get_parent().get_index())
+
+
+## Đổi độ khó (nhớ vào hồ sơ) và vẽ lại các thẻ để hiện sao của độ khó đó.
+func set_difficulty(difficulty: int) -> void:
+	GameManager.difficulty = difficulty as GameManager.Difficulty
+	SaveManager.section("player")["difficulty"] = difficulty
+	SaveManager.request_save()
+	difficulty_buttons[difficulty].set_pressed_no_signal(true)
 	_build_cards()
 
 
@@ -60,7 +101,7 @@ func _create_card(level: LevelData, index: int, unlocked: bool) -> Control:
 	box.add_child(title)
 
 	var stars := StarRating.new()
-	stars.stars = SaveManager.get_stars(level.id)
+	stars.stars = SaveManager.get_stars_for(level.id, GameManager.difficulty)
 	stars.star_size = 30.0
 	stars.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	box.add_child(stars)
@@ -94,7 +135,7 @@ func _create_card(level: LevelData, index: int, unlocked: bool) -> Control:
 
 	var endless := Button.new()
 	endless.custom_minimum_size = Vector2(0, 36)
-	endless.disabled = stars.stars == 0
+	endless.disabled = SaveManager.get_stars(level.id) == 0 # Mở vô tận khi đã qua màn ở bất kỳ độ khó nào.
 	var best := SaveManager.get_endless_best(level.id)
 	if endless.disabled:
 		endless.text = "Vô tận - qua màn này để mở"

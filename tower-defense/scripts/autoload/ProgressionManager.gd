@@ -4,6 +4,7 @@ extends Node
 ## - Thưởng cuối ván (kể cả khi THUA, để thất bại vẫn là tiến bộ):
 ##     xu = coin_reward của màn × (wave đã qua / tổng wave)^1.3, thắng thêm 40%
 ##     KN = 20 + 2 × wave đã qua
+##   Cả hai nhân hệ số độ khó (Dễ 1.0 / Thường 1.3 / Khó 1.7).
 ##   Chế độ vô tận: tỉ lệ = wave đã qua / 10 (không giới hạn trên), không có thưởng thắng.
 ## - Cấp: cần 100 + 40 × cấp hiện tại KN để lên cấp tiếp. Mỗi lần lên cấp thưởng 50 × cấp mới xu.
 
@@ -62,7 +63,9 @@ static func calculate_match_rewards(result: Dictionary, coin_reward: int) -> Dic
 	var coins := float(coin_reward) * pow(ratio, COIN_EXPONENT)
 	if result.won and not result.endless:
 		coins *= 1.0 + WIN_BONUS
-	return {"coins": roundi(coins), "exp": 20 + 2 * waves}
+	# Độ khó: Dễ ×1.0, Thường ×1.3, Khó ×1.7 (cả xu lẫn KN).
+	var difficulty_bonus: float = GameManager.DIFFICULTY_REWARD[result.get("difficulty", GameManager.Difficulty.EASY)]
+	return {"coins": roundi(coins * difficulty_bonus), "exp": roundi((20 + 2 * waves) * difficulty_bonus)}
 
 
 ## Tính và cộng thưởng cuối ván. Trả về chi tiết để bảng kết quả hiển thị:

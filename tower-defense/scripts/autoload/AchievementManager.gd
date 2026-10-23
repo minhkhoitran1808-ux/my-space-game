@@ -18,7 +18,7 @@ const MINIMALIST_MAX_TOWERS := 5
 
 ## Mã điều kiện đặc biệt mà AchievementDef.challenge có thể dùng.
 const CHALLENGES: Array[StringName] = [&"perfect_clear", &"minimalist", &"one_type", &"no_upgrade",
-		&"last_hp", &"boss_fast", &"all_stars", &"codex_all"]
+		&"last_hp", &"boss_fast", &"all_stars", &"codex_all", &"hard_win", &"hard_all"]
 
 ## id -> AchievementDef
 var defs: Dictionary = {}
@@ -81,6 +81,11 @@ func get_progress(def: AchievementDef) -> Vector2i:
 		return Vector2i(mini(StatsManager.get_stat(def.stat_key), def.target), def.target)
 	if def.challenge == &"codex_all":
 		return Vector2i(StatsManager.get_stat(StatsManager.ENEMY_TYPES_SEEN), _enemy_type_count)
+	if def.challenge == &"hard_all":
+		var won := 0
+		for level in GameManager.LEVEL_CATALOG.levels:
+			won += 1 if SaveManager.get_stars_for(level.id, GameManager.Difficulty.HARD) > 0 else 0
+		return Vector2i(won, GameManager.LEVEL_CATALOG.levels.size())
 	if def.challenge == &"all_stars":
 		return Vector2i(SaveManager.get_total_stars(), GameManager.LEVEL_CATALOG.levels.size() * 3)
 	return Vector2i(0, 1)
@@ -163,6 +168,17 @@ func _on_match_ended(result: Dictionary) -> void:
 			_unlock_challenge(&"last_hp")
 	if SaveManager.get_total_stars() >= GameManager.LEVEL_CATALOG.levels.size() * 3:
 		_unlock_challenge(&"all_stars")
+	if result.won and not result.endless and result.get("difficulty", -1) == GameManager.Difficulty.HARD:
+		_unlock_challenge(&"hard_win")
+	if _won_every_level_on_hard():
+		_unlock_challenge(&"hard_all")
+
+
+func _won_every_level_on_hard() -> bool:
+	for level in GameManager.LEVEL_CATALOG.levels:
+		if SaveManager.get_stars_for(level.id, GameManager.Difficulty.HARD) == 0:
+			return false
+	return true
 
 
 func _unlock_challenge(challenge: StringName) -> void:

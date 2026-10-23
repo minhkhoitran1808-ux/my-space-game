@@ -53,6 +53,7 @@ func build_result(victory: bool, stars: int) -> Dictionary:
 		"won": victory,
 		"level_id": level.id,
 		"endless": endless,
+		"difficulty": GameManager.difficulty,
 		"stars": stars,
 		"waves_survived": waves_survived,
 		"total_waves": GameManager.total_waves,

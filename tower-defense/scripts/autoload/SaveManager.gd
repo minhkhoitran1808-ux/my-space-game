@@ -24,7 +24,7 @@ signal progress_changed
 ## Phát ra khi một cài đặt thay đổi.
 signal settings_changed(key: String, value: Variant)
 
-const PROFILE_VERSION := 1
+const PROFILE_VERSION := 2
 const SECTION_SETTINGS := "settings"
 ## Các section tiến độ của định dạng cũ (save.cfg), chỉ dùng khi chuyển sang JSON.
 const LEGACY_SECTIONS := {"stars": "stars", "endless_best_wave": "endless_best", "flags": "flags"}
@@ -127,17 +127,30 @@ func reset_progress() -> void:
 
 # --- Sao + kỷ lục + cờ ------------------------------------------------------------------
 
+## Sao tốt nhất của một màn, tính trên MỌI độ khó (dùng để mở màn sau).
 func get_stars(level_id: StringName) -> int:
-	return read_int(section("stars"), String(level_id))
+	var best := 0
+	for difficulty in GameManager.Difficulty.size():
+		best = maxi(best, get_stars_for(level_id, difficulty))
+	return best
 
 
-## Ghi kết quả một màn; chỉ giữ lại số sao cao nhất.
-func record_result(level_id: StringName, stars: int) -> void:
-	if stars <= get_stars(level_id):
+## Sao tốt nhất của một màn ở một độ khó.
+func get_stars_for(level_id: StringName, difficulty: int) -> int:
+	return read_int(section("stars"), _stars_key(level_id, difficulty))
+
+
+## Ghi kết quả một màn; chỉ giữ lại số sao cao nhất của độ khó đó.
+func record_result(level_id: StringName, stars: int, difficulty: int = GameManager.Difficulty.NORMAL) -> void:
+	if stars <= get_stars_for(level_id, difficulty):
 		return
-	section("stars")[String(level_id)] = stars
+	section("stars")[_stars_key(level_id, difficulty)] = stars
 	request_save()
 	progress_changed.emit()
+
+
+static func _stars_key(level_id: StringName, difficulty: int) -> String:
+	return "%s:%d" % [level_id, difficulty]
 
 
 ## Kỷ lục chế độ vô tận của một màn (wave cao nhất đã tới).
@@ -161,10 +174,15 @@ func is_level_unlocked(catalog: LevelCatalog, index: int) -> bool:
 	return get_stars(catalog.levels[index - 1].id) > 0
 
 
+## Tổng sao (mỗi màn tính mức sao tốt nhất trên mọi độ khó).
 func get_total_stars() -> int:
+	var best_by_level := {}
+	for key: String in section("stars"):
+		var level_id := key.get_slice(":", 0)
+		best_by_level[level_id] = maxi(best_by_level.get(level_id, 0), read_int(section("stars"), key))
 	var total := 0
-	for key in section("stars"):
-		total += read_int(section("stars"), key)
+	for value: int in best_by_level.values():
+		total += value
 	return total
 
 
@@ -258,9 +276,19 @@ func _migrate(data: Dictionary) -> Dictionary:
 	var version := read_int(data, "save_version", 0)
 	if version > PROFILE_VERSION:
 		push_warning("SaveManager: hồ sơ từ phiên bản mới hơn (%d), có thể thiếu dữ liệu." % version)
-	# (Phiên bản 1 là bản đầu tiên, chưa có bước nâng cấp nào.)
+	if version < 2:
+		# v2: sao lưu theo độ khó ("level_01:1"); sao cũ tính là độ khó Thường.
+		data["stars"] = _stars_to_v2(data.get("stars", {}))
 	data["save_version"] = PROFILE_VERSION
 	return data
+
+
+static func _stars_to_v2(old: Variant) -> Dictionary:
+	var converted := {}
+	if old is Dictionary:
+		for key: String in old:
+			converted[key if ":" in key else _stars_key(StringName(key), GameManager.Difficulty.NORMAL)] = old[key]
+	return converted
 
 
 ## Chuyển sao / kỷ lục / cờ từ save.cfg kiểu cũ sang hồ sơ JSON. Trả về true nếu có dữ liệu.
@@ -275,6 +303,7 @@ func _import_legacy_progress() -> bool:
 		_config.erase_section(legacy_section)
 		imported = true
 	if imported:
+		profile["stars"] = _stars_to_v2(section("stars")) # save.cfg cũ chưa có độ khó => Thường.
 		_save_config()
 	return imported
 
