@@ -30,6 +30,8 @@ signal wave_completed(wave_number: int, reward_bonus: int)
 signal wave_called_early(wave_number: int, bonus: int)
 signal all_waves_completed
 signal enemy_spawned(enemy: Enemy)
+## Đếm ngược giữa wave đổi sang giây mới (0 = hết đếm ngược).
+signal countdown_changed(seconds_left: int)
 
 ## Thư mục chứa các file EnemyData (.tres). Được quét tự động khi khởi động.
 @export_dir var enemies_folder: String = "res://resources/enemies"
@@ -49,8 +51,15 @@ const DEATH_SPAWN_SPACING := 14.0
 ## Vàng hạ địch tăng thêm chừng này mỗi wave (máu địch tăng nhanh hơn => không lăn cầu tuyết).
 const REWARD_GROWTH_PER_WAVE := 0.03
 ## Thưởng gọi sớm = EARLY_CALL_BASE_BONUS + EARLY_CALL_BONUS_PER_WAVE * số thứ tự wave được gọi.
-const EARLY_CALL_BASE_BONUS := 10
-const EARLY_CALL_BONUS_PER_WAVE := 2
+## Nghỉ giữa hai wave (giây). Hết giờ thì wave sau tự bắt đầu (nếu auto_start_waves).
+const DEFAULT_INTERMISSION := 20.0
+## Thưởng hết wave khi file wave không ghi "reward_bonus": 15 + 3 × số thứ tự wave.
+const CLEAR_BONUS_BASE := 15
+const CLEAR_BONUS_PER_WAVE := 3
+
+## Đếm ngược giữa wave: tự gọi wave sau khi hết giờ. Smoke-test bot tắt để tự quyết khi nào gọi.
+var auto_start_waves := true
+var intermission_time := DEFAULT_INTERMISSION
 
 var _enemy_types: Dictionary = {} # StringName id -> EnemyData
 var _waves: Array = []
@@ -65,6 +74,9 @@ var _spawning_wave_index := -1
 ## Bộ đếm để chia đều địch vào các làn khi group không ghi "path".
 var _next_path_index := 0
 var _spawn_timer: Timer
+## Đếm ngược tới wave sau (chạy sau khi một wave sinh xong địch).
+var _intermission_timer: Timer
+var _last_countdown_second := -1
 
 
 func _ready() -> void:
@@ -74,6 +86,10 @@ func _ready() -> void:
 	_spawn_timer.one_shot = true
 	_spawn_timer.timeout.connect(_process_spawn_queue)
 	add_child(_spawn_timer)
+	_intermission_timer = Timer.new()
+	_intermission_timer.one_shot = true
+	_intermission_timer.timeout.connect(_on_intermission_timeout)
+	add_child(_intermission_timer)
 	_load_enemy_types()
 
 
@@ -131,14 +147,35 @@ func can_start_next_wave() -> bool:
 	return GameManager.is_playing() and not is_spawning() and has_more_waves()
 
 
-## Bắt đầu wave tiếp theo lúc này có phải là gọi sớm không.
+## Bắt đầu wave tiếp theo lúc này có phải là gọi sớm không (đang đếm ngược giữa wave).
 func is_early_call() -> bool:
-	return is_wave_in_progress()
+	return get_countdown() > 0.0
 
 
-## Vàng thưởng nếu gọi sớm wave tiếp theo ngay bây giờ.
+## Số giây còn lại tới khi wave sau tự bắt đầu (0 = không đếm ngược, vd trước wave 1).
+func get_countdown() -> float:
+	return _intermission_timer.time_left if _intermission_timer and not _intermission_timer.is_stopped() else 0.0
+
+
+## Vàng thưởng nếu gọi sớm wave tiếp theo ngay bây giờ = số giây còn lại (làm tròn lên).
+## (Main cũng giảm hồi chiêu kỹ năng đúng chừng ấy giây.)
 func get_early_call_bonus() -> int:
-	return EARLY_CALL_BASE_BONUS + EARLY_CALL_BONUS_PER_WAVE * (get_current_wave_number() + 1)
+	return ceili(get_countdown())
+
+
+## Nhãn "wave kiểm tra" của wave số `wave_number` (rỗng nếu là wave thường).
+func get_wave_label(wave_number: int) -> String:
+	if endless or wave_number < 1 or wave_number > _waves.size():
+		return ""
+	return str(_waves[wave_number - 1].get("test", ""))
+
+
+## Thưởng hết wave số `wave_number`: theo file wave, không ghi thì 15 + 3 × số wave.
+func get_clear_bonus(wave_number: int) -> int:
+	var wave: Dictionary = _waves[wave_number - 1]
+	if wave.has("reward_bonus"):
+		return int(wave.reward_bonus)
+	return CLEAR_BONUS_BASE + CLEAR_BONUS_PER_WAVE * wave_number
 
 
 ## Thành phần của một wave (số thứ tự từ 1), gộp theo loại địch:
@@ -171,6 +208,8 @@ func start_next_wave() -> bool:
 		return false
 	var early := is_early_call()
 	var early_bonus := get_early_call_bonus()
+	_intermission_timer.stop()
+	_last_countdown_second = -1
 	_current_wave_index += 1
 	if endless:
 		_ensure_wave(_current_wave_index)
@@ -184,6 +223,19 @@ func start_next_wave() -> bool:
 	wave_started.emit(get_current_wave_number())
 	_process_spawn_queue()
 	return true
+
+
+func _process(_delta: float) -> void:
+	# Báo đếm ngược mỗi khi sang giây mới (HUD cập nhật nút wave).
+	var seconds := ceili(get_countdown())
+	if seconds != _last_countdown_second:
+		_last_countdown_second = seconds
+		countdown_changed.emit(seconds)
+
+
+func _on_intermission_timeout() -> void:
+	if auto_start_waves:
+		start_next_wave()
 
 
 # --- Đọc dữ liệu ----------------------------------------------------------------
@@ -301,6 +353,8 @@ func _process_spawn_queue() -> void:
 		return
 	var finished_wave := _spawning_wave_index
 	_spawning_wave_index = -1
+	if has_more_waves() and GameManager.is_playing():
+		_intermission_timer.start(intermission_time)
 	spawning_finished.emit(finished_wave + 1)
 	_check_wave_completed(finished_wave)
 
@@ -368,7 +422,7 @@ func _check_wave_completed(wave_index: int) -> void:
 	if wave_index == _spawning_wave_index or _alive_by_wave[wave_index] > 0:
 		return
 	_alive_by_wave.erase(wave_index)
-	var bonus := int(_waves[wave_index].get("reward_bonus", 0))
+	var bonus := get_clear_bonus(wave_index + 1)
 	GameManager.add_gold(bonus)
 	wave_completed.emit(wave_index + 1, bonus)
 	if not has_more_waves() and not is_wave_in_progress():

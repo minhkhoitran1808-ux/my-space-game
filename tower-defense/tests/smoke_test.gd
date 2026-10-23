@@ -45,6 +45,7 @@ func _ready() -> void:
 	await _test_tower_management()
 	await _test_tower_mechanics()
 	await _test_new_enemies()
+	await _test_wave_pacing()
 	await _test_match_flow()
 	await _test_level_flow()
 	await _test_abilities_and_flying()
@@ -358,6 +359,66 @@ func _test_new_enemies() -> void:
 	await _free_main(main)
 
 
+# --- Phần 1q: nhịp wave (nghỉ giữa wave, gọi sớm, thưởng hết wave, wave kiểm tra) -----
+
+func _test_wave_pacing() -> void:
+	print("[1q] Nhịp wave")
+	var main := await _new_main()
+	var waves: WaveManager = main.wave_manager
+	var build: BuildManager = main.build_manager
+	waves.auto_start_waves = true
+	GameManager.add_gold(3000)
+	for order in [[3, Vector2i(4, 4)], [3, Vector2i(4, 7)], [0, Vector2i(5, 3)]]:
+		_choose(build, build.available_towers[order[0]])
+		build.try_place_tower(order[1])
+	build.cancel_build()
+
+	# Trước wave 1: không đếm ngược, chờ người chơi bấm.
+	for i in 120:
+		await get_tree().process_frame
+	_check(waves.get_current_wave_number() == 0 and waves.get_countdown() == 0.0, "wave 1 chờ người chơi bấm Start")
+	waves.start_next_wave()
+	while waves.is_spawning():
+		await get_tree().process_frame
+	_check(is_equal_approx(waves.get_countdown(), 20.0) or waves.get_countdown() > 19.9, "sinh xong wave 1: đếm ngược 20 giây")
+	await get_tree().process_frame
+	_check(main.hud.start_wave_button.text.contains("Wave 2 sau"), "nút wave hiện đếm ngược (%s)" % main.hud.start_wave_button.text)
+	var frames := 0
+	while waves.get_current_wave_number() == 1 and frames < 60 * 25:
+		await get_tree().process_frame
+		frames += 1
+	_check(waves.get_current_wave_number() == 2 and frames > 60 * 19, "hết 20 giây: wave 2 tự bắt đầu (%.1fs)" % (frames / 60.0))
+
+	# Gọi sớm: +vàng = số giây còn lại, kỹ năng hồi nhanh đúng chừng ấy.
+	var abilities: AbilityManager = main.ability_manager
+	var meteor: AbilityData = abilities.abilities[0]
+	abilities.cast(meteor, Vector2(640, 360))
+	while waves.is_spawning():
+		await get_tree().process_frame
+	for i in 60 * 5:
+		await get_tree().process_frame
+	var left := waves.get_countdown()
+	var gold_before := GameManager.gold
+	var cooldown_before := abilities.get_cooldown_remaining(meteor)
+	var bonus := waves.get_early_call_bonus()
+	waves.start_next_wave()
+	_check(bonus == ceili(left) and bonus >= 14 and bonus <= 16 and GameManager.gold >= gold_before + bonus, "gọi sớm còn %.1fs: +%d vàng" % [left, bonus])
+	_check(is_equal_approx(abilities.get_cooldown_remaining(meteor), cooldown_before - bonus), "gọi sớm: hồi chiêu kỹ năng giảm %d giây" % bonus)
+	_check(waves.get_countdown() == 0.0, "gọi xong thì dừng đếm ngược")
+
+	# Thưởng hết wave: file không ghi thì 15 + 3 × số wave.
+	waves._waves[4].erase("reward_bonus")
+	_check(waves.get_clear_bonus(5) == 30 and waves.get_clear_bonus(1) == int(waves._waves[0].reward_bonus), "thưởng hết wave: theo file, thiếu thì 15 + 3w")
+
+	# Wave kiểm tra được báo trước một wave.
+	waves._waves[5]["test"] = "Wave giáp nặng"
+	main._on_wave_completed(5, 0)
+	_check(main.hud.message_label.text == "Wave sau: Wave giáp nặng!", "báo trước wave kiểm tra (%s)" % main.hud.message_label.text)
+	main.hud.set_next_wave_preview(6, waves.get_wave_composition(6), waves.get_wave_label(6))
+	_check(main.hud.next_wave_label.text.begins_with("Wave giáp nặng:"), "xem trước wave tô nhãn kiểm tra")
+	await _free_main(main)
+
+
 # --- Phần 1c: nhịp trận (tốc độ, tạm dừng, xem trước, gọi sớm, hiệu ứng) -------
 
 func _test_match_flow() -> void:
@@ -406,7 +467,7 @@ func _test_match_flow() -> void:
 	var gold_before := GameManager.gold
 	var bonus := waves.get_early_call_bonus()
 	waves.start_next_wave()
-	_check(GameManager.gold == gold_before + bonus and bonus == 14, "gọi sớm wave 2 được thưởng %d vàng" % bonus)
+	_check(GameManager.gold == gold_before + bonus and bonus == 20, "gọi sớm ngay khi bắt đầu nghỉ: +20 vàng (%d)" % bonus)
 	var frames := 0
 	while waves.is_wave_in_progress() and frames < MAX_FRAMES_PER_RUN:
 		max_effects = maxi(max_effects, fx.get_active_effect_count())
@@ -1455,6 +1516,8 @@ func _new_main() -> Node:
 	var main := MAIN_SCENE.instantiate()
 	add_child(main)
 	await get_tree().process_frame
+	# Test tự quyết khi nào gọi wave; phần [1q] bật lại để kiểm tra đếm ngược.
+	main.wave_manager.auto_start_waves = false
 	return main
 
 

@@ -79,6 +79,12 @@ func cast(ability: AbilityData, cast_position: Vector2) -> bool:
 	return true
 
 
+## Giảm thời gian hồi của mọi kỹ năng (thưởng khi gọi wave sớm).
+func reduce_cooldowns(seconds: float) -> void:
+	for ability: AbilityData in _cooldowns.keys():
+		_cooldowns[ability] = maxf(_cooldowns[ability] - seconds, 0.001)
+
+
 func _process(delta: float) -> void:
 	for ability: AbilityData in _cooldowns.keys():
 		var remaining: float = maxf(_cooldowns[ability] - delta, 0.0)

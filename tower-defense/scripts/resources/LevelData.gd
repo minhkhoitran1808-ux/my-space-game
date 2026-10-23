@@ -18,6 +18,8 @@ extends Resource
 ## Xu (tiền meta) gốc của màn: thưởng cuối ván = coin_reward × (wave đã qua / tổng wave)^1.3,
 ## thắng được thêm 40%. Màn khó hơn nên cho nhiều hơn.
 @export var coin_reward: int = 150
+## Nghỉ giữa hai wave (giây); hết giờ wave sau tự bắt đầu. Gọi sớm được thưởng số giây còn lại.
+@export var intermission_seconds: float = 20.0
 
 
 ## Đọc nhanh số wave từ file JSON (để hiển thị ở màn chọn màn).

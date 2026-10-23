@@ -85,6 +85,7 @@ func _ready() -> void:
 	wave_manager.spawning_finished.connect(_refresh_wave_button.unbind(1))
 	wave_manager.wave_completed.connect(_on_wave_completed)
 	wave_manager.wave_called_early.connect(_on_wave_called_early)
+	wave_manager.countdown_changed.connect(_refresh_wave_button.unbind(1))
 
 	# Kỹ năng
 	ability_manager.targeting_changed.connect(_on_ability_targeting_changed)
@@ -138,6 +139,7 @@ func _load_level(p_level: LevelData) -> void:
 		wave_manager.setup_endless(String(level.id), paths, map.get_air_paths())
 	else:
 		wave_manager.setup(level.waves_file, paths, map.get_air_paths())
+	wave_manager.intermission_time = level.intermission_seconds
 
 
 ## Thưởng meta đầu ván: nâng cấp vĩnh viễn (Cửa hàng) + đồ tiêu hao đã chuẩn bị ở Kho đồ
@@ -207,7 +209,8 @@ func _refresh_wave_button() -> void:
 			wave_manager.has_more_waves(),
 			wave_manager.is_early_call(),
 			wave_manager.get_early_call_bonus())
-	hud.set_next_wave_preview(next_wave, wave_manager.get_wave_composition(next_wave))
+	hud.set_next_wave_preview(next_wave, wave_manager.get_wave_composition(next_wave),
+			wave_manager.get_wave_label(next_wave))
 
 
 func _upgrade_selected_tower(branch: int = 0) -> void:
@@ -272,8 +275,10 @@ func _on_wave_started(wave_number: int) -> void:
 	_refresh_wave_button()
 
 
+## Gọi sớm: +vàng = số giây bỏ qua, và mọi kỹ năng hồi nhanh hơn đúng chừng ấy giây.
 func _on_wave_called_early(wave_number: int, bonus: int) -> void:
-	hud.show_message("Gọi sớm wave %d! +%d vàng" % [wave_number, bonus], Color(1.0, 0.85, 0.3))
+	ability_manager.reduce_cooldowns(bonus)
+	hud.show_message("Gọi sớm wave %d! +%d vàng, kỹ năng hồi nhanh %ds" % [wave_number, bonus, bonus], Color(1.0, 0.85, 0.3))
 
 
 func _on_wave_completed(wave_number: int, reward_bonus: int) -> void:
@@ -282,7 +287,11 @@ func _on_wave_completed(wave_number: int, reward_bonus: int) -> void:
 		var mine: Tower = payout[0]
 		fx_manager.show_text(mine.global_position + Vector2(0, -30), "+%d" % payout[1], Color(1.0, 0.85, 0.3), 16)
 		tracker.gold_from_mines += payout[1]
-	if reward_bonus > 0:
+	# Wave kế tiếp là wave kiểm tra: báo trước một wave để người chơi kịp chuẩn bị.
+	var next_label := wave_manager.get_wave_label(wave_number + 1)
+	if not next_label.is_empty():
+		hud.show_message("Wave sau: %s!" % next_label, HUD.COLOR_RETRY)
+	elif reward_bonus > 0:
 		hud.show_message("Hoàn thành wave %d! +%d vàng" % [wave_number, reward_bonus], Color(0.5, 1.0, 0.5))
 	AudioManager.play(&"wave_complete")
 	_refresh_wave_button()

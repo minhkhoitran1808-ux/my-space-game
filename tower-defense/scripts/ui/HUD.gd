@@ -200,7 +200,8 @@ func update_wave_button(can_start: bool, next_wave_number: int, has_more_waves: 
 	elif not can_start:
 		start_wave_button.text = "Địch đang xuất hiện..."
 	elif is_early_call:
-		start_wave_button.text = "Gọi sớm Wave %d  +%d vàng" % [next_wave_number, early_bonus]
+		# Đang nghỉ giữa wave: early_bonus = số giây còn lại trước khi wave sau tự bắt đầu.
+		start_wave_button.text = "Wave %d sau %ds · Gọi sớm +%d" % [next_wave_number, early_bonus, early_bonus]
 		# Nút gọi sớm dùng màu vàng (token "gold economy") để báo có thưởng.
 		start_wave_button.theme_type_variation = &"GoldButton"
 	else:
@@ -208,7 +209,12 @@ func update_wave_button(can_start: bool, next_wave_number: int, has_more_waves: 
 
 
 ## Hiện thành phần wave sắp tới, vd "Wave 4: 5× Bọc thép, 8× Lính thường".
-func set_next_wave_preview(wave_number: int, composition: Array[Dictionary]) -> void:
+## test_label khác rỗng: wave kiểm tra (vd "Wave giáp nặng"), tô màu cam để báo trước.
+func set_next_wave_preview(wave_number: int, composition: Array[Dictionary], test_label: String = "") -> void:
+	if test_label.is_empty():
+		next_wave_label.remove_theme_color_override("font_color")
+	else:
+		next_wave_label.add_theme_color_override("font_color", COLOR_RETRY)
 	if composition.is_empty():
 		next_wave_label.text = "Không còn wave nào"
 		next_wave_label.tooltip_text = ""
@@ -216,7 +222,8 @@ func set_next_wave_preview(wave_number: int, composition: Array[Dictionary]) -> 
 	var parts := PackedStringArray()
 	for entry in composition:
 		parts.append("%d× %s" % [entry.count, entry.data.display_name])
-	next_wave_label.text = "Tiếp: %s" % ", ".join(parts)
+	next_wave_label.text = ("%s: %s" % [test_label, ", ".join(parts)]) if not test_label.is_empty() \
+			else "Tiếp: %s" % ", ".join(parts)
 	next_wave_label.tooltip_text = "Wave %d: %s" % [wave_number, ", ".join(parts)]
 
 
