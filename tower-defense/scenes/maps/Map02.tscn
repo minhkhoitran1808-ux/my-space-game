@@ -26,3 +26,10 @@ curve = SubResource("Curve2D_lane0")
 
 [node name="Lane2" type="Path2D" parent="Paths"]
 curve = SubResource("Curve2D_lane1")
+
+[node name="Terrain" type="Node2D" parent="."]
+
+[node name="Rock1" type="Polygon2D" parent="Terrain"]
+color = Color(0.5, 0.5, 0.45, 0.6)
+polygon = PackedVector2Array(640, 384, 704, 384, 704, 448, 640, 448)
+metadata/kind = "rock"

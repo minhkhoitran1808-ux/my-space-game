@@ -2,75 +2,76 @@
 	"waves": [
 		{
 			"groups": [
-				{ "enemy": "basic", "count": 14, "interval": 0.7, "health_multiplier": 1.3 }
+				{ "enemy": "basic", "count": 14, "interval": 0.7, "health_multiplier": 2.24 }
 			]
 		},
 		{
 			"groups": [
-				{ "enemy": "armored", "count": 6, "interval": 1.0, "health_multiplier": 1.3 },
-				{ "enemy": "fast", "count": 10, "interval": 0.5, "delay": 2.0, "health_multiplier": 1.4 }
+				{ "enemy": "armored", "count": 6, "interval": 1.0, "health_multiplier": 2.24 },
+				{ "enemy": "fast", "count": 10, "interval": 0.5, "delay": 2.0, "health_multiplier": 2.41 }
 			]
 		},
 		{
 			"groups": [
-				{ "enemy": "splitter", "count": 6, "interval": 1.2, "health_multiplier": 1.5 },
-				{ "enemy": "basic", "count": 10, "interval": 0.6, "delay": 2.0, "health_multiplier": 1.5 }
+				{ "enemy": "splitter", "count": 6, "interval": 1.2, "health_multiplier": 2.58 },
+				{ "enemy": "basic", "count": 10, "interval": 0.6, "delay": 2.0, "health_multiplier": 2.58 }
 			]
 		},
 		{
 			"groups": [
-				{ "enemy": "healer", "count": 3, "interval": 1.5, "health_multiplier": 1.6 },
-				{ "enemy": "armored", "count": 8, "interval": 0.9, "delay": 1.0, "health_multiplier": 1.7 }
+				{ "enemy": "healer", "count": 3, "interval": 1.5, "health_multiplier": 2.75 },
+				{ "enemy": "armored", "count": 8, "interval": 0.9, "delay": 1.0, "health_multiplier": 2.92 }
 			]
 		},
 		{
 			"test": "Giáp nặng",
 			"groups": [
-				{ "enemy": "armored", "count": 18, "interval": 0.6, "health_multiplier": 1.9 }
+				{ "enemy": "armored", "count": 18, "interval": 0.6, "health_multiplier": 3.27 }
 			]
 		},
 		{
 			"groups": [
-				{ "enemy": "wisp", "count": 14, "interval": 0.5, "health_multiplier": 2.1 },
-				{ "enemy": "bat", "count": 10, "interval": 0.6, "delay": 2.0, "health_multiplier": 2.1 }
+				{ "enemy": "wisp", "count": 20, "interval": 0.45, "health_multiplier": 3.61 },
+				{ "enemy": "fast", "count": 10, "interval": 0.4, "delay": 2.0, "health_multiplier": 3.61 }
 			]
 		},
 		{
 			"groups": [
-				{ "enemy": "basic", "count": 24, "interval": 0.45, "health_multiplier": 1.9 }
+				{ "enemy": "basic", "count": 24, "interval": 0.45, "health_multiplier": 3.27 }
 			]
 		},
 		{
 			"groups": [
-				{ "enemy": "splitter", "count": 10, "interval": 0.9, "health_multiplier": 2.4 },
-				{ "enemy": "swarm", "count": 40, "interval": 0.12, "delay": 2.0, "health_multiplier": 2.4 }
+				{ "enemy": "splitter", "count": 10, "interval": 0.9, "health_multiplier": 4.13 },
+				{ "enemy": "swarm", "count": 40, "interval": 0.12, "delay": 2.0, "health_multiplier": 4.13 }
 			]
 		},
 		{
 			"test": "Đội hồi máu",
 			"groups": [
-				{ "enemy": "healer", "count": 8, "interval": 0.8, "health_multiplier": 2.5 },
-				{ "enemy": "armored", "count": 10, "interval": 0.8, "delay": 1.0, "health_multiplier": 2.6 }
+				{ "enemy": "healer", "count": 8, "interval": 0.8, "health_multiplier": 4.3 },
+				{ "enemy": "armored", "count": 10, "interval": 0.8, "delay": 1.0, "health_multiplier": 4.47 }
+			]
+		},
+		{
+			"test": "Kháng phép",
+			"groups": [
+				{ "enemy": "fast", "count": 30, "interval": 0.25, "health_multiplier": 4.82 },
+				{ "enemy": "wisp", "count": 20, "interval": 0.45, "delay": 2.0, "health_multiplier": 4.82 }
 			]
 		},
 		{
 			"groups": [
-				{ "enemy": "fast", "count": 30, "interval": 0.25, "health_multiplier": 2.8 },
-				{ "enemy": "wisp", "count": 12, "interval": 0.6, "delay": 2.0, "health_multiplier": 2.8 }
-			]
-		},
-		{
-			"groups": [
-				{ "enemy": "armored", "count": 16, "interval": 0.6, "health_multiplier": 3.0 },
-				{ "enemy": "splitter", "count": 10, "interval": 0.9, "delay": 2.0, "health_multiplier": 3.0 },
-				{ "enemy": "bat", "count": 14, "interval": 0.5, "delay": 3.0, "health_multiplier": 3.0 }
+				{ "enemy": "armored", "count": 16, "interval": 0.6, "health_multiplier": 5.16 },
+				{ "enemy": "splitter", "count": 10, "interval": 0.9, "delay": 2.0, "health_multiplier": 5.16 },
+				{ "enemy": "bat", "count": 14, "interval": 0.5, "delay": 3.0, "health_multiplier": 5.16 }
 			]
 		},
 		{
 			"reward_bonus": 0,
 			"groups": [
-				{ "enemy": "boss", "count": 2, "interval": 4.0, "health_multiplier": 1.6 },
-				{ "enemy": "healer", "count": 6, "interval": 1.0, "delay": 3.0, "health_multiplier": 3.1 }
+				{ "enemy": "boss", "count": 2, "interval": 4.0, "health_multiplier": 2.75 },
+				{ "enemy": "healer", "count": 6, "interval": 1.0, "delay": 3.0, "health_multiplier": 5.33 }
 			]
 		}
 	]

@@ -42,6 +42,11 @@ func _ready() -> void:
 	tracker.name = "MatchTracker"
 	add_child(tracker)
 	tracker.setup(level, GameManager.endless_mode, GameManager.starting_lives, wave_manager, build_manager, ability_manager)
+	if OS.is_debug_build():
+		var debug_tools := DebugTools.new()
+		debug_tools.name = "DebugTools"
+		add_child(debug_tools)
+		debug_tools.setup(self)
 
 	# HUD -> hệ thống
 	hud.setup_tower_buttons(build_manager.available_towers)
@@ -324,6 +329,7 @@ func _on_game_state_changed(state: GameManager.GameState) -> void:
 				victory and GameManager.get_next_level() != null)
 	# Meta-progression: thưởng xu + KN (kể cả khi thua), rồi báo cho thống kê / thành tựu.
 	var result := tracker.build_result(victory, stars)
+	tracker.write_log(result)
 	last_rewards = ProgressionManager.grant_match_rewards(result, level.coin_reward)
 	last_rewards["drops"] = InventoryManager.grant_match_drops(result)
 	Events.match_ended.emit(result)

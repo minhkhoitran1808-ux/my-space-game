@@ -50,12 +50,13 @@ var endless_seed: String = ""
 const DEATH_SPAWN_SPACING := 14.0
 ## Vàng hạ địch tăng thêm chừng này mỗi wave (máu địch tăng nhanh hơn => không lăn cầu tuyết).
 const REWARD_GROWTH_PER_WAVE := 0.03
-## Thưởng gọi sớm = EARLY_CALL_BASE_BONUS + EARLY_CALL_BONUS_PER_WAVE * số thứ tự wave được gọi.
 ## Nghỉ giữa hai wave (giây). Hết giờ thì wave sau tự bắt đầu (nếu auto_start_waves).
 const DEFAULT_INTERMISSION := 20.0
 ## Thưởng hết wave khi file wave không ghi "reward_bonus": 15 + 3 × số thứ tự wave.
 const CLEAR_BONUS_BASE := 15
 const CLEAR_BONUS_PER_WAVE := 3
+## wave_index của địch sinh bằng phím debug: không bao giờ làm wave nào "hoàn thành".
+const DEBUG_WAVE_INDEX := -2
 
 ## Bản đồ (để địch biết đang đi qua bùn). Main gán; có thể null.
 var map: GameMap = null
@@ -202,6 +203,31 @@ func get_wave_composition(wave_number: int) -> Array[Dictionary]:
 
 func get_enemy_type(id: StringName) -> EnemyData:
 	return _enemy_types.get(id)
+
+
+## Mọi loại địch đã nạp, sắp theo máu tăng dần.
+func get_enemy_types() -> Array[EnemyData]:
+	var types: Array[EnemyData] = []
+	types.assign(_enemy_types.values())
+	types.sort_custom(func(a: EnemyData, b: EnemyData) -> bool: return a.max_health < b.max_health)
+	return types
+
+
+## Debug (Ctrl+2): ngừng sinh quân của wave đang chạy và hạ mọi địch trên bản đồ (vẫn cho vàng).
+func debug_end_wave() -> void:
+	_spawn_queue.clear()
+	_spawn_timer.stop()
+	if is_spawning():
+		_process_spawn_queue()
+	for pass_index in 3: # Lượt sau hạ nốt quân con sinh ra khi địch mẹ chết.
+		for enemy: Enemy in get_tree().get_nodes_in_group(Enemy.GROUP):
+			if enemy.is_alive():
+				enemy.take_damage(DamageInfo.new(enemy.health + 1.0, DamageInfo.Type.TRUE))
+
+
+## Debug (Ctrl+6): sinh một địch ở đầu làn. Không cho vàng, không tính vào wave nào.
+func debug_spawn(enemy_data: EnemyData) -> Enemy:
+	return _spawn_enemy(enemy_data, 1.0, 1.0, 0.0, DEBUG_WAVE_INDEX, null, true)
 
 
 ## Bắt đầu wave tiếp theo. Trả về false nếu chưa thể bắt đầu.
@@ -361,13 +387,13 @@ func _process_spawn_queue() -> void:
 	_check_wave_completed(finished_wave)
 
 
-## wave_index < 0 nghĩa là "wave hiện tại"; path = null nghĩa là làn đầu tiên phù hợp.
+## wave_index = -1 nghĩa là "wave hiện tại"; path = null nghĩa là làn đầu tiên phù hợp.
 ## spawned_by_enemy = true: quân sinh ra từ địch khác (tách đôi, Boss chết / gọi quân), không cho vàng
 ## để không "cày" được tiền. Còn lại: vàng tăng 3% mỗi wave (chậm hơn máu địch).
 func _spawn_enemy(enemy_data: EnemyData, health_multiplier: float, speed_multiplier: float,
 		start_progress: float = 0.0, wave_index: int = -1, path: Path2D = null,
 		spawned_by_enemy: bool = false) -> Enemy:
-	if wave_index < 0:
+	if wave_index == -1:
 		wave_index = maxi(_current_wave_index, 0)
 	if path == null:
 		path = air_paths[0] if enemy_data.is_flying and not air_paths.is_empty() else paths[0]
@@ -423,6 +449,10 @@ func _on_enemy_reached_end(enemy: Enemy, damage: int) -> void:
 
 ## Wave hoàn thành khi đã spawn xong và địch của chính nó chết / đi hết.
 func _check_wave_completed(wave_index: int) -> void:
+	if wave_index == DEBUG_WAVE_INDEX:
+		if _alive_by_wave.get(wave_index, 0) <= 0:
+			_alive_by_wave.erase(wave_index)
+		return
 	if not GameManager.is_playing() or not _alive_by_wave.has(wave_index):
 		return
 	if wave_index == _spawning_wave_index or _alive_by_wave[wave_index] > 0:

@@ -24,6 +24,7 @@ const MAIN_SCENE := preload("res://scenes/main/Main.tscn")
 const LEVEL_SELECT_SCENE := preload("res://scenes/menus/LevelSelect.tscn")
 const MAIN_MENU_SCENE := preload("res://scenes/menus/MainMenu.tscn")
 const TEST_SAVE_PATH := "user://smoke_test_save.cfg"
+const TEST_LOG_DIR := "user://smoke_test_match_logs"
 ## Giới hạn số frame cho mỗi lượt chơi để test không bao giờ treo.
 const MAX_FRAMES_PER_RUN := 60 * 60 * 40
 
@@ -31,6 +32,16 @@ const MAX_FRAMES_PER_RUN := 60 * 60 * 40
 const BOT_TOWER_ROTATION := [0, 0, 2, 1, 3, 0, 1, 3, 2, 3, 1, 3]
 ## Bot xây tối đa chừng này tháp, sau đó dồn tiền nâng cấp.
 const BOT_MAX_TOWERS := 18
+## Từ màn này (chỉ số trong catalog) trở đi, chỉ xây một loại tháp thì phải thua.
+const MONO_BUILD_FROM_LEVEL := 2
+## Loại tháp dùng cho bot "chỉ một loại tháp" (chỉ số trong available_towers: Cung thủ, Phép).
+const MONO_BUILD_TOWERS := [0, 3]
+## Tầm bắn nhỏ nhất của tháp tấn công, dùng để đo độ phủ đường của từng ô.
+const COVERAGE_RANGE := 130.0
+## Ô phủ ít hơn chừng này pixel đường coi như không đáng xây (không tính vào trung vị).
+const COVERAGE_MIN := 128.0
+## Ô tốt nhất không được phủ quá chừng này lần ô trung vị (tránh một ô "thần thánh").
+const COVERAGE_MAX_RATIO := 2.5
 
 var _failures := PackedStringArray()
 
@@ -41,6 +52,7 @@ func _ready() -> void:
 	GameManager.unlock_all_towers = true # Phần [1s] tắt để kiểm tra mở khoá theo chiến dịch.
 	SaveManager.save_path = TEST_SAVE_PATH
 	SaveManager.reset_progress()
+	MatchTracker.log_dir = TEST_LOG_DIR
 
 	await _test_systems()
 	await _test_tower_management()
@@ -49,6 +61,7 @@ func _ready() -> void:
 	await _test_wave_pacing()
 	await _test_difficulty()
 	await _test_terrain_and_unlocks()
+	await _test_debug_tools_and_logs()
 	await _test_match_flow()
 	await _test_level_flow()
 	await _test_abilities_and_flying()
@@ -65,10 +78,14 @@ func _ready() -> void:
 		await _test_bot_playthrough(level)
 	for level in GameManager.LEVEL_CATALOG.levels:
 		await _test_defeat_without_towers(level)
+	_test_path_coverage()
+	for index in range(MONO_BUILD_FROM_LEVEL, GameManager.LEVEL_CATALOG.levels.size()):
+		await _test_mono_build(GameManager.LEVEL_CATALOG.levels[index])
 
 	for path in [TEST_SAVE_PATH, SaveManager.profile_path, SaveManager.profile_path + ".bak",
 			SaveManager.profile_path + ".tmp"]:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	_remove_test_logs()
 	if _failures.is_empty():
 		print("=== SMOKE TEST PASSED ===")
 		AudioManager.quit_game(0)
@@ -634,6 +651,98 @@ func _test_terrain_and_unlocks() -> void:
 	GameManager.unlock_all_towers = true
 	SaveManager.reset_progress()
 	GameManager.current_level = null
+
+
+# --- Phần 1t: phím debug và log trận ------------------------------------------------
+
+func _test_debug_tools_and_logs() -> void:
+	print("[1t] Phím debug và log trận")
+	SaveManager.reset_progress()
+	SaveManager.set_flag(TutorialManager.DONE_FLAG, true)
+	_remove_test_logs()
+	GameManager.current_level = GameManager.LEVEL_CATALOG.levels[0]
+	var main := await _new_main()
+	var debug: DebugTools = main.get_node_or_null("DebugTools")
+	_check(debug != null, "bản debug có DebugTools")
+	var waves: WaveManager = main.wave_manager
+
+	var gold := GameManager.gold
+	var tower_before: TowerData = main.build_manager.selected_tower_data
+	_press_key(KEY_1, false, true)
+	await get_tree().process_frame
+	_check(GameManager.gold == gold + DebugTools.GOLD_STEP and main.build_manager.selected_tower_data == tower_before,
+			"Ctrl+1: +1000 vàng, không đổi tháp đang chọn")
+
+	_press_key(KEY_3, false, true)
+	GameManager.lose_lives(5)
+	_check(GameManager.lives == GameManager.starting_lives, "Ctrl+3: bất tử, không mất máu")
+	_press_key(KEY_3, false, true)
+	_check(not GameManager.debug_invincible, "Ctrl+3 lần nữa: tắt bất tử")
+
+	_press_key(KEY_5, false, true)
+	_check(is_equal_approx(Engine.time_scale, DebugTools.FAST_SPEED), "Ctrl+5: tốc độ x8")
+	_press_key(KEY_5, false, true)
+	_check(is_equal_approx(Engine.time_scale, 1.0), "Ctrl+5 lần nữa: về x1")
+
+	# Ctrl+6 trước wave 1: địch debug không làm wave nào "hoàn thành".
+	var completed: Array[int] = []
+	waves.wave_completed.connect(func(wave: int, _bonus: int) -> void: completed.append(wave))
+	_press_key(KEY_6, false, true)
+	_check(waves.get_alive_enemy_count() == 1, "Ctrl+6: sinh 1 địch")
+	gold = GameManager.gold
+	waves.debug_end_wave()
+	await get_tree().process_frame
+	_check(waves.get_alive_enemy_count() == 0 and completed.is_empty() and GameManager.gold == gold,
+			"địch debug: hạ không cho vàng, không tính hoàn thành wave")
+
+	# Ctrl+2 giữa wave: ngừng sinh quân, hạ hết, wave hoàn thành.
+	waves.start_next_wave()
+	for i in 90:
+		await get_tree().process_frame
+	_press_key(KEY_2, false, true)
+	await get_tree().process_frame
+	_check(not waves.is_wave_in_progress() and completed == [1], "Ctrl+2: kết thúc wave 1 ngay (%s)" % [completed])
+
+	_press_key(KEY_4, false, true)
+	_check(debug.overlay, "Ctrl+4: bật lớp phủ")
+	_press_key(KEY_4, false, true)
+
+	# Log trận: thua để ghi log, kiểm tra các trường cân bằng.
+	GameManager.lose_lives(999)
+	await get_tree().process_frame
+	var files := DirAccess.get_files_at(TEST_LOG_DIR)
+	_check(files.size() == 1, "hết ván ghi 1 file log (%d)" % files.size())
+	if files.size() == 1:
+		var entry: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(TEST_LOG_DIR.path_join(files[0])))
+		var fields_ok := true
+		for key in ["damage_by_tower_type", "kills_by_tower_type", "leaks_by_enemy_type", "gold_per_wave",
+				"early_calls", "skill_uses", "difficulty", "level_id", "won"]:
+			fields_ok = fields_ok and entry.has(key)
+		_check(fields_ok and entry.level_id == "level_01" and entry.gold_per_wave.size() == 1 and not entry.won,
+				"log có đủ trường cân bằng")
+	await _free_main(main)
+
+	# Chỉ giữ MAX_LOGS file mới nhất.
+	var tracker := MatchTracker.new()
+	tracker.level = GameManager.LEVEL_CATALOG.levels[0]
+	add_child(tracker)
+	for i in MatchTracker.MAX_LOGS + 3:
+		tracker.write_log({"fastest_boss_kill": INF})
+	_check(DirAccess.get_files_at(TEST_LOG_DIR).size() == MatchTracker.MAX_LOGS, "giữ tối đa %d file log" % MatchTracker.MAX_LOGS)
+	tracker.free()
+	_remove_test_logs()
+	Engine.time_scale = 1.0
+	GameManager.set_game_speed(1.0)
+	SaveManager.reset_progress()
+	GameManager.current_level = null
+
+
+func _remove_test_logs() -> void:
+	if not DirAccess.dir_exists_absolute(TEST_LOG_DIR):
+		return
+	for file_name in DirAccess.get_files_at(TEST_LOG_DIR):
+		DirAccess.remove_absolute(TEST_LOG_DIR.path_join(file_name))
+	DirAccess.remove_absolute(TEST_LOG_DIR)
 
 
 # --- Phần 1d: luồng màn (menu, chọn màn, khoá / mở, sao) ----------------------
@@ -1550,33 +1659,9 @@ func _test_bot_playthrough(level: LevelData) -> void:
 	waves.enemy_spawned.connect(func(enemy: Enemy) -> void:
 		spawns_per_lane[enemy.get_parent()] = spawns_per_lane.get(enemy.get_parent(), 0) + 1)
 
-	var samples := _path_samples(main.map.get_paths())
-	var towers_built := 0
-	var upgrades := 0
-	var frames := 0
-	while GameManager.is_playing() and frames < MAX_FRAMES_PER_RUN:
-		if towers_built < BOT_MAX_TOWERS:
-			var tower_data: TowerData = build.available_towers[BOT_TOWER_ROTATION[towers_built % BOT_TOWER_ROTATION.size()]]
-			if GameManager.can_afford(tower_data.cost):
-				var cell := _bot_best_cell(build, tower_data, samples)
-				if cell.x >= 0:
-					build.select_tower(tower_data) if build.selected_tower_data != tower_data else null
-					build.try_place_tower(cell)
-					towers_built += 1
-		else:
-			var cheapest: Tower = null
-			for tower in build.get_towers():
-				if tower.can_upgrade() and (cheapest == null or tower.get_upgrade_cost() < cheapest.get_upgrade_cost()):
-					cheapest = tower
-			if cheapest and GameManager.can_afford(cheapest.get_upgrade_cost()):
-				build.upgrade_tower(cheapest)
-				upgrades += 1
-
-		# Bot chơi "bình thường": chỉ gọi wave mới khi wave trước đã xong hẳn.
-		if waves.can_start_next_wave() and not waves.is_wave_in_progress():
-			waves.start_next_wave()
-		await get_tree().process_frame
-		frames += 1
+	var run := await _bot_play(main, BOT_TOWER_ROTATION)
+	var towers_built: int = run.towers
+	var upgrades: int = run.upgrades
 
 	var won := GameManager.state == GameManager.GameState.VICTORY
 	print("    %s ở wave %d/%d, máu %d/%d, %d tháp, %d nâng cấp, %d sao" % ["THẮNG" if won else "THUA",
@@ -1606,6 +1691,40 @@ func _test_bot_playthrough(level: LevelData) -> void:
 			total_kills += tower.kills
 		_check(total_kills > 100, "tháp ghi nhận số địch hạ (%d)" % total_kills)
 	await _free_main(main)
+
+
+## Bot xây theo thứ tự rotation (chỉ số trong available_towers) tới BOT_MAX_TOWERS tháp,
+## sau đó dồn tiền nâng cấp tháp rẻ nhất; chỉ gọi wave mới khi wave trước đã xong hẳn.
+func _bot_play(main: Node, rotation: Array) -> Dictionary:
+	var build: BuildManager = main.build_manager
+	var waves: WaveManager = main.wave_manager
+	var samples := _path_samples(main.map.get_paths())
+	var towers_built := 0
+	var upgrades := 0
+	var frames := 0
+	while GameManager.is_playing() and frames < MAX_FRAMES_PER_RUN:
+		if towers_built < BOT_MAX_TOWERS:
+			var tower_data: TowerData = build.available_towers[rotation[towers_built % rotation.size()]]
+			if GameManager.can_afford(tower_data.cost):
+				var cell := _bot_best_cell(build, tower_data, samples)
+				if cell.x >= 0:
+					_choose(build, tower_data)
+					build.try_place_tower(cell)
+					towers_built += 1
+		else:
+			var cheapest: Tower = null
+			for tower in build.get_towers():
+				if tower.can_upgrade() and (cheapest == null or tower.get_upgrade_cost() < cheapest.get_upgrade_cost()):
+					cheapest = tower
+			if cheapest and GameManager.can_afford(cheapest.get_upgrade_cost()):
+				build.upgrade_tower(cheapest)
+				upgrades += 1
+		if waves.can_start_next_wave() and not waves.is_wave_in_progress():
+			waves.start_next_wave()
+		await get_tree().process_frame
+		frames += 1
+	return {"won": GameManager.state == GameManager.GameState.VICTORY, "lives": GameManager.lives,
+			"wave": waves.get_current_wave_number(), "towers": towers_built, "upgrades": upgrades}
 
 
 ## Các điểm mẫu dọc mọi làn (chỉ phần nằm trong màn hình), dùng để chấm điểm ô xây.
@@ -1663,6 +1782,77 @@ func _test_defeat_without_towers(level: LevelData) -> void:
 	await _free_main(main)
 
 
+# --- Phần 4: công cụ cân bằng ---------------------------------------------------
+
+## Độ phủ: mỗi ô xây được phủ bao nhiêu pixel đường trong tầm COVERAGE_RANGE.
+## Ô tốt nhất / ô trung vị (trong các ô đáng xây) phải ≤ COVERAGE_MAX_RATIO.
+func _test_path_coverage() -> void:
+	print("[4] Độ phủ đường của từng ô")
+	var probe: TowerData = load("res://resources/towers/basic_tower.tres")
+	GameManager.reset(0, 99999, 20) # Đủ vàng để mọi ô chỉ còn bị loại vì vị trí.
+	for level in GameManager.LEVEL_CATALOG.levels:
+		var map := level.map_scene.instantiate() as GameMap
+		add_child(map)
+		var build := BuildManager.new()
+		build.map = map
+		build.paths = map.get_paths()
+		add_child(build)
+		var coverage := _cell_coverage(build, map.get_paths(), probe)
+		var values: Array = coverage.values()
+		values.sort()
+		var best: float = values.back()
+		# Trung vị chỉ tính các ô "đáng xây" (phủ ≥ COVERAGE_MIN px); ô chỉ chạm mép đường bị bỏ qua.
+		var useful := values.filter(func(v: float) -> bool: return v >= COVERAGE_MIN)
+		var median: float = useful[useful.size() / 2]
+		var weak := values.size() - useful.size()
+		print("    %s: %d ô phủ đường, tốt nhất %dpx, trung vị %dpx, %d ô dưới %dpx" % [level.display_name,
+				values.size(), best, median, weak, COVERAGE_MIN])
+		_check(best / median <= COVERAGE_MAX_RATIO, "%s: ô tốt nhất / trung vị = %.2f ≤ %.1f" % [level.display_name,
+				best / median, COVERAGE_MAX_RATIO])
+		build.free()
+		map.free()
+
+
+## ô -> số pixel đường (mọi làn mặt đất) nằm trong tầm COVERAGE_RANGE, chỉ tính ô có phủ.
+func _cell_coverage(build: BuildManager, paths: Array[Path2D], probe: TowerData) -> Dictionary:
+	var points := PackedVector2Array()
+	var lengths := PackedFloat32Array()
+	for path in paths:
+		var baked := path.curve.get_baked_points()
+		for i in baked.size():
+			points.append(path.to_global(baked[i]))
+			lengths.append(path.curve.bake_interval)
+	var result := {}
+	var area := GameConfig.BUILD_AREA
+	var range_squared := COVERAGE_RANGE * COVERAGE_RANGE
+	for y in range(int(area.position.y) / GameConfig.CELL_SIZE, int(area.end.y) / GameConfig.CELL_SIZE):
+		for x in range(int(area.position.x) / GameConfig.CELL_SIZE, int(area.end.x) / GameConfig.CELL_SIZE):
+			var cell := Vector2i(x, y)
+			if build.get_placement_error(cell, probe) != "":
+				continue
+			var center := GameConfig.cell_to_world(cell)
+			var covered := 0.0
+			for i in points.size():
+				if center.distance_squared_to(points[i]) <= range_squared:
+					covered += lengths[i]
+			if covered > 0.0:
+				result[cell] = covered
+	return result
+
+
+## Chỉ xây một loại tháp (Cung thủ, rồi Phép) thì phải thua: buộc người chơi phối hợp tháp.
+func _test_mono_build(level: LevelData) -> void:
+	for index in MONO_BUILD_TOWERS:
+		GameManager.current_level = level
+		var main := await _new_main()
+		var tower_name: String = main.build_manager.available_towers[index].display_name
+		var run := await _bot_play(main, [index])
+		print("    %s chỉ %s: %s ở wave %d, máu %d" % [level.display_name, tower_name,
+				"THẮNG" if run.won else "THUA", run.wave, run.lives])
+		_check(not run.won, "%s: chỉ xây %s thì thua" % [level.display_name, tower_name])
+		await _free_main(main)
+
+
 # --- Tiện ích -------------------------------------------------------------------
 
 func _new_main() -> Node:
@@ -1705,11 +1895,12 @@ func _choose(build: BuildManager, tower_data: TowerData) -> void:
 		build.select_tower(tower_data)
 
 
-func _press_key(keycode: Key, shift: bool = false) -> void:
+func _press_key(keycode: Key, shift: bool = false, ctrl: bool = false) -> void:
 	var event := InputEventKey.new()
 	event.keycode = keycode
 	event.pressed = true
 	event.shift_pressed = shift
+	event.ctrl_pressed = ctrl
 	get_viewport().push_input(event, true)
 
 

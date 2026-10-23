@@ -3,85 +3,85 @@
 		{
 			"reward_bonus": 20,
 			"groups": [
-				{ "enemy": "basic", "count": 12, "interval": 0.8, "health_multiplier": 1.68 }
+				{ "enemy": "basic", "count": 12, "interval": 0.8, "health_multiplier": 1.95 }
 			]
 		},
 		{
 			"reward_bonus": 25,
 			"groups": [
-				{ "enemy": "fast", "count": 12, "interval": 0.45, "health_multiplier": 1.95 },
-				{ "enemy": "basic", "count": 10, "interval": 0.6, "delay": 1.5, "health_multiplier": 2.1 }
+				{ "enemy": "fast", "count": 12, "interval": 0.45, "health_multiplier": 2.27 },
+				{ "enemy": "basic", "count": 10, "interval": 0.6, "delay": 1.5, "health_multiplier": 2.44 }
 			]
 		},
 		{
 			"reward_bonus": 30,
 			"groups": [
-				{ "enemy": "swarm", "count": 40, "interval": 0.15, "health_multiplier": 2.24 }
+				{ "enemy": "swarm", "count": 40, "interval": 0.15, "health_multiplier": 2.6 }
 			]
 		},
 		{
 			"reward_bonus": 35,
 			"groups": [
-				{ "enemy": "armored", "count": 10, "interval": 0.9, "health_multiplier": 2.72 }
+				{ "enemy": "armored", "count": 10, "interval": 0.9, "health_multiplier": 3.16 }
 			]
 		},
 		{
 			"reward_bonus": 40,
 			"groups": [
-				{ "enemy": "basic", "count": 20, "interval": 0.4, "health_multiplier": 3.6 },
-				{ "enemy": "fast", "count": 15, "interval": 0.35, "delay": 2.0, "health_multiplier": 3.24 }
+				{ "enemy": "basic", "count": 20, "interval": 0.4, "health_multiplier": 4.18 },
+				{ "enemy": "fast", "count": 15, "interval": 0.35, "delay": 2.0, "health_multiplier": 3.76 }
 			]
 		},
 		{
 			"reward_bonus": 45,
 			"groups": [
-				{ "enemy": "boss", "count": 1, "health_multiplier": 1.52 },
-				{ "enemy": "swarm", "count": 30, "interval": 0.15, "delay": 2.0, "health_multiplier": 3.42 },
-				{ "enemy": "bat", "count": 10, "interval": 0.6, "delay": 2.0, "health_multiplier": 3.42 }
+				{ "enemy": "boss", "count": 1, "health_multiplier": 1.77 },
+				{ "enemy": "swarm", "count": 30, "interval": 0.15, "delay": 2.0, "health_multiplier": 3.97 },
+				{ "enemy": "bat", "count": 10, "interval": 0.6, "delay": 2.0, "health_multiplier": 3.97 }
 			]
 		},
 		{
 			"reward_bonus": 50,
 			"groups": [
-				{ "enemy": "armored", "count": 14, "interval": 0.7, "health_multiplier": 4.0 },
-				{ "enemy": "swarm", "count": 30, "interval": 0.12, "delay": 2.0, "health_multiplier": 4.0 }
+				{ "enemy": "armored", "count": 14, "interval": 0.7, "health_multiplier": 4.65 },
+				{ "enemy": "swarm", "count": 30, "interval": 0.12, "delay": 2.0, "health_multiplier": 4.65 }
 			]
 		},
 		{
 			"reward_bonus": 55,
 			"groups": [
-				{ "enemy": "fast", "count": 30, "interval": 0.25, "health_multiplier": 5.04 }
+				{ "enemy": "fast", "count": 30, "interval": 0.25, "health_multiplier": 5.86 }
 			]
 		},
 		{
 			"reward_bonus": 60,
 			"groups": [
-				{ "enemy": "basic", "count": 30, "interval": 0.3, "health_multiplier": 5.72 },
-				{ "enemy": "armored", "count": 10, "interval": 0.7, "delay": 2.0, "health_multiplier": 5.28 },
-				{ "enemy": "bat", "count": 14, "interval": 0.45, "delay": 2.0, "health_multiplier": 5.72 }
+				{ "enemy": "basic", "count": 30, "interval": 0.3, "health_multiplier": 6.65 },
+				{ "enemy": "armored", "count": 10, "interval": 0.7, "delay": 2.0, "health_multiplier": 6.14 },
+				{ "enemy": "bat", "count": 14, "interval": 0.45, "delay": 2.0, "health_multiplier": 6.65 }
 			]
 		},
 		{
 			"reward_bonus": 65,
 			"groups": [
-				{ "enemy": "swarm", "count": 60, "interval": 0.1, "health_multiplier": 5.98 },
-				{ "enemy": "armored", "count": 12, "interval": 0.6, "delay": 3.0, "health_multiplier": 5.98 }
+				{ "enemy": "swarm", "count": 60, "interval": 0.1, "health_multiplier": 6.95 },
+				{ "enemy": "armored", "count": 12, "interval": 0.6, "delay": 3.0, "health_multiplier": 6.95 }
 			]
 		},
 		{
 			"reward_bonus": 70,
 			"groups": [
-				{ "enemy": "fast", "count": 25, "interval": 0.25, "health_multiplier": 7.2 },
-				{ "enemy": "armored", "count": 16, "interval": 0.6, "delay": 2.0, "health_multiplier": 6.72 },
-				{ "enemy": "bat", "count": 16, "interval": 0.4, "delay": 2.0, "health_multiplier": 7.2 }
+				{ "enemy": "fast", "count": 25, "interval": 0.25, "health_multiplier": 8.37 },
+				{ "enemy": "armored", "count": 16, "interval": 0.6, "delay": 2.0, "health_multiplier": 7.81 },
+				{ "enemy": "bat", "count": 16, "interval": 0.4, "delay": 2.0, "health_multiplier": 8.37 }
 			]
 		},
 		{
 			"reward_bonus": 0,
 			"groups": [
-				{ "enemy": "boss", "count": 2, "interval": 6.0, "health_multiplier": 3.25 },
-				{ "enemy": "armored", "count": 14, "interval": 0.6, "delay": 2.0, "health_multiplier": 7.5 },
-				{ "enemy": "swarm", "count": 40, "interval": 0.12, "delay": 2.0, "health_multiplier": 7.5 }
+				{ "enemy": "boss", "count": 2, "interval": 6.0, "health_multiplier": 3.78 },
+				{ "enemy": "armored", "count": 14, "interval": 0.6, "delay": 2.0, "health_multiplier": 8.71 },
+				{ "enemy": "swarm", "count": 40, "interval": 0.12, "delay": 2.0, "health_multiplier": 8.71 }
 			]
 		}
 	]

@@ -13,10 +13,12 @@ extends Node2D
 ## Địa hình (tuỳ chọn): node con "Terrain" chứa các Polygon2D có metadata "kind":
 ## - "mud": bùn, địch đi bộ qua bị chậm 20%.
 ## - "hill": đồi, tháp đặt lên được +15% tầm bắn.
+## - "rock": đá, không xây được (chặn những ô phủ đường quá nhiều, xem test độ phủ).
 ## Polygon2D chỉ dùng để chỉnh hình trong editor; Ground vẽ địa hình nên chúng được ẩn đi.
 
 const TERRAIN_MUD := &"mud"
 const TERRAIN_HILL := &"hill"
+const TERRAIN_ROCK := &"rock"
 ## Hiệu ứng của địa hình.
 const MUD_SLOW := 0.2
 const HILL_RANGE_BONUS := 0.15

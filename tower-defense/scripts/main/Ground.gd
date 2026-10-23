@@ -30,6 +30,7 @@ func _draw() -> void:
 	draw_rect(get_viewport_rect().grow(32.0), background_color)
 	_draw_grass()
 	_draw_hills()
+	_draw_rocks()
 	if paths.is_empty():
 		return
 	# Vẽ viền của mọi làn trước rồi mới vẽ mặt đường, để chỗ các làn nhập nhau liền mạch.
@@ -85,6 +86,25 @@ func _draw_mud() -> void:
 			var dot := bounds.position + Vector2(rng.randf(), rng.randf()) * bounds.size
 			if Geometry2D.is_point_in_polygon(dot, points):
 				draw_circle(dot, rng.randf_range(2.0, 4.0), Color(0.24, 0.18, 0.1))
+
+
+## Đá (không xây được): nền sỏi xám và vài tảng đá tròn.
+func _draw_rocks() -> void:
+	if map == null:
+		return
+	for points: PackedVector2Array in map.get_terrain_polygons(GameMap.TERRAIN_ROCK):
+		draw_colored_polygon(points, Color(0.42, 0.42, 0.38, 0.55))
+		var bounds := Rect2(points[0], Vector2.ZERO)
+		for point in points:
+			bounds = bounds.expand(point)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(points)
+		for i in maxi(int(bounds.get_area() / 1400.0), 2):
+			var at := bounds.position + Vector2(rng.randf_range(0.2, 0.8), rng.randf_range(0.2, 0.8)) * bounds.size
+			var radius := rng.randf_range(9.0, 15.0)
+			draw_circle(at + Vector2(2, 3), radius, Color(0.18, 0.18, 0.16, 0.6))
+			draw_circle(at, radius, Color(0.58, 0.57, 0.52))
+			draw_circle(at - Vector2(radius, radius) * 0.3, radius * 0.4, Color(0.72, 0.71, 0.66))
 
 
 ## Vẽ một lớp của làn đường; hình tròn ở mỗi điểm giúp bo tròn góc cua.

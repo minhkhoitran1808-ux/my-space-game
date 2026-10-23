@@ -60,6 +60,8 @@ var difficulty: Difficulty = Difficulty.NORMAL
 
 ## Test hook: mở khoá mọi tháp bất kể tiến độ chiến dịch.
 var unlock_all_towers := false
+## Debug (Ctrl+3): nhà chính không mất máu.
+var debug_invincible := false
 
 ## Test hook: true thì các hàm chuyển cảnh chỉ ghi lại scene được yêu cầu, không đổi thật.
 var block_scene_changes := false
@@ -105,7 +107,7 @@ func add_gold(amount: int) -> void:
 
 ## Gọi khi địch chạm tới nhà chính. Hết mạng => thua.
 func lose_lives(amount: int) -> void:
-	if not is_playing():
+	if not is_playing() or debug_invincible:
 		return
 	lives -= amount
 	if lives <= 0:

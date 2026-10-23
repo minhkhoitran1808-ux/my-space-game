@@ -63,6 +63,8 @@ func get_placement_error(cell: Vector2i, tower_data: TowerData) -> String:
 		return "Ô này đã có tháp"
 	if _is_on_path(GameConfig.cell_to_world(cell)):
 		return "Không thể xây trên đường đi"
+	if map and map.get_terrain_at(GameConfig.cell_to_world(cell)) == GameMap.TERRAIN_ROCK:
+		return "Không thể xây trên đá"
 	if not GameManager.can_afford(tower_data.cost):
 		return "Không đủ vàng (cần %d)" % tower_data.cost
 	return ""
