@@ -173,25 +173,35 @@ func _spawn_projectile(enemy: Enemy, info: DamageInfo) -> void:
 
 # --- Hiển thị tạm (chưa có sprite) ---------------------------------------------
 
+## Vẽ thân tháp (đế + thân + chấm cấp + nòng) lên một CanvasItem bất kỳ.
+## Dùng chung cho tháp thật và ghost khi đặt tháp, nên ghost luôn trông giống hệt tháp sẽ xây.
+## tint: màu pha vào mọi phần (tint.a = mức pha, 0 = không pha); alpha: độ trong suốt.
+static func draw_body(canvas: CanvasItem, tower_data: TowerData, aim_angle: float,
+		tint: Color = Color(0, 0, 0, 0), alpha: float = 1.0) -> void:
+	var paint := func(color: Color) -> Color:
+		var mixed := color.lerp(Color(tint, 1.0), tint.a)
+		return Color(mixed, color.a * alpha)
+	var half := BASE_SIZE * 0.5
+	canvas.draw_rect(Rect2(-half, -half, BASE_SIZE, BASE_SIZE), paint.call(Color(0.25, 0.27, 0.32)))
+	canvas.draw_rect(Rect2(-half, -half, BASE_SIZE, BASE_SIZE), paint.call(Color(0.1, 0.1, 0.12)), false, 2.0)
+	canvas.draw_circle(Vector2.ZERO, 12.0 + tower_data.level * 2.0, paint.call(tower_data.color))
+	# Chấm vàng thể hiện cấp.
+	for i in tower_data.level:
+		var pip := Vector2((i - (tower_data.level - 1) * 0.5) * 9.0, half - 6.0)
+		canvas.draw_circle(pip, 3.0, paint.call(Color(1.0, 0.85, 0.3)))
+	var barrel_tip := Vector2.from_angle(aim_angle) * BARREL_LENGTH
+	var barrel_width := 11.0 if tower_data.splash_radius > 0.0 else 7.0
+	canvas.draw_line(Vector2.ZERO, barrel_tip, paint.call(tower_data.color.darkened(0.3)), barrel_width)
+
+
 func _draw() -> void:
 	var half := BASE_SIZE * 0.5
+	# Đang được chọn: viền trắng quanh đế. Vòng tầm bắn do RangeIndicator vẽ (TowerRangeDisplay).
 	if show_range:
-		draw_circle(Vector2.ZERO, data.attack_range, Color(data.color, 0.08))
-		draw_arc(Vector2.ZERO, data.attack_range, 0.0, TAU, 64, Color(data.color, 0.6), 2.0)
 		draw_rect(Rect2(-half - 4.0, -half - 4.0, BASE_SIZE + 8.0, BASE_SIZE + 8.0), Color(1, 1, 1, 0.9), false, 2.0)
 
-	# Đế tháp + thân + nòng súng (nòng to hơn với tháp nổ lan, thân to dần theo cấp).
-	draw_rect(Rect2(-half, -half, BASE_SIZE, BASE_SIZE), Color(0.25, 0.27, 0.32))
-	draw_rect(Rect2(-half, -half, BASE_SIZE, BASE_SIZE), Color(0.1, 0.1, 0.12), false, 2.0)
-	draw_circle(Vector2.ZERO, 12.0 + data.level * 2.0, data.color)
-
-	# Chấm vàng thể hiện cấp.
-	for i in data.level:
-		var pip := Vector2((i - (data.level - 1) * 0.5) * 9.0, half - 6.0)
-		draw_circle(pip, 3.0, Color(1.0, 0.85, 0.3))
+	draw_body(self, data, _aim_angle)
 	var barrel_tip := Vector2.from_angle(_aim_angle) * BARREL_LENGTH
-	var barrel_width := 11.0 if data.splash_radius > 0.0 else 7.0
-	draw_line(Vector2.ZERO, barrel_tip, data.color.darkened(0.3), barrel_width)
 
 	# Tia bắn tức thời (chỉ với HITSCAN).
 	if _shot_timer > 0.0:

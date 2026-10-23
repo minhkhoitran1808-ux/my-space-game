@@ -87,6 +87,26 @@ Wave được sinh tự động và mạnh dần, cứ 10 wave có Boss; kỷ l�
 - Font **Be Vietnam Pro** (SemiBold / ExtraBold) trong `assets/fonts/`, giấy phép SIL Open Font License
   (`assets/fonts/OFL.txt`) – được phép đóng gói kèm game.
 
+## Tầm bắn và ghost tháp
+
+- `scripts/fx/RangeIndicator.gd`: một vòng tầm bắn (fill alpha 0.15 + viền 2px + halo tối 1px), 6 trạng thái.
+  Mỗi trạng thái khác nhau cả màu lẫn **hình dạng** (đọc được với người mù màu, kể cả ảnh xám):
+
+  | Trạng thái | Màu | Viền | Khi nào |
+  |---|---|---|---|
+  | VALID | `#56B4E9` | liền | ô đặt được |
+  | INVALID | `#D55E00` | **đứt nét** + ✕ trên ghost + dòng lý do | trên đường, trùng tháp, thiếu vàng, ngoài bản đồ |
+  | SELECTED | trắng | liền, nhịp sáng rất nhẹ | click vào tháp đã xây |
+  | UPGRADE_PREVIEW | trắng | đứt nét, không fill | rê chuột lên nút Nâng cấp |
+  | NEIGHBOR | trắng mờ 1px | liền | tầm bắn các tháp khác khi đang đặt |
+
+  Fill nằm dưới địch, viền nằm trên địch (node con `z_index = 1`). Thông số gom trong `RangeIndicator.STYLE`.
+- `scripts/fx/TowerRangeDisplay.gd`: ghost (hình tháp thật, alpha 0.6, pha 35% màu trạng thái, khung ô, bóng đổ,
+  nhãn giá) + các vòng + phản hồi. Chỉ nghe signal và gọi lại `BuildManager.get_placement_error()`, đúng hàm
+  lệnh đặt thật dùng, nên ghost và kết quả đặt không bao giờ lệch nhau.
+- Phản hồi: đặt sai → ghost rung ±4px 0.2s + lý do nổi lên; đặt đúng → tháp "đáp đất" (squash 0.18s),
+  sóng vòng lan tới đúng tầm bắn, bụi, "-giá". Animation chỉ để trình diễn, không khoá input.
+
 ## Kiến trúc
 
 ```

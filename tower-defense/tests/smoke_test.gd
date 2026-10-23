@@ -12,6 +12,7 @@ extends Node
 ##      Nhịp trận: tốc độ game, tạm dừng, xem trước wave, gọi wave sớm, hiệu ứng, âm thanh.
 ##      Luồng màn: menu, chọn màn, khoá / mở màn, lưu sao.
 ##      Kỹ năng chủ động, địch bay, chế độ vô tận. Cài đặt, hướng dẫn chơi lần đầu.
+##      Hiển thị tầm bắn + ghost tháp (trạng thái, bán kính, phản hồi đặt đúng / sai).
 ##   2. Với MỖI màn: bot tự chọn ô có độ phủ đường đi tốt nhất, nâng cấp khi dư tiền,
 ##      và phải THẮNG. Bot không cần biết trước bản đồ nên áp dụng được cho màn mới.
 ##   3. Với MỖI màn: không đặt tháp nào thì phải THUA (đảm bảo game không quá dễ).
@@ -46,6 +47,7 @@ func _ready() -> void:
 	await _test_abilities_and_flying()
 	await _test_endless()
 	await _test_settings_and_tutorial()
+	await _test_range_display()
 	for level in GameManager.LEVEL_CATALOG.levels:
 		await _test_bot_playthrough(level)
 	for level in GameManager.LEVEL_CATALOG.levels:
@@ -457,6 +459,85 @@ func _test_settings_and_tutorial() -> void:
 	GameManager.current_level = null
 
 
+# --- Phần 1h: tầm bắn + ghost tháp -----------------------------------------------
+
+func _test_range_display() -> void:
+	print("[1h] Tầm bắn + ghost tháp")
+	SaveManager.set_flag(TutorialManager.DONE_FLAG, true)
+	var main := await _new_main()
+	var build: BuildManager = main.build_manager
+	var display: TowerRangeDisplay = main.range_display
+	var State := RangeIndicator.State
+
+	# Chế độ xây (Cung thủ chọn sẵn) + rê chuột vào ô trống => VALID, đúng bán kính.
+	var free_cell := Vector2i(4, 4)
+	_move_mouse(GameConfig.cell_to_world(free_cell))
+	await get_tree().process_frame
+	_check(display.is_ghost_visible() and display.get_placement_state() == State.VALID, "ô trống: ghost + vòng VALID")
+	_check(is_equal_approx(display.get_placement_radius(), build.selected_tower_data.attack_range), "bán kính = tầm bắn Cung thủ")
+
+	# Đổi loại tháp => bán kính đổi theo.
+	for index in build.available_towers.size():
+		var data: TowerData = build.available_towers[index]
+		if build.selected_tower_data != data:
+			build.select_tower(data)
+		await get_tree().process_frame
+		_check(is_equal_approx(display.get_placement_radius(), data.attack_range),
+				"bán kính vòng đặt %s = %d" % [data.display_name, data.attack_range])
+	build.select_tower(build.available_towers[0])
+
+	# Trên đường đi => INVALID, và trùng khớp với hàm kiểm tra của lệnh đặt thật.
+	var path_cell := Vector2i(3, 2)
+	_move_mouse(GameConfig.cell_to_world(path_cell))
+	await get_tree().process_frame
+	_check(display.get_placement_state() == State.INVALID, "trên đường đi: vòng INVALID (đứt nét)")
+	_check((display.get_placement_state() == State.VALID) == build.get_placement_error(path_cell, build.selected_tower_data).is_empty(),
+			"ghost và lệnh đặt thật dùng chung một kết quả kiểm tra")
+
+	# Click vào chỗ sai: không đặt, ghost rung + hiện lý do.
+	var effects_before := display.get_effect_count()
+	_click(GameConfig.cell_to_world(path_cell), MOUSE_BUTTON_LEFT)
+	await get_tree().process_frame
+	_check(build.get_tower_at(path_cell) == null and display.get_effect_count() > effects_before, "đặt sai: không xây, có lý do nổi lên")
+
+	# Đặt thành công bằng chuột: hiệu ứng xuất hiện, ghost ẩn ở ô vừa đặt cho tới khi rời ô.
+	_move_mouse(GameConfig.cell_to_world(free_cell))
+	await get_tree().process_frame
+	_click(GameConfig.cell_to_world(free_cell), MOUSE_BUTTON_LEFT)
+	await get_tree().process_frame
+	var tower := build.get_tower_at(free_cell)
+	_check(tower != null and display.get_effect_count() > 0, "đặt đúng: có sóng vòng / bụi / -giá")
+	_check(not display.is_ghost_visible(), "vừa đặt xong: ẩn ghost ở ô đó (không chớp đỏ)")
+	_move_mouse(GameConfig.cell_to_world(free_cell + Vector2i(1, 0)))
+	await get_tree().process_frame
+	_check(display.is_ghost_visible(), "rời sang ô khác: ghost hiện lại")
+
+	# Thiếu vàng => INVALID.
+	var gold := GameManager.gold
+	GameManager.spend_gold(gold)
+	await get_tree().process_frame
+	_check(display.get_placement_state() == State.INVALID, "thiếu vàng: vòng chuyển INVALID")
+	GameManager.add_gold(1000)
+
+	# Click vào tháp đã xây: vòng SELECTED đúng bán kính; xem trước nâng cấp; nâng cấp thì vòng nở ra.
+	_click(GameConfig.cell_to_world(free_cell), MOUSE_BUTTON_LEFT)
+	await get_tree().process_frame
+	var ring := display.get_selection_ring()
+	_check(ring.state == State.SELECTED and is_equal_approx(ring.radius, tower.data.attack_range), "chọn tháp: vòng SELECTED đúng tầm bắn")
+	_check(display.get_placement_state() == State.HIDDEN, "chọn tháp thì ẩn ghost / vòng đặt")
+	display.show_upgrade_preview(true)
+	_check(display.get_upgrade_ring().state == State.UPGRADE_PREVIEW
+			and is_equal_approx(display.get_upgrade_ring().radius, tower.data.next_level.attack_range), "xem trước tầm bắn sau nâng cấp")
+	build.upgrade_tower(tower)
+	for i in 20:
+		await get_tree().process_frame
+	_check(is_equal_approx(ring.radius, tower.data.attack_range), "nâng cấp: vòng SELECTED nở theo tầm mới")
+	main.selection_manager.deselect()
+	_check(not ring.is_shown() and not display.get_upgrade_ring().is_shown(), "bỏ chọn: ẩn vòng")
+	await _free_main(main)
+	SaveManager.reset_progress()
+
+
 # --- Phần 2: bot chơi hết từng màn ----------------------------------------------
 
 func _test_bot_playthrough(level: LevelData) -> void:
@@ -600,6 +681,13 @@ func _click(position: Vector2, button: MouseButton) -> void:
 	var event := InputEventMouseButton.new()
 	event.button_index = button
 	event.pressed = true
+	event.position = position
+	event.global_position = position
+	get_viewport().push_input(event, true)
+
+
+func _move_mouse(position: Vector2) -> void:
+	var event := InputEventMouseMotion.new()
 	event.position = position
 	event.global_position = position
 	get_viewport().push_input(event, true)

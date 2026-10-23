@@ -3,7 +3,7 @@ extends Node2D
 ## Quản lý vòng đời tháp: xây, nâng cấp, bán, và ô lưới nào đang có tháp.
 ##
 ## - Chọn loại tháp (nút trên HUD hoặc phím 1-9) để vào chế độ xây.
-## - Di chuột: hiện bóng tháp + tầm bắn (xanh = đặt được, đỏ = không).
+## - Di chuột: phát hover_cell_changed; TowerRangeDisplay vẽ ghost + tầm bắn theo ô đó.
 ## - Chuột trái: đặt tháp. Chuột phải / Esc: thoát chế độ xây.
 ## Việc click chọn tháp có sẵn do SelectionManager lo.
 ##
@@ -12,6 +12,8 @@ extends Node2D
 ## Phát ra khi đổi loại tháp đang chọn (null = thoát chế độ xây).
 signal build_mode_changed(tower_data: TowerData)
 signal tower_placed(tower: Tower)
+## Phát ra khi chuột chuyển sang ô lưới khác (để hiển thị ghost / tầm bắn).
+signal hover_cell_changed(cell: Vector2i)
 signal tower_upgraded(tower: Tower)
 signal tower_sold(tower: Tower, refund: int)
 ## Phát ra khi đặt / nâng cấp tháp thất bại, kèm lý do để hiện lên UI.
@@ -36,7 +38,6 @@ func select_tower(tower_data: TowerData) -> void:
 	# Bấm lại đúng loại đang chọn => huỷ chọn.
 	selected_tower_data = null if tower_data == selected_tower_data else tower_data
 	build_mode_changed.emit(selected_tower_data)
-	queue_redraw()
 
 
 func cancel_build() -> void:
@@ -78,7 +79,6 @@ func try_place_tower(cell: Vector2i) -> Tower:
 	tower_container.add_child(tower)
 	_occupied_cells[cell] = tower
 	tower_placed.emit(tower)
-	queue_redraw()
 	return tower
 
 
@@ -115,7 +115,6 @@ func sell_tower(tower: Tower) -> int:
 	GameManager.add_gold(refund)
 	tower_sold.emit(tower, refund)
 	tower.queue_free()
-	queue_redraw()
 	return refund
 
 
@@ -137,7 +136,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var cell := event_to_cell(event)
 		if cell != _hover_cell:
 			_hover_cell = cell
-			queue_redraw()
+			hover_cell_changed.emit(cell)
 
 	elif event is InputEventMouseButton and event.pressed and is_building():
 		if event.button_index == MOUSE_BUTTON_LEFT:
@@ -162,20 +161,3 @@ func _unhandled_input(event: InputEvent) -> void:
 func event_to_cell(event: InputEventMouse) -> Vector2i:
 	var local_event := make_input_local(event) as InputEventMouse
 	return GameConfig.world_to_cell(to_global(local_event.position))
-
-
-# --- Bóng tháp khi đang xây -----------------------------------------------------
-
-func _draw() -> void:
-	if not is_building() or not GameConfig.is_in_build_area(_hover_cell):
-		return
-	var center := GameConfig.cell_to_world(_hover_cell)
-	var size := Vector2.ONE * GameConfig.CELL_SIZE
-	var can_place := get_placement_error(_hover_cell, selected_tower_data).is_empty()
-	var color := Color(0.3, 1.0, 0.4) if can_place else Color(1.0, 0.3, 0.3)
-
-	draw_rect(Rect2(center - size * 0.5, size), Color(color, 0.25))
-	draw_rect(Rect2(center - size * 0.5, size), Color(color, 0.8), false, 2.0)
-	draw_circle(center, selected_tower_data.attack_range, Color(color, 0.08))
-	draw_arc(center, selected_tower_data.attack_range, 0.0, TAU, 64, Color(color, 0.6), 2.0)
-	draw_circle(center, 14.0, Color(selected_tower_data.color, 0.6))

@@ -18,6 +18,7 @@ extends Node2D
 @onready var fx_manager: FxManager = $FxManager
 @onready var ability_manager: AbilityManager = $AbilityManager
 @onready var tutorial: TutorialManager = $TutorialManager
+@onready var range_display: TowerRangeDisplay = $TowerRangeDisplay
 @onready var hud: HUD = $UI/HUD
 @onready var tower_info_panel: TowerInfoPanel = hud.tower_info_panel
 @onready var pause_menu: PauseMenu = hud.pause_menu
@@ -54,6 +55,10 @@ func _ready() -> void:
 	build_manager.tower_placed.connect(_on_tower_placed)
 	build_manager.tower_upgraded.connect(_on_tower_upgraded)
 	build_manager.tower_sold.connect(_on_tower_sold)
+
+	# Hiển thị tầm bắn + ghost tháp (chỉ nghe signal, không đổi logic đặt tháp)
+	range_display.setup(build_manager, selection_manager)
+	tower_info_panel.upgrade_hovered.connect(range_display.show_upgrade_preview)
 
 	# Chọn tháp + bảng thông tin
 	selection_manager.selection_changed.connect(tower_info_panel.show_tower)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/main/Main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/main/Ground.gd" id="2_ground"]
@@ -17,6 +17,7 @@
 [ext_resource type="Resource" path="res://resources/abilities/meteor.tres" id="15_meteor"]
 [ext_resource type="Resource" path="res://resources/abilities/freeze.tres" id="16_freeze"]
 [ext_resource type="Script" path="res://scripts/managers/TutorialManager.gd" id="17_tutorial"]
+[ext_resource type="Script" path="res://scripts/fx/TowerRangeDisplay.gd" id="18_range_display"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -28,6 +29,9 @@ anchor_mode = 0
 script = ExtResource("2_ground")
 
 [node name="Towers" type="Node2D" parent="."]
+
+[node name="TowerRangeDisplay" type="Node2D" parent="."]
+script = ExtResource("18_range_display")
 
 [node name="Map" type="Node2D" parent="."]
 

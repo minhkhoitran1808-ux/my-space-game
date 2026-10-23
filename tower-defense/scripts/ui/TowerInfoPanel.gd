@@ -10,6 +10,8 @@ signal upgrade_requested
 signal sell_requested
 signal target_mode_selected(mode: Tower.TargetMode)
 signal close_requested
+## Rê chuột vào / ra nút Nâng cấp (để xem trước tầm bắn sau nâng cấp).
+signal upgrade_hovered(hovering: bool)
 
 ## Tên hiển thị, theo đúng thứ tự Tower.TargetMode.
 const TARGET_MODE_NAMES := ["Đầu đoàn", "Cuối đoàn", "Gần nhất", "Nhiều máu nhất"]
@@ -33,6 +35,8 @@ func _ready() -> void:
 		target_option.add_item(mode_name)
 	target_option.item_selected.connect(func(index: int) -> void: target_mode_selected.emit(index))
 	upgrade_button.pressed.connect(upgrade_requested.emit)
+	upgrade_button.mouse_entered.connect(upgrade_hovered.emit.bind(true))
+	upgrade_button.mouse_exited.connect(upgrade_hovered.emit.bind(false))
 	sell_button.pressed.connect(sell_requested.emit)
 	close_button.pressed.connect(close_requested.emit)
 	hide()
