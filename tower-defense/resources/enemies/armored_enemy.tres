@@ -7,6 +7,7 @@
 script = ExtResource("1_data")
 id = &"armored"
 display_name = "Bọc thép"
+hint = "Giáp 60%: dùng tháp Phép"
 max_health = 150.0
 speed = 65.0
 reward = 15

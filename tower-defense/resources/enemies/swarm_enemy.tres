@@ -7,6 +7,7 @@
 script = ExtResource("1_data")
 id = &"swarm"
 display_name = "Bầy chuột"
+hint = "Rất đông: dùng Pháo nổ lan"
 max_health = 18.0
 speed = 115.0
 reward = 2

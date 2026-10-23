@@ -634,6 +634,17 @@ func _test_enemy_feedback() -> void:
 	_check(fx._spark_count <= FxManager.MAX_SPARKS, "tia lửa có trần (%d <= %d)" % [fx._spark_count, FxManager.MAX_SPARKS])
 	punching_bag.queue_free()
 
+	# Gặp loại địch mới lần đầu: hiện mẹo một lần duy nhất.
+	SaveManager.set_flag("seen_enemy_fast", false)
+	main.hud.message_label.text = ""
+	var scout: Enemy = waves._spawn_enemy(waves.get_enemy_type(&"fast"), 1.0, 0.0, 200.0)
+	_check(main.hud.message_label.text.contains("Trinh sát") and SaveManager.get_flag("seen_enemy_fast"), "địch mới lần đầu: hiện mẹo (%s)" % main.hud.message_label.text)
+	main.hud.message_label.text = ""
+	var scout2: Enemy = waves._spawn_enemy(waves.get_enemy_type(&"fast"), 1.0, 0.0, 220.0)
+	_check(main.hud.message_label.text.is_empty(), "lần sau không hiện lại mẹo")
+	scout.queue_free()
+	scout2.queue_free()
+
 	# Thầy lang: hồi máu cho địch khác trong bán kính, không tự hồi, không vượt máu tối đa.
 	var healer := _spawn_test_enemy(path, waves.get_enemy_type(&"healer"))
 	var patient := _spawn_test_enemy(path, waves.get_enemy_type(&"armored"))

@@ -12,6 +12,8 @@ enum Shape { CIRCLE, SQUARE, TRIANGLE, DIAMOND, BAT, CROSS }
 ## Mã định danh, dùng trong các file data/waves/*.json. Phải duy nhất.
 @export var id: StringName = &"basic"
 @export var display_name: String = "Địch"
+## Mẹo ngắn hiện ra khi loại địch này xuất hiện LẦN ĐẦU (để trống = không giới thiệu).
+@export var hint: String = ""
 
 @export_group("Chỉ số")
 @export var max_health: float = 60.0

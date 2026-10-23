@@ -86,6 +86,7 @@ func _ready() -> void:
 	wave_manager.enemy_spawned.connect(func(enemy: Enemy) -> void:
 		if enemy.data.elite:
 			hud.boss_bar.track(enemy))
+	wave_manager.enemy_spawned.connect(_announce_new_enemy)
 	fx_manager.track_projectile_container(build_manager.projectile_container)
 
 	GameManager.state_changed.connect(_on_game_state_changed)
@@ -206,6 +207,16 @@ func _on_ability_targeting_changed(ability: AbilityData) -> void:
 	if ability != null:
 		build_manager.cancel_build()
 		selection_manager.deselect()
+
+
+## Lần đầu gặp một loại địch có mẹo (EnemyData.hint): hiện giới thiệu ngắn, chỉ một lần mỗi file save.
+func _announce_new_enemy(enemy: Enemy) -> void:
+	var data := enemy.data
+	var flag := "seen_enemy_%s" % data.id
+	if data.hint.is_empty() or SaveManager.get_flag(flag):
+		return
+	SaveManager.set_flag(flag, true)
+	hud.show_message("Địch mới: %s - %s" % [data.display_name, data.hint], Color(1.0, 0.85, 0.4))
 
 
 func _on_ability_cast(ability: AbilityData, cast_position: Vector2) -> void:

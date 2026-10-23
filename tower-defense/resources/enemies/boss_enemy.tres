@@ -8,6 +8,7 @@
 script = ExtResource("1_data")
 id = &"boss"
 display_name = "Chúa quỷ"
+hint = "Rất trâu, chết thì sinh 8 Bầy chuột"
 max_health = 1500.0
 speed = 42.0
 reward = 150

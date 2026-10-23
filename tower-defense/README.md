@@ -41,6 +41,9 @@ chọn tháp → nâng cấp → dùng kỹ năng), có nút "Bỏ qua". Xem l�
 **Cài đặt** (menu chính hoặc menu tạm dừng): âm lượng, bật/tắt số sát thương, rung màn hình,
 toàn màn hình, và nhóm hiển thị / hỗ trợ (xem bên dưới). Lưu cùng tiến độ trong `user://save.cfg` ("Xoá tiến độ" không xoá cài đặt).
 
+**Giới thiệu địch mới:** lần đầu một loại địch xuất hiện (theo file save), một dòng mẹo hiện ở cuối
+màn hình, vd "Địch mới: Thầy lang - Hồi máu cho đồng đội: hạ nó trước!" (`EnemyData.hint`).
+
 **Chế độ vô tận:** qua một màn sẽ mở chế độ vô tận của màn đó (nút ở màn chọn màn).
 Wave được sinh tự động và mạnh dần, cứ 10 wave có Boss; kỷ lục wave cao nhất được lưu lại.
 
