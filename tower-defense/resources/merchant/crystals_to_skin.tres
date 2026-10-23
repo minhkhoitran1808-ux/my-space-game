@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MerchantRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/MerchantRecipe.gd" id="1_recipe"]
+
+[resource]
+script = ExtResource("1_recipe")
+id = &"crystals_to_skin"
+title = "Skin Sử thi bí ẩn"
+give = {"crystal": 3, "dust": 300}
+receive = {"random_skin:3": 1}
+order = 30

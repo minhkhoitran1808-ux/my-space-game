@@ -28,6 +28,7 @@ EconomyManager="*res://scripts/autoload/EconomyManager.gd"
 StatsManager="*res://scripts/autoload/StatsManager.gd"
 ProgressionManager="*res://scripts/autoload/ProgressionManager.gd"
 InventoryManager="*res://scripts/autoload/InventoryManager.gd"
+ShopManager="*res://scripts/autoload/ShopManager.gd"
 AchievementManager="*res://scripts/autoload/AchievementManager.gd"
 ToastLayer="*res://scripts/autoload/ToastLayer.gd"
 

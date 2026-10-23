@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MerchantRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/MerchantRecipe.gd" id="1_recipe"]
+
+[resource]
+script = ExtResource("1_recipe")
+id = &"steel_to_crystal"
+title = "Mảnh thép thành Tinh thể"
+give = {"steel_shard": 5}
+receive = {"crystal": 1}
+order = 0

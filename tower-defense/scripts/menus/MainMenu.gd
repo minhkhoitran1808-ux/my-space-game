@@ -16,6 +16,8 @@ var _achievements_dot: NotificationDot
 var inventory_screen: InventoryScreen
 var inventory_button: Button
 var _inventory_dot: NotificationDot
+var shop_screen: ShopScreen
+var shop_button: Button
 var _last_meta_button: Button
 
 
@@ -35,6 +37,9 @@ func _ready() -> void:
 	add_child(inventory_screen)
 	inventory_button = _add_menu_button("Kho đồ", inventory_screen)
 	_inventory_dot = NotificationDot.attach(inventory_button)
+	shop_screen = ShopScreen.new()
+	add_child(shop_screen)
+	shop_button = _add_menu_button("Cửa hàng", shop_screen)
 
 	SaveManager.progress_changed.connect(_refresh)
 	Events.claimables_changed.connect(_refresh)

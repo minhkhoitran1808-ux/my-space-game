@@ -140,11 +140,13 @@ func _load_level(p_level: LevelData) -> void:
 		wave_manager.setup(level.waves_file, paths, map.get_air_paths())
 
 
-## Đồ tiêu hao đã chuẩn bị ở Kho đồ: dùng ngay khi vào ván (+vàng / +máu đầu ván).
+## Thưởng meta đầu ván: nâng cấp vĩnh viễn (Cửa hàng) + đồ tiêu hao đã chuẩn bị ở Kho đồ
+## (đồ tiêu hao bị dùng hết ngay khi vào ván).
 func _apply_meta_bonuses() -> void:
 	var effects := InventoryManager.use_prepared()
-	var bonus_gold := roundi(level.starting_gold * effects.bonus_gold_pct / 100.0)
-	var bonus_lives := roundi(effects.bonus_lives)
+	var upgrades := ShopManager.get_upgrade_bonuses()
+	var bonus_gold := roundi(level.starting_gold * (effects.bonus_gold_pct + upgrades.bonus_gold_pct) / 100.0)
+	var bonus_lives := roundi(effects.bonus_lives + upgrades.bonus_lives)
 	if bonus_gold > 0:
 		GameManager.add_gold(bonus_gold)
 	if bonus_lives > 0:

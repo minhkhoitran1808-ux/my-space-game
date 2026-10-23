@@ -53,6 +53,7 @@ func _ready() -> void:
 	await _test_meta_foundation()
 	await _test_achievements()
 	await _test_inventory()
+	await _test_shop()
 	for level in GameManager.LEVEL_CATALOG.levels:
 		await _test_bot_playthrough(level)
 	for level in GameManager.LEVEL_CATALOG.levels:
@@ -962,6 +963,103 @@ func _test_inventory() -> void:
 	screen.close()
 	menu.queue_free()
 	await get_tree().process_frame
+	ToastLayer.clear()
+	SaveManager.reset_progress()
+
+
+# --- Phần 1m: thương nhân, ghép đồ, cửa hàng ngày, nâng cấp vĩnh viễn -----------------
+
+func _test_shop() -> void:
+	print("[1m] Cửa hàng + thương nhân")
+	SaveManager.reset_progress()
+	_check(ShopManager.recipes.size() >= 4, "thương nhân có %d công thức" % ShopManager.recipes.size())
+
+	# Thương nhân: thiếu đồ thì báo lý do; đủ thì đổi đúng tỉ giá.
+	var shards: MerchantRecipe = ShopManager.recipes[&"steel_to_crystal"]
+	_check(ShopManager.get_trade_error(shards) == "Thiếu 5 Mảnh thép", "thiếu đồ: \"%s\"" % ShopManager.get_trade_error(shards))
+	_check(ShopManager.trade(shards).is_empty(), "thiếu đồ thì không đổi được")
+	InventoryManager.grant(&"steel_shard", 6, "test")
+	ShopManager.trade(shards)
+	_check(InventoryManager.count(&"steel_shard") == 1 and InventoryManager.count(&"crystal") == 1, "5 Mảnh thép => 1 Tinh thể")
+	InventoryManager.grant(&"crystal", 2, "test")
+	EconomyManager.add(EconomyManager.DUST, 300, "test")
+	var skin_result := ShopManager.trade(ShopManager.recipes[&"crystals_to_skin"])
+	_check(skin_result.size() == 1 and skin_result[0].item.kind == ItemDef.Kind.SKIN and skin_result[0].item.rarity == Rarity.Tier.EPIC
+			and not skin_result[0].duplicate, "3 Tinh thể + 300 Bụi => skin Sử thi chưa có")
+
+	# Ghép đồ: 5 món cùng bậc (trộn loại) => 1 món bậc kế tiếp.
+	InventoryManager.grant(&"gold_pouch_small", 4, "test")
+	_check(ShopManager.get_fusable_count(Rarity.Tier.COMMON) == 5 and ShopManager.can_fuse(Rarity.Tier.COMMON), "có 5 món Thường để ghép")
+	var fused := ShopManager.fuse(Rarity.Tier.COMMON)
+	_check(fused.item.rarity == Rarity.Tier.UNCOMMON and ShopManager.get_fusable_count(Rarity.Tier.COMMON) == 0, "ghép ra món Ít gặp (%s)" % fused.item.display_name)
+	_check(ShopManager.fuse(Rarity.Tier.COMMON).is_empty(), "không đủ 5 thì không ghép")
+
+	# Cửa hàng hôm nay: cố định trong ngày, mỗi ô mua một lần, sang ngày mới thì đổi.
+	ShopManager.date_override = "2026-01-01"
+	var offers := ShopManager.get_daily_offers()
+	var offer_ids := offers.map(func(def: ItemDef) -> StringName: return def.id)
+	_check(offers.size() == ShopManager.SHOP_SLOTS and offer_ids == ShopManager.get_daily_offers().map(func(def: ItemDef) -> StringName: return def.id),
+			"4 món, giống nhau mỗi lần mở trong ngày")
+	_check(offers.all(func(def: ItemDef) -> bool: return def.droppable and def.kind != ItemDef.Kind.MATERIAL), "không bán nguyên liệu / đồ độc quyền")
+	var slot := -1
+	for i in offers.size():
+		if offers[i].is_stackable() or not InventoryManager.owns(offers[i].id):
+			slot = i
+			break
+	var price := ShopManager.price_of(offers[slot])
+	_check(ShopManager.buy(slot).is_empty(), "thiếu xu thì không mua được")
+	EconomyManager.add(EconomyManager.COINS, price, "test")
+	_check(not ShopManager.buy(slot).is_empty() and EconomyManager.get_amount(EconomyManager.COINS) == 0, "mua với giá %d xu" % price)
+	_check(ShopManager.is_bought(slot) and ShopManager.buy(slot).is_empty(), "mỗi ô chỉ mua một lần mỗi ngày")
+	var other_day := false
+	for day in ["2026-01-02", "2026-01-03", "2026-01-04"]:
+		ShopManager.date_override = day
+		other_day = other_day or ShopManager.get_daily_offers().map(func(def: ItemDef) -> StringName: return def.id) != offer_ids
+	_check(other_day and not ShopManager.is_bought(slot), "sang ngày mới: hàng đổi, được mua lại")
+
+	# Nâng cấp vĩnh viễn: giá tăng dần, có giới hạn, áp dụng khi vào ván.
+	_check(ShopManager.get_upgrade_cost(&"treasury") == 300, "nâng cấp đầu tiên 300 xu")
+	EconomyManager.add(EconomyManager.COINS, 5000, "test")
+	_check(ShopManager.buy_upgrade(&"treasury") and ShopManager.get_upgrade_cost(&"treasury") == 345, "giá cấp 2 = 300 × 1.15 = 345")
+	while ShopManager.buy_upgrade(&"treasury"):
+		pass
+	while ShopManager.buy_upgrade(&"walls"):
+		pass
+	_check(ShopManager.get_upgrade_level(&"treasury") == 5 and ShopManager.get_upgrade_cost(&"treasury") == -1
+			and ShopManager.get_upgrade_level(&"walls") == 2, "có giới hạn: Kho bạc 5 cấp, Tường thành 2 cấp")
+	var bonuses := ShopManager.get_upgrade_bonuses()
+	_check(is_equal_approx(bonuses.bonus_gold_pct, 10.0) and is_equal_approx(bonuses.bonus_lives, 2.0), "tối đa +10% vàng, +2 máu")
+	SaveManager.set_flag(TutorialManager.DONE_FLAG, true)
+	GameManager.current_level = GameManager.LEVEL_CATALOG.levels[1]
+	var main := await _new_main()
+	_check(GameManager.gold == main.level.starting_gold + roundi(main.level.starting_gold * 0.1) and GameManager.lives == main.level.starting_lives + 2,
+			"vào ván: nâng cấp vĩnh viễn được áp dụng")
+	await _free_main(main)
+	GameManager.current_level = null
+
+	# Màn hình Cửa hàng (4 tab).
+	var menu := MAIN_MENU_SCENE.instantiate()
+	add_child(menu)
+	await get_tree().process_frame
+	menu.shop_button.pressed.emit()
+	var screen: ShopScreen = menu.shop_screen
+	_check(screen.visible and screen.action_buttons.size() == ShopManager.SHOP_SLOTS, "tab Hôm nay: 4 nút mua")
+	screen.tab = ShopScreen.Tab.MERCHANT
+	screen.refresh()
+	_check(screen.action_buttons[&"trade_steel_to_crystal"].disabled, "tab Thương nhân: thiếu đồ thì nút xám")
+	InventoryManager.grant(&"steel_shard", 5, "test")
+	var shards_before := InventoryManager.count(&"steel_shard")
+	var crystals_before := InventoryManager.count(&"crystal")
+	screen.refresh()
+	screen.action_buttons[&"trade_steel_to_crystal"].pressed.emit()
+	_check(InventoryManager.count(&"crystal") == crystals_before + 1 and InventoryManager.count(&"steel_shard") == shards_before - 5, "bấm Đổi trên thẻ")
+	screen.tab = ShopScreen.Tab.UPGRADES
+	screen.refresh()
+	_check(screen.action_buttons[&"upgrade_treasury"].disabled and screen.action_buttons[&"upgrade_treasury"].text == "Tối đa", "tab Nâng cấp: đã tối đa thì khoá")
+	screen.close()
+	menu.queue_free()
+	await get_tree().process_frame
+	ShopManager.date_override = ""
 	ToastLayer.clear()
 	SaveManager.reset_progress()
 
