@@ -1,7 +1,8 @@
 class_name HUD
 extends Control
-## Giao diện trong trận: vàng, mạng sống, wave, nút chọn tháp (kèm tooltip chỉ số),
-## nút bắt đầu wave, bảng thông tin tháp và bảng kết thúc ván.
+## Giao diện trong trận: vàng, mạng sống, wave, xem trước wave sau, tốc độ, tạm dừng,
+## nút chọn tháp (kèm tooltip chỉ số), nút bắt đầu / gọi sớm wave,
+## bảng thông tin tháp, menu tạm dừng và bảng kết thúc ván.
 ##
 ## HUD tự lắng nghe GameManager để cập nhật số liệu. Các hành động của người chơi
 ## được phát ra bằng signal; Main sẽ nối chúng tới hệ thống tương ứng.
@@ -9,6 +10,8 @@ extends Control
 signal start_wave_pressed
 signal tower_selected(tower_data: TowerData)
 signal restart_pressed
+signal speed_pressed
+signal pause_pressed
 
 const MESSAGE_DURATION := 1.6
 
@@ -17,6 +20,10 @@ const MESSAGE_DURATION := 1.6
 @onready var wave_label: Label = %WaveLabel
 @onready var tower_buttons: HBoxContainer = %TowerButtons
 @onready var start_wave_button: Button = %StartWaveButton
+@onready var next_wave_label: Label = %NextWaveLabel
+@onready var speed_button: Button = %SpeedButton
+@onready var pause_button: Button = %PauseButton
+@onready var pause_menu: PauseMenu = %PauseMenu
 @onready var message_label: Label = %MessageLabel
 @onready var game_over_panel: PanelContainer = %GameOverPanel
 @onready var result_label: Label = %ResultLabel
@@ -31,14 +38,18 @@ func _ready() -> void:
 	GameManager.gold_changed.connect(_on_gold_changed)
 	GameManager.lives_changed.connect(_on_lives_changed)
 	GameManager.wave_changed.connect(_on_wave_changed)
+	GameManager.game_speed_changed.connect(update_speed)
 	start_wave_button.pressed.connect(start_wave_pressed.emit)
 	restart_button.pressed.connect(restart_pressed.emit)
+	speed_button.pressed.connect(speed_pressed.emit)
+	pause_button.pressed.connect(pause_pressed.emit)
 
 	game_over_panel.hide()
 	message_label.modulate.a = 0.0
 	_on_gold_changed(GameManager.gold)
 	_on_lives_changed(GameManager.lives)
 	_on_wave_changed(GameManager.current_wave, GameManager.total_waves)
+	update_speed(GameManager.game_speed)
 
 
 ## Tạo một nút cho mỗi loại tháp có thể xây.
@@ -69,14 +80,35 @@ func set_selected_tower(tower_data: TowerData) -> void:
 		_buttons_by_tower[data].set_pressed_no_signal(data == tower_data)
 
 
-func update_wave_button(can_start: bool, next_wave_number: int, has_more_waves: bool) -> void:
+## Cập nhật nút wave. Khi wave trước vẫn còn địch (is_early_call) thì nút thành "Gọi sớm".
+func update_wave_button(can_start: bool, next_wave_number: int, has_more_waves: bool,
+		is_early_call: bool = false, early_bonus: int = 0) -> void:
 	start_wave_button.disabled = not can_start
 	if not has_more_waves:
 		start_wave_button.text = "Đã hết wave"
-	elif can_start:
-		start_wave_button.text = "Bắt đầu Wave %d [Space]" % next_wave_number
+	elif not can_start:
+		start_wave_button.text = "Địch đang xuất hiện..."
+	elif is_early_call:
+		start_wave_button.text = "Gọi sớm Wave %d (+%d) [Space]" % [next_wave_number, early_bonus]
 	else:
-		start_wave_button.text = "Wave đang diễn ra..."
+		start_wave_button.text = "Bắt đầu Wave %d [Space]" % next_wave_number
+
+
+## Hiện thành phần wave sắp tới, vd "Wave 4: 5× Bọc thép, 8× Lính thường".
+func set_next_wave_preview(wave_number: int, composition: Array[Dictionary]) -> void:
+	if composition.is_empty():
+		next_wave_label.text = ""
+		next_wave_label.tooltip_text = ""
+		return
+	var parts := PackedStringArray()
+	for entry in composition:
+		parts.append("%d× %s" % [entry.count, entry.data.display_name])
+	next_wave_label.text = "Wave %d: %s" % [wave_number, ", ".join(parts)]
+	next_wave_label.tooltip_text = next_wave_label.text
+
+
+func update_speed(speed: float) -> void:
+	speed_button.text = "x%d [F]" % roundi(speed)
 
 
 ## Hiện thông báo ngắn ở cuối màn hình rồi mờ dần.

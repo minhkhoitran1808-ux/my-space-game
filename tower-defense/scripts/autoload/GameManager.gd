@@ -15,17 +15,22 @@ signal lives_changed(lives: int)
 signal wave_changed(current_wave: int, total_waves: int)
 ## Phát ra khi trạng thái game thay đổi (PLAYING -> VICTORY / DEFEAT).
 signal state_changed(state: GameState)
+## Phát ra khi đổi tốc độ game (x1, x2, x3).
+signal game_speed_changed(speed: float)
 
 enum GameState { PLAYING, VICTORY, DEFEAT }
 
 const STARTING_GOLD := 200
 const STARTING_LIVES := 20
+## Các mức tốc độ người chơi có thể chọn (phím F / nút trên HUD).
+const GAME_SPEEDS: Array[float] = [1.0, 2.0, 3.0]
 
 var gold: int = STARTING_GOLD: set = _set_gold
 var lives: int = STARTING_LIVES: set = _set_lives
 var current_wave: int = 0
 var total_waves: int = 0
 var state: GameState = GameState.PLAYING: set = _set_state
+var game_speed: float = 1.0
 
 
 ## Đưa mọi chỉ số về giá trị ban đầu. Gọi khi bắt đầu (hoặc chơi lại) một ván.
@@ -35,6 +40,7 @@ func reset(wave_count: int = 0) -> void:
 	current_wave = 0
 	total_waves = wave_count
 	wave_changed.emit(current_wave, total_waves)
+	set_game_speed(1.0)
 	state = GameState.PLAYING
 
 
@@ -83,6 +89,21 @@ func set_current_wave(wave_number: int) -> void:
 func win() -> void:
 	if is_playing():
 		state = GameState.VICTORY
+
+
+# --- Tốc độ game ---------------------------------------------------------------
+
+## Đổi tốc độ toàn game bằng Engine.time_scale (ảnh hưởng mọi delta và Timer).
+func set_game_speed(speed: float) -> void:
+	game_speed = speed
+	Engine.time_scale = speed
+	game_speed_changed.emit(game_speed)
+
+
+## Chuyển sang mức tốc độ kế tiếp: x1 -> x2 -> x3 -> x1.
+func cycle_game_speed() -> void:
+	var index := GAME_SPEEDS.find(game_speed)
+	set_game_speed(GAME_SPEEDS[(index + 1) % GAME_SPEEDS.size()])
 
 
 # --- Setter (phát signal khi giá trị đổi) -------------------------------------

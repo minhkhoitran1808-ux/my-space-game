@@ -21,7 +21,8 @@ func _ready() -> void:
 
 
 func _draw() -> void:
-	draw_rect(get_viewport_rect(), background_color)
+	# Vẽ tràn ra ngoài màn hình một chút để khi rung màn hình không lộ mép.
+	draw_rect(get_viewport_rect().grow(32.0), background_color)
 	_draw_grass()
 	if enemy_path and enemy_path.curve and enemy_path.curve.point_count >= 2:
 		_draw_path()

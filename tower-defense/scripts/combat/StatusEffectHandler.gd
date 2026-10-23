@@ -70,7 +70,9 @@ func _process(delta: float) -> void:
 			while entry.tick_timer <= 0.0:
 				entry.tick_timer += effect.tick_interval
 				var source: Node = entry.source if is_instance_valid(entry.source) else null
-				_enemy.take_damage(DamageInfo.new(effect.damage_per_second * effect.tick_interval, effect.damage_type, source))
+				var tick := DamageInfo.new(effect.damage_per_second * effect.tick_interval, effect.damage_type, source)
+				tick.is_periodic = true
+				_enemy.take_damage(tick)
 				if not _enemy.is_alive():
 					return
 

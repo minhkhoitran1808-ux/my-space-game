@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/main/Main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/main/Ground.gd" id="2_ground"]
@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://scripts/managers/WaveManager.gd" id="6_wave"]
 [ext_resource type="PackedScene" path="res://scenes/ui/HUD.tscn" id="7_hud"]
 [ext_resource type="Script" path="res://scripts/managers/SelectionManager.gd" id="11_selection"]
+[ext_resource type="Script" path="res://scripts/fx/FxManager.gd" id="12_fx"]
 
 [sub_resource type="Curve2D" id="Curve2D_path"]
 _data = {
@@ -21,6 +22,9 @@ point_count = 8
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+anchor_mode = 0
 
 [node name="Ground" type="Node2D" parent="." node_paths=PackedStringArray("enemy_path")]
 script = ExtResource("2_ground")
@@ -34,6 +38,10 @@ enemy_path = NodePath("../Enemies/EnemyPath")
 curve = SubResource("Curve2D_path")
 
 [node name="Projectiles" type="Node2D" parent="."]
+
+[node name="FxManager" type="Node2D" parent="." node_paths=PackedStringArray("camera")]
+script = ExtResource("12_fx")
+camera = NodePath("../Camera2D")
 
 [node name="BuildManager" type="Node2D" parent="." node_paths=PackedStringArray("tower_container", "projectile_container", "enemy_path")]
 script = ExtResource("3_build")

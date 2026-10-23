@@ -18,6 +18,8 @@ var type: Type = Type.PHYSICAL
 var source: Node = null
 ## Hiệu ứng trạng thái gắn kèm cú đánh (làm chậm, thiêu đốt...).
 var effects: Array[StatusEffectData] = []
+## true nếu là sát thương theo thời gian (thiêu đốt...), để UI hiển thị nhỏ hơn.
+var is_periodic: bool = false
 
 
 func _init(p_amount: float = 0.0, p_type: Type = Type.PHYSICAL, p_source: Node = null) -> void:

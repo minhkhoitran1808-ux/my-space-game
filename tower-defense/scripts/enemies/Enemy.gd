@@ -31,6 +31,8 @@ var base_speed: float = 0.0
 var health_multiplier: float = 1.0
 ## Node gây đòn cuối cùng (dùng cho thống kê của tháp).
 var last_damage_source: Node = null
+## Địch thuộc wave nào (WaveManager gán, dùng để biết khi nào từng wave kết thúc).
+var wave_index: int = -1
 
 var _is_dead := false
 var _path_length := 0.0

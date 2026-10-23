@@ -11,9 +11,17 @@ extends Node
 ##   - cộng vàng (died) / trừ mạng (reached_end) qua GameManager
 ##   - sinh địch con khi một địch có spawn_on_death chết
 ##   - biết khi nào wave kết thúc và khi nào thắng.
+##
+## Gọi wave sớm: khi wave hiện tại đã spawn xong (nhưng địch còn trên đường), người chơi
+## được gọi wave tiếp theo và nhận thưởng thêm. Vì vậy số địch còn sống được đếm
+## RIÊNG cho từng wave; mỗi wave báo hoàn thành khi địch của chính nó chết hết.
 
 signal wave_started(wave_number: int)
+## Phát ra khi wave đã spawn hết địch (địch có thể vẫn còn trên đường).
+signal spawning_finished(wave_number: int)
 signal wave_completed(wave_number: int, reward_bonus: int)
+## Phát ra khi người chơi gọi wave sớm, kèm vàng thưởng.
+signal wave_called_early(wave_number: int, bonus: int)
 signal all_waves_completed
 signal enemy_spawned(enemy: Enemy)
 
@@ -25,6 +33,9 @@ signal enemy_spawned(enemy: Enemy)
 
 ## Khoảng cách (pixel trên đường đi) giữa các địch con sinh ra khi địch mẹ chết.
 const DEATH_SPAWN_SPACING := 14.0
+## Thưởng gọi sớm = EARLY_CALL_BASE_BONUS + EARLY_CALL_BONUS_PER_WAVE * số thứ tự wave được gọi.
+const EARLY_CALL_BASE_BONUS := 10
+const EARLY_CALL_BONUS_PER_WAVE := 2
 
 var _enemy_types: Dictionary = {} # StringName id -> EnemyData
 var _waves: Array = []
@@ -32,8 +43,10 @@ var _current_wave_index := -1
 ## Hàng đợi spawn của wave hiện tại. Mỗi phần tử:
 ## { data: EnemyData, delay: float, health_multiplier: float, speed_multiplier: float }
 var _spawn_queue: Array[Dictionary] = []
-var _alive_enemies := 0
-var _is_spawning := false
+## Số địch còn sống của từng wave đang diễn ra: wave_index -> int.
+var _alive_by_wave: Dictionary = {}
+## Wave đang spawn (-1 = không có wave nào đang spawn).
+var _spawning_wave_index := -1
 var _spawn_timer: Timer
 
 
@@ -63,12 +76,53 @@ func has_more_waves() -> bool:
 	return _current_wave_index + 1 < _waves.size()
 
 
+func is_spawning() -> bool:
+	return _spawning_wave_index >= 0
+
+
 func is_wave_in_progress() -> bool:
-	return _is_spawning or _alive_enemies > 0
+	return is_spawning() or not _alive_by_wave.is_empty()
 
 
+func get_alive_enemy_count() -> int:
+	var total := 0
+	for count: int in _alive_by_wave.values():
+		total += count
+	return total
+
+
+## Được bắt đầu wave mới khi không còn wave nào đang spawn
+## (địch của wave trước vẫn còn trên đường thì tính là gọi sớm).
 func can_start_next_wave() -> bool:
-	return GameManager.is_playing() and not is_wave_in_progress() and has_more_waves()
+	return GameManager.is_playing() and not is_spawning() and has_more_waves()
+
+
+## Bắt đầu wave tiếp theo lúc này có phải là gọi sớm không.
+func is_early_call() -> bool:
+	return is_wave_in_progress()
+
+
+## Vàng thưởng nếu gọi sớm wave tiếp theo ngay bây giờ.
+func get_early_call_bonus() -> int:
+	return EARLY_CALL_BASE_BONUS + EARLY_CALL_BONUS_PER_WAVE * (get_current_wave_number() + 1)
+
+
+## Thành phần của một wave (số thứ tự từ 1), gộp theo loại địch:
+## [{ data: EnemyData, count: int }, ...] theo thứ tự xuất hiện.
+func get_wave_composition(wave_number: int) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if wave_number < 1 or wave_number > _waves.size():
+		return result
+	var by_type: Dictionary = {}
+	for group: Dictionary in _waves[wave_number - 1].get("groups", []):
+		var enemy_data := _resolve_enemy(str(group.get("enemy", "")))
+		if enemy_data == null:
+			continue
+		if not by_type.has(enemy_data):
+			by_type[enemy_data] = {"data": enemy_data, "count": 0}
+			result.append(by_type[enemy_data])
+		by_type[enemy_data].count += int(group.get("count", 1))
+	return result
 
 
 func get_enemy_type(id: StringName) -> EnemyData:
@@ -79,10 +133,16 @@ func get_enemy_type(id: StringName) -> EnemyData:
 func start_next_wave() -> bool:
 	if not can_start_next_wave():
 		return false
+	var early := is_early_call()
+	var early_bonus := get_early_call_bonus()
 	_current_wave_index += 1
 	GameManager.set_current_wave(get_current_wave_number())
 	_build_spawn_queue(_waves[_current_wave_index])
-	_is_spawning = true
+	_alive_by_wave[_current_wave_index] = 0
+	_spawning_wave_index = _current_wave_index
+	if early:
+		GameManager.add_gold(early_bonus)
+		wave_called_early.emit(get_current_wave_number(), early_bonus)
 	wave_started.emit(get_current_wave_number())
 	_process_spawn_queue()
 	return true
@@ -178,21 +238,29 @@ func _process_spawn_queue() -> void:
 			next.delay = 0.0 # Lần gọi tiếp theo (khi Timer hết giờ) sẽ spawn ngay.
 			return
 		var entry: Dictionary = _spawn_queue.pop_front()
-		_spawn_enemy(entry.data, entry.health_multiplier, entry.speed_multiplier)
+		_spawn_enemy(entry.data, entry.health_multiplier, entry.speed_multiplier, 0.0, _spawning_wave_index)
 
-	_is_spawning = false
-	_check_wave_completed()
+	if not is_spawning():
+		return
+	var finished_wave := _spawning_wave_index
+	_spawning_wave_index = -1
+	spawning_finished.emit(finished_wave + 1)
+	_check_wave_completed(finished_wave)
 
 
+## wave_index < 0 nghĩa là "wave hiện tại".
 func _spawn_enemy(enemy_data: EnemyData, health_multiplier: float, speed_multiplier: float,
-		start_progress: float = 0.0) -> Enemy:
+		start_progress: float = 0.0, wave_index: int = -1) -> Enemy:
+	if wave_index < 0:
+		wave_index = maxi(_current_wave_index, 0)
 	var enemy := enemy_data.scene.instantiate() as Enemy
 	enemy.setup(enemy_data, health_multiplier, speed_multiplier)
+	enemy.wave_index = wave_index
 	enemy.died.connect(_on_enemy_died)
 	enemy.reached_end.connect(_on_enemy_reached_end)
 	enemy_path.add_child(enemy)
 	enemy.progress = start_progress
-	_alive_enemies += 1
+	_alive_by_wave[wave_index] = _alive_by_wave.get(wave_index, 0) + 1
 	enemy_spawned.emit(enemy)
 	return enemy
 
@@ -203,26 +271,29 @@ func _on_enemy_died(enemy: Enemy, reward: int) -> void:
 	if child_data and child_data.scene:
 		for i in enemy.data.spawn_on_death_count:
 			_spawn_enemy(child_data, enemy.health_multiplier, 1.0,
-					maxf(enemy.progress - i * DEATH_SPAWN_SPACING, 0.0))
+					maxf(enemy.progress - i * DEATH_SPAWN_SPACING, 0.0), enemy.wave_index)
 
-	_alive_enemies -= 1
+	_alive_by_wave[enemy.wave_index] -= 1
 	GameManager.add_gold(reward)
-	_check_wave_completed()
+	_check_wave_completed(enemy.wave_index)
 
 
-func _on_enemy_reached_end(_enemy: Enemy, damage: int) -> void:
-	_alive_enemies -= 1
+func _on_enemy_reached_end(enemy: Enemy, damage: int) -> void:
+	_alive_by_wave[enemy.wave_index] -= 1
 	GameManager.lose_lives(damage)
-	_check_wave_completed()
+	_check_wave_completed(enemy.wave_index)
 
 
-func _check_wave_completed() -> void:
-	if is_wave_in_progress() or not GameManager.is_playing():
+## Wave hoàn thành khi đã spawn xong và địch của chính nó chết / đi hết.
+func _check_wave_completed(wave_index: int) -> void:
+	if not GameManager.is_playing() or not _alive_by_wave.has(wave_index):
 		return
-	var wave_number := get_current_wave_number()
-	var bonus := int(_waves[_current_wave_index].get("reward_bonus", 0))
+	if wave_index == _spawning_wave_index or _alive_by_wave[wave_index] > 0:
+		return
+	_alive_by_wave.erase(wave_index)
+	var bonus := int(_waves[wave_index].get("reward_bonus", 0))
 	GameManager.add_gold(bonus)
-	wave_completed.emit(wave_number, bonus)
-	if not has_more_waves():
+	wave_completed.emit(wave_index + 1, bonus)
+	if not has_more_waves() and not is_wave_in_progress():
 		all_waves_completed.emit()
 		GameManager.win()

@@ -9,6 +9,7 @@ extends Node
 ## Gồm 3 phần, mỗi phần dùng một bản Main mới:
 ##   1. Kiểm tra từng hệ thống (kháng sát thương, làm chậm, đặt tháp, dữ liệu wave,
 ##      nâng cấp / bán, chọn tháp bằng chuột và phím tắt...).
+##      Nhịp trận: tốc độ game, tạm dừng, xem trước wave, gọi wave sớm, hiệu ứng, âm thanh.
 ##   2. Bot đặt tháp theo kế hoạch, nâng cấp khi dư tiền, và phải THẮNG đủ mọi wave.
 ##   3. Không đặt tháp nào thì phải THUA (đảm bảo game không quá dễ).
 
@@ -34,6 +35,7 @@ func _ready() -> void:
 	print("=== SMOKE TEST ===")
 	await _test_systems()
 	await _test_tower_management()
+	await _test_match_flow()
 	await _test_bot_playthrough()
 	await _test_defeat_without_towers()
 
@@ -168,6 +170,69 @@ func _test_tower_management() -> void:
 	await _free_main(main)
 
 
+# --- Phần 1c: nhịp trận (tốc độ, tạm dừng, xem trước, gọi sớm, hiệu ứng) -------
+
+func _test_match_flow() -> void:
+	print("[1c] Nhịp trận")
+	var main := await _new_main()
+	var build: BuildManager = main.build_manager
+	var waves: WaveManager = main.wave_manager
+	var fx: FxManager = main.fx_manager
+	build.cancel_build()
+
+	# Tốc độ game: x1 -> x2 -> x3 -> x1.
+	GameManager.cycle_game_speed()
+	_check(is_equal_approx(Engine.time_scale, 2.0) and main.hud.speed_button.text.begins_with("x2"), "phím tốc độ chuyển sang x2")
+	GameManager.cycle_game_speed()
+	GameManager.cycle_game_speed()
+	_check(is_equal_approx(Engine.time_scale, 1.0), "tốc độ quay vòng về x1")
+
+	# Tạm dừng: Esc (khi không xây / không chọn) mở menu, P đóng menu.
+	_press_key(KEY_ESCAPE)
+	await get_tree().process_frame
+	_check(get_tree().paused and main.pause_menu.visible, "Esc mở menu tạm dừng")
+	_press_key(KEY_P)
+	await get_tree().process_frame
+	_check(not get_tree().paused and not main.pause_menu.visible, "P đóng menu tạm dừng")
+
+	# Xem trước wave.
+	var preview := waves.get_wave_composition(2)
+	_check(preview.size() == 2 and preview[0].count == 10 and preview[1].data.id == &"fast", "xem trước wave 2: 10 Lính thường + 5 Trinh sát")
+	_check(main.hud.next_wave_label.text.contains("Lính thường"), "HUD hiện wave sắp tới")
+
+	# Gọi sớm: dựng vài tháp mạnh để không thua, chạy wave 1 tới khi spawn xong.
+	GameManager.add_gold(2000)
+	for order in [[3, Vector2i(4, 7)], [3, Vector2i(8, 7)], [1, Vector2i(4, 4)], [3, Vector2i(10, 4)], [1, Vector2i(2, 3)]]:
+		build.select_tower(build.available_towers[order[0]]) if build.selected_tower_data != build.available_towers[order[0]] else null
+		build.try_place_tower(order[1])
+	build.cancel_build()
+	var completed: Array[int] = []
+	waves.wave_completed.connect(func(number: int, _bonus: int) -> void: completed.append(number))
+	_check(waves.start_next_wave(), "bắt đầu wave 1")
+	_check(not waves.can_start_next_wave(), "không gọi được wave mới khi đang spawn")
+	var max_effects := 0
+	while waves.is_spawning():
+		max_effects = maxi(max_effects, fx.get_active_effect_count())
+		await get_tree().process_frame
+	_check(waves.is_wave_in_progress() and waves.can_start_next_wave(), "spawn xong mà địch còn => được gọi sớm")
+	var gold_before := GameManager.gold
+	var bonus := waves.get_early_call_bonus()
+	waves.start_next_wave()
+	_check(GameManager.gold == gold_before + bonus and bonus == 14, "gọi sớm wave 2 được thưởng %d vàng" % bonus)
+	var frames := 0
+	while waves.is_wave_in_progress() and frames < MAX_FRAMES_PER_RUN:
+		max_effects = maxi(max_effects, fx.get_active_effect_count())
+		await get_tree().process_frame
+		frames += 1
+	_check(completed == [1, 2], "2 wave chồng nhau đều báo hoàn thành đúng thứ tự (%s)" % [completed])
+	_check(GameManager.is_playing(), "vẫn đang chơi sau 2 wave")
+	_check(max_effects > 0, "có hiệu ứng số sát thương / vụ nổ (%d)" % max_effects)
+
+	# Âm thanh: chưa có file thì im lặng, không lỗi.
+	_check(not AudioManager.play(&"enemy_death"), "thiếu file âm thanh thì bỏ qua")
+	await _free_main(main)
+
+
 # --- Phần 2: bot chơi hết game --------------------------------------------------
 
 func _test_bot_playthrough() -> void:
@@ -200,7 +265,8 @@ func _test_bot_playthrough() -> void:
 				build.upgrade_tower(cheapest)
 				upgrades += 1
 
-		if waves.can_start_next_wave():
+		# Bot chơi "bình thường": chỉ gọi wave mới khi wave trước đã xong hẳn.
+		if waves.can_start_next_wave() and not waves.is_wave_in_progress():
 			if waves.get_current_wave_number() > 0:
 				print("    sau wave %2d: máu=%2d vàng=%4d tháp=%d" \
 						% [waves.get_current_wave_number(), GameManager.lives, GameManager.gold, next_build])
@@ -240,6 +306,7 @@ func _test_defeat_without_towers() -> void:
 
 func _new_main() -> Node:
 	get_tree().paused = false
+	Engine.time_scale = 1.0
 	var main := MAIN_SCENE.instantiate()
 	add_child(main)
 	await get_tree().process_frame
