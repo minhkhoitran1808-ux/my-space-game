@@ -26,7 +26,7 @@ mở project và bấm Play là chơi được ngay.
 ## Nội dung
 
 **4 màn chơi**, màn sau mở khi qua màn trước. Qua màn được 1–3 sao theo số máu còn lại
-(≥ 80% = 3 sao, ≥ 40% = 2 sao). Tiến độ lưu ở `user://save.cfg`.
+(≥ 80% = 3 sao, ≥ 40% = 2 sao). Tiến độ lưu ở `user://save.profile.json` (xem "Meta-progression").
 
 | Màn | Bản đồ | Wave | Vàng đầu |
 |---|---|---|---|
@@ -39,7 +39,7 @@ mở project và bấm Play là chơi được ngay.
 chọn tháp → nâng cấp → dùng kỹ năng), có nút "Bỏ qua". Xem lại được trong Cài đặt.
 
 **Cài đặt** (menu chính hoặc menu tạm dừng): âm lượng, bật/tắt số sát thương, rung màn hình,
-toàn màn hình, và nhóm hiển thị / hỗ trợ (xem bên dưới). Lưu cùng tiến độ trong `user://save.cfg` ("Xoá tiến độ" không xoá cài đặt).
+toàn màn hình, và nhóm hiển thị / hỗ trợ (xem bên dưới). Lưu trong `user://save.cfg`, tách khỏi tiến độ ("Xoá tiến độ" không xoá cài đặt).
 
 **Giới thiệu địch mới:** lần đầu một loại địch xuất hiện (theo file save), một dòng mẹo hiện ở cuối
 màn hình, vd "Địch mới: Thầy lang - Hồi máu cho đồng đội: hạ nó trước!" (`EnemyData.hint`).
@@ -145,11 +145,46 @@ Menu Cài đặt có nhóm "Hiển thị & hỗ trợ", lưu trong `user://save.
 
 Giá trị được giữ ở biến static trong `scripts/core/VisualSettings.gd` (SaveManager cập nhật), nên hiệu ứng chạy mỗi frame đọc thẳng mà không tra file.
 
+## Meta-progression (tiến trình ngoài trận)
+
+Mỗi ván, kể cả khi thua, đều mang về thứ gì đó. Toàn bộ chạy offline: không bán vật phẩm ngẫu nhiên
+bằng tiền thật, không mạnh lên nhờ trả tiền, không trao đổi giữa người chơi (cần server mới làm an toàn).
+
+| Hệ thống | Tóm tắt |
+|---|---|
+| **Thưởng cuối ván** | Xu = `coin_reward` của màn × (wave đã qua / tổng)^1.3, thắng +40%. KN = 20 + 2 × wave. Bảng kết quả đếm xu, chạy thanh KN, lật đồ rơi theo độ hiếm. |
+| **Cấp tài khoản** | Cần 100 + 40 × cấp KN để lên cấp; mỗi cấp thưởng 50 × cấp xu. |
+| **Thành tựu** (19) | Cột mốc / Thử thách / Khám phá / Ẩn. Bấm "Nhận" mới cộng thưởng (xu, danh hiệu, skin độc quyền). Thông báo nổi góc trên phải, xếp hàng, không chặn game. |
+| **Vật phẩm** (16) | 5 độ hiếm (Thường xám, Ít gặp xanh lá, Hiếm xanh dương, Sử thi tím, Huyền thoại cam), mỗi bậc có **khung riêng** (vuông / vuông + vạch / góc vát / lục giác / lục giác + hào quang) và tên chữ. Skin tháp chỉ đổi ngoại hình; đồ tiêu hao (+vàng / +máu, tối đa 2 món mỗi ván); nguyên liệu. Đồ rơi cuối ván: 1 món, thắng +1. Skin trùng tự thành Bụi. |
+| **Cửa hàng** | Hôm nay: 4 món giá cố định, đổi theo ngày, không trả tiền để đổi sớm. Thương nhân: công thức đổi cố định. Ghép đồ: 5 món cùng bậc → 1 món bậc kế. Nâng cấp vĩnh viễn: 300 × 1.15^cấp xu, **giới hạn** +10% vàng đầu, +2 máu. |
+| **Nhiệm vụ ngày** | 3 nhiệm vụ / ngày, giữ tối đa 3 ngày, đổi miễn phí 1 lần / ngày. |
+| **Quà đăng nhập** | Chuỗi 7 ngày, bỏ lỡ ngày thì tạm dừng chứ không reset. |
+| **Codex** | Album địch đã gặp (chỉ số + mẹo) và mọi vật phẩm (chưa có thì hiện bóng tối + nguồn nhận). |
+
+Menu chính là "hub": thẻ hồ sơ (cấp, danh hiệu, KN, Xu, Bụi) và lưới nút các màn hình trên, có chấm đỏ
+khi có thứ để nhận.
+
+**Kiến trúc meta:**
+- `Events` (autoload, chỉ khai báo signal). Trong trận, `MatchTracker` (node con của Main) nghe các hệ thống
+  rồi phát `enemy_killed`, `wave_survived`, `tower_built`, `match_ended`... Hệ thống meta chỉ nghe Events.
+- Autoload: `SaveManager` → `EconomyManager` (xu, bụi; mọi thay đổi ghi lý do) → `StatsManager` (bộ đếm)
+  → `ProgressionManager` (cấp, KN, danh hiệu, thưởng ván) → `InventoryManager` → `ShopManager`
+  → `AchievementManager` → `DailyManager` → `ToastLayer`.
+- **Hồ sơ = JSON** (`user://save.profile.json`), có `save_version` + `_migrate()`; ghi ra `.tmp` rồi đổi tên,
+  giữ `.bak` và tự khôi phục nếu file chính hỏng. Không lưu save bằng Resource (Resource có thể chứa script).
+  Save cũ (tiến độ trong `save.cfg`) được chuyển sang tự động ở lần chạy đầu.
+- Các manager không giữ bản sao: đọc / ghi thẳng `SaveManager.section(...)` rồi `request_save()` (gộp
+  mọi yêu cầu trong một frame). Không ghi đĩa sau mỗi lần hạ địch, chỉ khi hết wave / hết ván / nhận thưởng.
+- Nội dung là Resource `.tres`: `resources/achievements/`, `resources/items/`, `resources/merchant/`,
+  `resources/quests/`. **`id` không được đổi sau khi phát hành** (là khoá trong file save).
+- `tradeable_p2p` luôn false: trao đổi giữa người chơi để dành cho khi có server.
+
 ## Kiến trúc
 
 ```
 tower-defense/
-├── project.godot               # main scene = menu chính; autoload: GameManager, AudioManager, SaveManager
+├── project.godot               # main scene = menu chính; autoload: Events, GameManager, AudioManager,
+│                               # SaveManager + các manager meta (xem "Meta-progression")
 ├── assets/audio/               # 16 âm thanh tổng hợp bằng tools/gen_sfx.py (thay được bằng file của bạn)
 ├── data/waves/level_XX.json    # wave của từng màn
 ├── resources/
@@ -157,6 +192,8 @@ tower-defense/
 │   ├── effects/                # StatusEffectData: làm chậm, thiêu đốt (3 cấp), đóng băng
 │   ├── enemies/                # EnemyData: 7 loại địch
 │   ├── levels/                 # LevelData từng màn + catalog.tres (thứ tự màn)
+│   ├── achievements/, items/,  # Meta: AchievementDef, ItemDef, MerchantRecipe, QuestDef
+│   │   merchant/, quests/
 │   ├── towers/                 # TowerData: 4 tháp × 3 cấp (chuỗi next_level)
 │   └── ui/theme.tres           # theme UI dùng chung
 ├── scenes/
@@ -166,13 +203,15 @@ tower-defense/
 │   ├── enemies/, towers/, projectiles/
 │   └── ui/                     # HUD, TowerInfoPanel, PauseMenu, SettingsMenu
 ├── scripts/
-│   ├── autoload/               # GameManager, AudioManager, SaveManager (tiến độ + cài đặt)
+│   ├── autoload/               # GameManager, AudioManager, SaveManager (hồ sơ JSON + cài đặt),
+│   │                           # Events, Economy/Stats/Progression/Inventory/Shop/Achievement/Daily, ToastLayer
 │   ├── combat/                 # DamageInfo, Combat, Projectile, StatusEffectHandler
 │   ├── managers/               # WaveManager, WaveGenerator, BuildManager, SelectionManager,
 │   │                           # AbilityManager, TutorialManager
 │   ├── fx/FxManager.gd         # số sát thương, vụ nổ, rung màn hình
 │   ├── enemies/                # Enemy + HealthBar + HitFeedback + HealerAura
-│   ├── main/                   # Main, Ground, GameMap
+│   ├── main/                   # Main, Ground, GameMap, MatchTracker
+│   ├── ui/meta/                # MetaScreen + Thành tựu, Kho đồ, Cửa hàng, Nhiệm vụ, Codex, ItemSlot
 │   ├── menus/, ui/, resources/, enemies/, towers/, core/
 └── tests/smoke_test.tscn       # test tự động
 ```
@@ -208,6 +247,9 @@ Main                  ← Main.gd: nạp màn + nối signal giữa các hệ th
 
 **Thêm loại địch:** nhân bản một file trong `resources/enemies/`, đổi `id` (duy nhất) và chỉ số.
 WaveManager tự quét thư mục, trong file wave chỉ cần ghi `"enemy": "<id>"`.
+
+**Thêm thành tựu / vật phẩm / công thức thương nhân / nhiệm vụ:** nhân bản một `.tres` trong
+`resources/achievements/`, `items/`, `merchant/` hoặc `quests/` và đổi `id`. Các manager tự quét thư mục.
 
 **Thêm loại tháp:** nhân bản bộ 3 file cấp của một tháp trong `resources/towers/`, sửa chỉ số
 (trường `next_level` nối cấp 1 → 2 → 3, `cost` của cấp 2/3 là giá nâng cấp), rồi thêm file cấp 1
