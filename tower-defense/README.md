@@ -175,6 +175,21 @@ Lỗi trong file wave (sai id, sai số làn...) được báo rõ trong cửa s
 **Âm thanh:** thả file `.ogg` / `.wav` / `.mp3` đúng tên vào `assets/audio/`
 (danh sách tên trong `assets/audio/README.md`). Không có file thì game im lặng, không lỗi.
 
+## Xuất bản (Windows / Web)
+
+Project đã có sẵn `export_presets.cfg` với 2 cấu hình: **Windows Desktop** và **Web**
+(cả hai đã tự kèm các file `data/*.json` và bỏ thư mục `tests/`). Chỉ cần làm một lần:
+
+1. Trong Godot: **Editor → Manage Export Templates → Download and Install**
+   (tải bộ template đúng phiên bản 4.7.2, khoảng vài trăm MB).
+2. **Project → Export…** → chọn **Windows Desktop** hoặc **Web** → **Export Project**.
+   - Windows: ra file `build/windows/TowerDefense.exe` (đã gộp dữ liệu vào trong file .exe).
+   - Web: ra thư mục `build/web/` (mở `index.html` qua một web server; có thể nén cả thư mục
+     thành .zip để đăng lên itch.io với tuỳ chọn "This file will be played in the browser").
+
+Thư mục `build/` đã nằm trong `.gitignore`. Cấu hình Web tắt đa luồng (`thread_support = false`)
+nên chạy được trên itch.io / GitHub Pages mà không cần cấu hình header đặc biệt.
+
 ## Test tự động
 
 ```
