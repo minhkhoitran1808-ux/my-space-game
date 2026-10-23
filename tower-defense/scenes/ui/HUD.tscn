@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/HUD.gd" id="1_hud"]
 [ext_resource type="PackedScene" path="res://scenes/ui/TowerInfoPanel.tscn" id="2_info_panel"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/SettingsMenu.tscn" id="5_settings"]
 [ext_resource type="Script" path="res://scripts/ui/HudIcon.gd" id="6_icon"]
 [ext_resource type="Theme" path="res://resources/ui/hud_theme.tres" id="7_theme"]
+[ext_resource type="Script" path="res://scripts/ui/BossBar.gd" id="8_boss_bar"]
 
 [node name="HUD" type="Control"]
 layout_mode = 3
@@ -243,6 +244,20 @@ theme_override_font_sizes/font_size = 12
 text = "Click tháp: U nâng cấp · X bán · T mục tiêu
 Space wave · F tốc độ · P dừng · Esc huỷ"
 horizontal_alignment = 2
+
+[node name="BossBar" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -220.0
+offset_top = 68.0
+offset_right = 220.0
+offset_bottom = 104.0
+grow_horizontal = 2
+mouse_filter = 2
+script = ExtResource("8_boss_bar")
 
 [node name="MessageLabel" type="Label" parent="."]
 unique_name_in_owner = true

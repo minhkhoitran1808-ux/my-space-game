@@ -66,6 +66,7 @@ const COLOR_RETRY := Color("#F77F00")
 @onready var pause_menu: PauseMenu = %PauseMenu
 @onready var message_label: Label = %MessageLabel
 @onready var tower_info_panel: TowerInfoPanel = %TowerInfoPanel
+@onready var boss_bar: BossBar = %BossBar
 @onready var settings_menu: SettingsMenu = %SettingsMenu
 @onready var tutorial_panel: PanelContainer = %TutorialPanel
 @onready var tutorial_step_label: Label = %TutorialStepLabel

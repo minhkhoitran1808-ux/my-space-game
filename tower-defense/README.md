@@ -122,6 +122,10 @@ không đụng tới máu, tốc độ hay việc chết / chạm nhà.
 - `scripts/enemies/HitFeedback.gd`: nháy trắng 0.10s (ease-out) + giật (1.08, 0.92) trong 0.12s, neo ở chân.
   Tối đa 3 lần nháy / giây mỗi địch; thiêu đốt (sát thương theo thời gian) không nháy; Boss giật nhẹ hơn.
 - Hiệu năng: cả hai chỉ chạy `_process` trong lúc có hiệu ứng rồi tự tắt; thanh máu chỉ vẽ lại khi máu đổi.
+- Thanh máu Boss trên HUD (`scripts/ui/BossBar.gd`): hiện khi địch `elite` xuất hiện, dùng lại `HealthBar`
+  (440×12px, vệt sát thương, vạch chia), kèm tên, "máu / tối đa" và "×N" nếu nhiều Boss cùng lúc.
+- Tia lửa khi trúng đòn (`FxManager`): 3 vệt nhỏ, 0.22s, màu theo loại sát thương; tối đa 90 tia cùng lúc,
+  thiêu đốt không tạo tia.
 
 ## Cài đặt hiển thị và hỗ trợ người chơi
 

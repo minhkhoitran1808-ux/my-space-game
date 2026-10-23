@@ -83,6 +83,9 @@ func _ready() -> void:
 
 	# Hiệu ứng
 	wave_manager.enemy_spawned.connect(fx_manager.track_enemy)
+	wave_manager.enemy_spawned.connect(func(enemy: Enemy) -> void:
+		if enemy.data.elite:
+			hud.boss_bar.track(enemy))
 	fx_manager.track_projectile_container(build_manager.projectile_container)
 
 	GameManager.state_changed.connect(_on_game_state_changed)

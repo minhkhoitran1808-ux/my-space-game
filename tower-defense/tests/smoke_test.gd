@@ -607,6 +607,33 @@ func _test_enemy_feedback() -> void:
 	enemy.take_damage(DamageInfo.new(99999.0, DamageInfo.Type.TRUE))
 	_check(died[0] and not enemy.is_alive(), "hết máu: vẫn phát died")
 
+	# Thanh máu Boss trên HUD: hiện khi Boss xuất hiện, theo máu, ẩn khi Boss chết.
+	var boss_bar: BossBar = main.hud.boss_bar
+	_check(not boss_bar.visible, "chưa có Boss: ẩn thanh Boss")
+	var real_boss: Enemy = waves._spawn_enemy(waves.get_enemy_type(&"boss"), 1.0, 0.0, 300.0)
+	await get_tree().process_frame
+	_check(boss_bar.visible and boss_bar.get_current_boss() == real_boss, "Boss xuất hiện: hiện thanh Boss trên HUD")
+	real_boss.take_damage(DamageInfo.new(real_boss.max_health * 0.6, DamageInfo.Type.TRUE))
+	_check(is_equal_approx(boss_bar.get_health_bar().ratio, 0.4), "thanh Boss theo máu Boss")
+	real_boss.take_damage(DamageInfo.new(99999.0, DamageInfo.Type.TRUE))
+	for i in 20:
+		await get_tree().process_frame
+	_check(not boss_bar.visible and boss_bar.get_current_boss() == null, "Boss chết: ẩn thanh Boss")
+
+	# Tia lửa: có khi trúng đòn, nhưng có trần dù trúng dồn dập.
+	var fx: FxManager = main.fx_manager
+	var punching_bag := _spawn_test_enemy(path, waves.get_enemy_type(&"armored"))
+	punching_bag.max_health = 1e9
+	punching_bag.health = 1e9
+	fx.track_enemy(punching_bag)
+	var effects_before := fx.get_active_effect_count()
+	punching_bag.take_damage(DamageInfo.new(5.0, DamageInfo.Type.MAGIC))
+	_check(fx.get_active_effect_count() > effects_before, "trúng đòn: có tia lửa")
+	for i in 200:
+		punching_bag.take_damage(DamageInfo.new(5.0, DamageInfo.Type.MAGIC))
+	_check(fx._spark_count <= FxManager.MAX_SPARKS, "tia lửa có trần (%d <= %d)" % [fx._spark_count, FxManager.MAX_SPARKS])
+	punching_bag.queue_free()
+
 	# Cài đặt hiển thị / hỗ trợ (đổi qua chính menu Cài đặt như người chơi).
 	var settings: SettingsMenu = main.hud.settings_menu
 	settings.open()
