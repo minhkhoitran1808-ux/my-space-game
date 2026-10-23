@@ -1,8 +1,10 @@
 extends Control
-## Màn hình tiêu đề: Chơi / Xoá tiến độ / Thoát.
+## Màn hình tiêu đề: Chơi / Cài đặt / Xoá tiến độ / Thoát.
 
 @onready var play_button: Button = %PlayButton
 @onready var reset_button: Button = %ResetButton
+@onready var settings_button: Button = %SettingsButton
+@onready var settings_menu: SettingsMenu = %SettingsMenu
 @onready var quit_button: Button = %QuitButton
 @onready var stars_label: Label = %StarsLabel
 @onready var reset_dialog: ConfirmationDialog = %ResetDialog
@@ -10,6 +12,7 @@ extends Control
 
 func _ready() -> void:
 	play_button.pressed.connect(GameManager.go_to_level_select)
+	settings_button.pressed.connect(settings_menu.open)
 	reset_button.pressed.connect(reset_dialog.popup_centered)
 	reset_dialog.confirmed.connect(SaveManager.reset_progress)
 	quit_button.pressed.connect(get_tree().quit)

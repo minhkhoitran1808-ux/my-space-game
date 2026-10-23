@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/menus/MainMenu.gd" id="1_menu"]
 [ext_resource type="Script" path="res://scripts/menus/MenuBackground.gd" id="2_background"]
+[ext_resource type="PackedScene" path="res://scenes/ui/SettingsMenu.tscn" id="3_settings"]
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -78,6 +79,12 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 22
 text = "Chơi"
 
+[node name="SettingsButton" type="Button" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "Cài đặt"
+
 [node name="ResetButton" type="Button" parent="Center/Panel/Margin/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)
@@ -90,9 +97,15 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 text = "Thoát"
 
+[node name="SettingsMenu" parent="." instance=ExtResource("3_settings")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
 [node name="ResetDialog" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
 title = "Xoá tiến độ"
-dialog_text = "Xoá toàn bộ sao và khoá lại các màn đã mở?"
+dialog_text = "Xoá toàn bộ sao, kỷ lục vô tận và khoá lại các màn đã mở?
+(Cài đặt được giữ nguyên.)"
 ok_button_text = "Xoá"
 cancel_button_text = "Huỷ"

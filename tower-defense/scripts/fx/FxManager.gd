@@ -11,8 +11,10 @@ extends Node2D
 ## Projectile.impacted), không hệ thống nào phải gọi ngược vào nó. Mọi hiệu ứng được vẽ
 ## trong một lần _draw() thay vì tạo node riêng, nên rất nhẹ kể cả khi có hàng trăm địch.
 
-## Bật/tắt số sát thương bay lên.
+## Bật/tắt số sát thương bay lên (đọc từ cài đặt người chơi khi vào trận).
 @export var show_damage_numbers := true
+## Bật/tắt rung màn hình (đọc từ cài đặt người chơi khi vào trận).
+@export var screen_shake := true
 @export var camera: Camera2D
 
 const TEXT_LIFETIME := 0.8
@@ -40,6 +42,20 @@ var _flash_color := Color.TRANSPARENT
 var _flash_time := 0.0
 
 const FLASH_DURATION := 0.5
+
+
+func _ready() -> void:
+	show_damage_numbers = SaveManager.get_setting("damage_numbers")
+	screen_shake = SaveManager.get_setting("screen_shake")
+	SaveManager.settings_changed.connect(_on_settings_changed)
+
+
+func _on_settings_changed(key: String, value: Variant) -> void:
+	match key:
+		"damage_numbers":
+			show_damage_numbers = value
+		"screen_shake":
+			screen_shake = value
 
 
 # --- Đăng ký nguồn sự kiện (Main gọi) ------------------------------------------
@@ -84,7 +100,8 @@ func play_ability(ability: AbilityData, cast_position: Vector2) -> void:
 
 ## Rung màn hình (cộng dồn, tự giảm dần).
 func shake(strength: float) -> void:
-	_shake_strength = minf(_shake_strength + strength, 16.0)
+	if screen_shake:
+		_shake_strength = minf(_shake_strength + strength, 16.0)
 
 
 func get_active_effect_count() -> int:

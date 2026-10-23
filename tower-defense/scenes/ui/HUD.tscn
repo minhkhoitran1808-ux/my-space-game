@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/HUD.gd" id="1_hud"]
 [ext_resource type="PackedScene" path="res://scenes/ui/TowerInfoPanel.tscn" id="2_info_panel"]
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="3_pause_menu"]
 [ext_resource type="Script" path="res://scripts/ui/StarRating.gd" id="4_star_rating"]
+[ext_resource type="PackedScene" path="res://scenes/ui/SettingsMenu.tscn" id="5_settings"]
 
 [node name="HUD" type="Control"]
 layout_mode = 3
@@ -159,11 +160,70 @@ theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 22
 horizontal_alignment = 1
 
+[node name="TutorialPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -330.0
+offset_top = 70.0
+offset_right = 330.0
+offset_bottom = 140.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="TutorialPanel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 10
+
+[node name="HBox" type="HBoxContainer" parent="TutorialPanel/Margin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="VBox" type="VBoxContainer" parent="TutorialPanel/Margin/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="TutorialStepLabel" type="Label" parent="TutorialPanel/Margin/HBox/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 13
+text = "HƯỚNG DẪN 1/6"
+
+[node name="TutorialTextLabel" type="Label" parent="TutorialPanel/Margin/HBox/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(540, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "..."
+autowrap_mode = 3
+
+[node name="TutorialSkipButton" type="Button" parent="TutorialPanel/Margin/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+text = "Bỏ qua"
+
 [node name="TowerInfoPanel" parent="." instance=ExtResource("2_info_panel")]
 unique_name_in_owner = true
 layout_mode = 0
 
 [node name="PauseMenu" parent="." instance=ExtResource("3_pause_menu")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="SettingsMenu" parent="." instance=ExtResource("5_settings")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1

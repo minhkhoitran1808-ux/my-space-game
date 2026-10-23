@@ -15,6 +15,7 @@ signal level_select_pressed
 signal speed_pressed
 signal pause_pressed
 signal ability_pressed(ability: AbilityData)
+signal tutorial_skip_pressed
 
 const MESSAGE_DURATION := 1.6
 
@@ -37,6 +38,11 @@ const MESSAGE_DURATION := 1.6
 @onready var restart_button: Button = %RestartButton
 @onready var level_select_button: Button = %LevelSelectButton
 @onready var tower_info_panel: TowerInfoPanel = %TowerInfoPanel
+@onready var settings_menu: SettingsMenu = %SettingsMenu
+@onready var tutorial_panel: PanelContainer = %TutorialPanel
+@onready var tutorial_step_label: Label = %TutorialStepLabel
+@onready var tutorial_text_label: Label = %TutorialTextLabel
+@onready var tutorial_skip_button: Button = %TutorialSkipButton
 
 var _buttons_by_tower: Dictionary = {} # TowerData -> Button
 var _buttons_by_ability: Dictionary = {} # AbilityData -> Button
@@ -54,6 +60,7 @@ func _ready() -> void:
 	level_select_button.pressed.connect(level_select_pressed.emit)
 	speed_button.pressed.connect(speed_pressed.emit)
 	pause_button.pressed.connect(pause_pressed.emit)
+	tutorial_skip_button.pressed.connect(tutorial_skip_pressed.emit)
 
 	game_over_panel.hide()
 	message_label.modulate.a = 0.0
@@ -180,6 +187,13 @@ func show_game_over(victory: bool, stars: int, lives: int, max_lives: int, has_n
 	result_detail.text = "Còn %d/%d máu" % [lives, max_lives] if victory else "Nhà chính đã thất thủ ở wave %d" % GameManager.current_wave
 	next_level_button.visible = has_next_level
 	game_over_panel.show()
+
+
+## Hiện một bước hướng dẫn (text rỗng = ẩn bảng hướng dẫn).
+func show_tutorial_step(text: String, step_number: int, step_count: int) -> void:
+	tutorial_panel.visible = not text.is_empty()
+	tutorial_step_label.text = "HƯỚNG DẪN %d/%d" % [step_number, step_count]
+	tutorial_text_label.text = text
 
 
 ## Bảng kết thúc chế độ vô tận: wave đạt được và kỷ lục.

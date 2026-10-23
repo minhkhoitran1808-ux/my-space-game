@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/main/Main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/main/Ground.gd" id="2_ground"]
@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://scripts/resources/AbilityData.gd" id="14_ability_data"]
 [ext_resource type="Resource" path="res://resources/abilities/meteor.tres" id="15_meteor"]
 [ext_resource type="Resource" path="res://resources/abilities/freeze.tres" id="16_freeze"]
+[ext_resource type="Script" path="res://scripts/managers/TutorialManager.gd" id="17_tutorial"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -52,6 +53,9 @@ abilities = Array[ExtResource("14_ability_data")]([ExtResource("15_meteor"), Ext
 
 [node name="WaveManager" type="Node" parent="."]
 script = ExtResource("6_wave")
+
+[node name="TutorialManager" type="Node" parent="."]
+script = ExtResource("17_tutorial")
 
 [node name="UI" type="CanvasLayer" parent="."]
 

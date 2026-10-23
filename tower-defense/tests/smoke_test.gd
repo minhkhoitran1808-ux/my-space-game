@@ -11,7 +11,7 @@ extends Node
 ##      nâng cấp / bán, chọn tháp bằng chuột và phím tắt...).
 ##      Nhịp trận: tốc độ game, tạm dừng, xem trước wave, gọi wave sớm, hiệu ứng, âm thanh.
 ##      Luồng màn: menu, chọn màn, khoá / mở màn, lưu sao.
-##      Kỹ năng chủ động, địch bay, chế độ vô tận.
+##      Kỹ năng chủ động, địch bay, chế độ vô tận. Cài đặt, hướng dẫn chơi lần đầu.
 ##   2. Với MỖI màn: bot tự chọn ô có độ phủ đường đi tốt nhất, nâng cấp khi dư tiền,
 ##      và phải THẮNG. Bot không cần biết trước bản đồ nên áp dụng được cho màn mới.
 ##   3. Với MỖI màn: không đặt tháp nào thì phải THUA (đảm bảo game không quá dễ).
@@ -45,6 +45,7 @@ func _ready() -> void:
 	await _test_level_flow()
 	await _test_abilities_and_flying()
 	await _test_endless()
+	await _test_settings_and_tutorial()
 	for level in GameManager.LEVEL_CATALOG.levels:
 		await _test_bot_playthrough(level)
 	for level in GameManager.LEVEL_CATALOG.levels:
@@ -391,6 +392,69 @@ func _test_endless() -> void:
 	await _free_main(main)
 	GameManager.endless_mode = false
 	SaveManager.reset_progress()
+
+
+# --- Phần 1g: cài đặt + hướng dẫn --------------------------------------------
+
+func _test_settings_and_tutorial() -> void:
+	print("[1g] Cài đặt + hướng dẫn")
+	# Cài đặt áp dụng ngay, được lưu, và không bị "Xoá tiến độ" xoá mất.
+	SaveManager.set_setting("master_volume", 0.5)
+	_check(is_equal_approx(AudioServer.get_bus_volume_db(0), linear_to_db(0.5)), "âm lượng áp dụng vào Audio bus")
+	SaveManager.set_setting("damage_numbers", false)
+	SaveManager.reset_progress()
+	SaveManager.save_path = TEST_SAVE_PATH # Đọc lại từ file.
+	_check(is_equal_approx(float(SaveManager.get_setting("master_volume")), 0.5), "cài đặt được lưu và giữ sau Xoá tiến độ")
+
+	var menu := MAIN_MENU_SCENE.instantiate()
+	add_child(menu)
+	await get_tree().process_frame
+	menu.settings_button.pressed.emit()
+	_check(menu.settings_menu.visible and is_equal_approx(menu.settings_menu.volume_slider.value, 50.0), "menu chính mở bảng cài đặt với giá trị đã lưu")
+	_press_key(KEY_ESCAPE)
+	_check(not menu.settings_menu.visible, "Esc đóng bảng cài đặt")
+	menu.queue_free()
+
+	# Hướng dẫn: màn 1, chưa xem lần nào.
+	GameManager.current_level = GameManager.LEVEL_CATALOG.levels[0]
+	var main := await _new_main()
+	var tutorial: TutorialManager = main.tutorial
+	var build: BuildManager = main.build_manager
+	_check(not main.fx_manager.show_damage_numbers, "tắt số sát thương trong cài đặt thì FxManager tắt theo")
+	_check(tutorial.current_step == 0 and main.hud.tutorial_panel.visible, "hướng dẫn bắt đầu ở bước 1")
+	GameManager.add_gold(1000)
+	var tower := build.try_place_tower(Vector2i(4, 7))
+	_check(tutorial.current_step == 1, "xây tháp => bước 2")
+	main.wave_manager.start_next_wave()
+	_check(tutorial.current_step == 2, "gọi wave => bước 3")
+	main.selection_manager.select(tower)
+	_check(tutorial.current_step == 3, "chọn tháp => bước 4")
+	build.upgrade_tower(tower)
+	_check(tutorial.current_step == 4, "nâng cấp => bước 5")
+	main.ability_manager.request(main.ability_manager.abilities[1])
+	_check(tutorial.current_step == 5, "dùng kỹ năng => bước cuối")
+	for i in 60 * 7:
+		await get_tree().process_frame
+	_check(not tutorial.is_active() and not main.hud.tutorial_panel.visible, "bước cuối tự đóng sau vài giây")
+	_check(SaveManager.get_flag(TutorialManager.DONE_FLAG), "đánh dấu đã xem hướng dẫn")
+	await _free_main(main)
+	main = await _new_main()
+	_check(not main.tutorial.is_active(), "lần sau không hiện lại hướng dẫn")
+
+	# Tạm dừng -> Cài đặt -> Esc quay lại menu tạm dừng -> P chơi tiếp.
+	main.set_paused(true)
+	main.pause_menu.settings_requested.emit()
+	_check(main.hud.settings_menu.visible and not main.pause_menu.visible, "mở cài đặt từ menu tạm dừng")
+	_press_key(KEY_ESCAPE)
+	_check(not main.hud.settings_menu.visible and main.pause_menu.visible, "đóng cài đặt thì quay lại menu tạm dừng")
+	_press_key(KEY_P)
+	_check(not get_tree().paused, "P tiếp tục chơi")
+	await _free_main(main)
+
+	SaveManager.set_setting("damage_numbers", true)
+	SaveManager.set_setting("master_volume", 0.8)
+	SaveManager.reset_progress()
+	GameManager.current_level = null
 
 
 # --- Phần 2: bot chơi hết từng màn ----------------------------------------------

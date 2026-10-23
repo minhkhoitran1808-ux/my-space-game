@@ -17,6 +17,7 @@ extends Node2D
 @onready var selection_manager: SelectionManager = $SelectionManager
 @onready var fx_manager: FxManager = $FxManager
 @onready var ability_manager: AbilityManager = $AbilityManager
+@onready var tutorial: TutorialManager = $TutorialManager
 @onready var hud: HUD = $UI/HUD
 @onready var tower_info_panel: TowerInfoPanel = hud.tower_info_panel
 @onready var pause_menu: PauseMenu = hud.pause_menu
@@ -44,6 +45,8 @@ func _ready() -> void:
 	pause_menu.resume_requested.connect(set_paused.bind(false))
 	pause_menu.restart_requested.connect(GameManager.restart_level)
 	pause_menu.level_select_requested.connect(GameManager.go_to_level_select)
+	pause_menu.settings_requested.connect(_open_settings_from_pause)
+	hud.settings_menu.closed.connect(_on_settings_closed)
 
 	# Xây tháp
 	build_manager.build_mode_changed.connect(_on_build_mode_changed)
@@ -78,6 +81,19 @@ func _ready() -> void:
 	fx_manager.track_projectile_container(build_manager.projectile_container)
 
 	GameManager.state_changed.connect(_on_game_state_changed)
+
+	# Hướng dẫn: các hệ thống không biết tới nó, Main chỉ chuyển tiếp sự kiện.
+	tutorial.step_changed.connect(hud.show_tutorial_step)
+	hud.tutorial_skip_pressed.connect(tutorial.skip)
+	build_manager.tower_placed.connect(tutorial.notify.bind(&"tower_placed").unbind(1))
+	build_manager.tower_upgraded.connect(tutorial.notify.bind(&"tower_upgraded").unbind(1))
+	wave_manager.wave_started.connect(tutorial.notify.bind(&"wave_started").unbind(1))
+	ability_manager.ability_cast.connect(tutorial.notify.bind(&"ability_cast").unbind(2))
+	selection_manager.selection_changed.connect(func(tower: Tower) -> void:
+		if tower:
+			tutorial.notify(&"tower_selected"))
+	if not GameManager.endless_mode and GameManager.LEVEL_CATALOG.get_level_index(level) == 0:
+		tutorial.start()
 
 	# Chọn sẵn tháp đầu tiên để vào game là đặt được ngay.
 	if not build_manager.available_towers.is_empty():
@@ -124,6 +140,17 @@ func set_paused(paused: bool) -> void:
 		return
 	get_tree().paused = paused
 	pause_menu.visible = paused
+
+
+## Mở cài đặt từ menu tạm dừng: tạm ẩn menu tạm dừng để hai bảng không chồng lên nhau.
+func _open_settings_from_pause() -> void:
+	pause_menu.hide()
+	hud.settings_menu.open()
+
+
+func _on_settings_closed() -> void:
+	if get_tree().paused and GameManager.is_playing():
+		pause_menu.show()
 
 
 func _start_next_wave() -> void:

@@ -64,6 +64,13 @@ layout_mode = 2
 focus_mode = 0
 text = "Chơi lại"
 
+[node name="SettingsButton" type="Button" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+focus_mode = 0
+text = "Cài đặt"
+
 [node name="LevelSelectButton" type="Button" parent="Center/Panel/Margin/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)

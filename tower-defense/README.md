@@ -21,7 +21,7 @@ mở project và bấm Play là chơi được ngay.
 | `E` | Kỹ năng **Băng giá**: làm chậm 90% toàn bộ địch trong 3 giây |
 | `Space` | Bắt đầu wave, hoặc **gọi sớm** wave sau (thưởng thêm vàng) |
 | `F` | Tốc độ x1 / x2 / x3 |
-| `P` (hoặc `Esc` khi không chọn gì) | Tạm dừng |
+| `P` (hoặc `Esc` khi không chọn gì) | Tạm dừng (trong menu có Cài đặt) |
 
 ## Nội dung
 
@@ -33,6 +33,12 @@ mở project và bấm Play là chơi được ngay.
 | Đồng cỏ | 1 làn quanh co | 10 | 200 |
 | Ngã ba sông | 2 làn nhập làm một | 10 | 260 |
 | Đường rắn | 1 làn rất dài, 2 Boss | 12 | 300 |
+
+**Hướng dẫn chơi lần đầu:** vào màn 1 lần đầu sẽ có hướng dẫn từng bước (xây tháp → gọi wave →
+chọn tháp → nâng cấp → dùng kỹ năng), có nút "Bỏ qua". Xem lại được trong Cài đặt.
+
+**Cài đặt** (menu chính hoặc menu tạm dừng): âm lượng, bật/tắt số sát thương, rung màn hình,
+toàn màn hình. Lưu cùng tiến độ trong `user://save.cfg` ("Xoá tiến độ" không xoá cài đặt).
 
 **Chế độ vô tận:** qua một màn sẽ mở chế độ vô tận của màn đó (nút ở màn chọn màn).
 Wave được sinh tự động và mạnh dần, cứ 10 wave có Boss; kỷ lục wave cao nhất được lưu lại.
@@ -83,11 +89,12 @@ tower-defense/
 │   ├── maps/Map01..03.tscn     # bản đồ: chỉ chứa các Path2D (làn đường)
 │   ├── menus/                  # MainMenu, LevelSelect
 │   ├── enemies/, towers/, projectiles/
-│   └── ui/                     # HUD, TowerInfoPanel, PauseMenu
+│   └── ui/                     # HUD, TowerInfoPanel, PauseMenu, SettingsMenu
 ├── scripts/
-│   ├── autoload/               # GameManager, AudioManager, SaveManager
+│   ├── autoload/               # GameManager, AudioManager, SaveManager (tiến độ + cài đặt)
 │   ├── combat/                 # DamageInfo, Combat, Projectile, StatusEffectHandler
-│   ├── managers/               # WaveManager, WaveGenerator, BuildManager, SelectionManager, AbilityManager
+│   ├── managers/               # WaveManager, WaveGenerator, BuildManager, SelectionManager,
+│   │                           # AbilityManager, TutorialManager
 │   ├── fx/FxManager.gd         # số sát thương, vụ nổ, rung màn hình
 │   ├── main/                   # Main, Ground, GameMap
 │   ├── menus/, ui/, resources/, enemies/, towers/, core/
@@ -108,6 +115,7 @@ Main                  ← Main.gd: nạp màn + nối signal giữa các hệ th
 ├── SelectionManager  ← click chọn tháp, phím U/X/T
 ├── AbilityManager    ← kỹ năng chủ động: hồi chiêu, ngắm vùng, phím Q/E
 ├── WaveManager       ← đọc wave (hoặc sinh wave vô tận), spawn địch, đếm địch theo từng wave
+├── TutorialManager   ← hướng dẫn lần đầu (Main chuyển tiếp sự kiện cho nó)
 └── UI/HUD            ← thanh trên/dưới, bảng thông tin tháp, menu tạm dừng, bảng kết thúc
 ```
 

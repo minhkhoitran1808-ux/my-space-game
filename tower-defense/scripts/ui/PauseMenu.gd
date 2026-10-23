@@ -8,19 +8,23 @@ extends Control
 signal resume_requested
 signal restart_requested
 signal level_select_requested
+signal settings_requested
 
 @onready var resume_button: Button = %ResumeButton
 @onready var restart_button: Button = %RestartButton
 @onready var level_select_button: Button = %LevelSelectButton
+@onready var settings_button: Button = %SettingsButton
 
 
 func _ready() -> void:
 	resume_button.pressed.connect(resume_requested.emit)
 	restart_button.pressed.connect(restart_requested.emit)
 	level_select_button.pressed.connect(level_select_requested.emit)
+	settings_button.pressed.connect(settings_requested.emit)
 	hide()
 
 
+## SettingsMenu nằm sau PauseMenu trong HUD nên khi nó đang mở, nó nhận Esc trước.
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
