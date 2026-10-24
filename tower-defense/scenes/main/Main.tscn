@@ -1,0 +1,69 @@
+[gd_scene load_steps=20 format=3]
+
+[ext_resource type="Script" path="res://scripts/main/Main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/main/Ground.gd" id="2_ground"]
+[ext_resource type="Script" path="res://scripts/managers/BuildManager.gd" id="3_build"]
+[ext_resource type="Script" path="res://scripts/resources/TowerData.gd" id="4_tower_data"]
+[ext_resource type="Resource" path="res://resources/towers/basic_tower.tres" id="5_basic_tower"]
+[ext_resource type="Script" path="res://scripts/managers/WaveManager.gd" id="6_wave"]
+[ext_resource type="PackedScene" path="res://scenes/ui/HUD.tscn" id="7_hud"]
+[ext_resource type="Resource" path="res://resources/towers/cannon_tower.tres" id="8_cannon_tower"]
+[ext_resource type="Resource" path="res://resources/towers/frost_tower.tres" id="9_frost_tower"]
+[ext_resource type="Resource" path="res://resources/towers/mage_tower.tres" id="10_mage_tower"]
+[ext_resource type="Resource" path="res://resources/towers/banner_tower.tres" id="21_banner_tower"]
+[ext_resource type="Resource" path="res://resources/towers/mine_tower.tres" id="22_mine_tower"]
+[ext_resource type="Script" path="res://scripts/managers/SelectionManager.gd" id="11_selection"]
+[ext_resource type="Script" path="res://scripts/fx/FxManager.gd" id="12_fx"]
+[ext_resource type="Script" path="res://scripts/managers/AbilityManager.gd" id="13_ability"]
+[ext_resource type="Script" path="res://scripts/resources/AbilityData.gd" id="14_ability_data"]
+[ext_resource type="Resource" path="res://resources/abilities/meteor.tres" id="15_meteor"]
+[ext_resource type="Resource" path="res://resources/abilities/freeze.tres" id="16_freeze"]
+[ext_resource type="Script" path="res://scripts/managers/TutorialManager.gd" id="17_tutorial"]
+[ext_resource type="Script" path="res://scripts/fx/TowerRangeDisplay.gd" id="18_range_display"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+anchor_mode = 0
+
+[node name="Ground" type="Node2D" parent="."]
+script = ExtResource("2_ground")
+
+[node name="Towers" type="Node2D" parent="."]
+
+[node name="TowerRangeDisplay" type="Node2D" parent="."]
+script = ExtResource("18_range_display")
+
+[node name="Map" type="Node2D" parent="."]
+
+[node name="Projectiles" type="Node2D" parent="."]
+
+[node name="FxManager" type="Node2D" parent="." node_paths=PackedStringArray("camera")]
+z_index = 11
+script = ExtResource("12_fx")
+camera = NodePath("../Camera2D")
+
+[node name="BuildManager" type="Node2D" parent="." node_paths=PackedStringArray("tower_container", "projectile_container")]
+script = ExtResource("3_build")
+tower_container = NodePath("../Towers")
+projectile_container = NodePath("../Projectiles")
+available_towers = Array[ExtResource("4_tower_data")]([ExtResource("5_basic_tower"), ExtResource("8_cannon_tower"), ExtResource("9_frost_tower"), ExtResource("10_mage_tower"), ExtResource("21_banner_tower"), ExtResource("22_mine_tower")])
+
+[node name="SelectionManager" type="Node" parent="." node_paths=PackedStringArray("build_manager")]
+script = ExtResource("11_selection")
+build_manager = NodePath("../BuildManager")
+
+[node name="AbilityManager" type="Node2D" parent="."]
+script = ExtResource("13_ability")
+abilities = Array[ExtResource("14_ability_data")]([ExtResource("15_meteor"), ExtResource("16_freeze")])
+
+[node name="WaveManager" type="Node" parent="."]
+script = ExtResource("6_wave")
+
+[node name="TutorialManager" type="Node" parent="."]
+script = ExtResource("17_tutorial")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="HUD" parent="UI" instance=ExtResource("7_hud")]

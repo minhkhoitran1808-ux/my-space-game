@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AchievementDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/AchievementDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"endless_30"
+title = "Bất tận"
+description = "Trụ tới wave 30 ở chế độ vô tận."
+category = 1
+order = 130
+stat_key = &"endless_best_wave"
+target = 30
+reward_coins = 600

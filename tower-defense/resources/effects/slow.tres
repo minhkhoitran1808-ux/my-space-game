@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="StatusEffectData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/StatusEffectData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"slow"
+display_name = "Làm chậm"
+duration = 1.5
+slow_amount = 0.4
+tint = Color(0.45, 0.8, 1, 1)

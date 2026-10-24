@@ -1,0 +1,86 @@
+class_name EnemyData
+extends Resource
+## Dữ liệu cấu hình cho một loại địch.
+##
+## Muốn thêm loại địch mới: tạo file .tres mới trong res://resources/enemies/
+## (chuột phải > New Resource > EnemyData) rồi chỉnh chỉ số trong Inspector.
+## WaveManager tự quét thư mục này, nên trong file wave chỉ cần ghi "id".
+
+## Hình dạng vẽ tạm khi chưa có sprite.
+enum Shape { CIRCLE, SQUARE, TRIANGLE, DIAMOND, BAT, CROSS, BLOB }
+
+## Mã định danh, dùng trong các file data/waves/*.json. Phải duy nhất.
+@export var id: StringName = &"basic"
+@export var display_name: String = "Địch"
+## Mẹo ngắn hiện ra khi loại địch này xuất hiện LẦN ĐẦU (để trống = không giới thiệu).
+@export var hint: String = ""
+
+@export_group("Chỉ số")
+@export var max_health: float = 60.0
+## Tốc độ di chuyển (pixel / giây).
+@export var speed: float = 90.0
+## Vàng nhận được khi tiêu diệt.
+@export var reward: int = 8
+## Số mạng nhà chính bị trừ khi địch đi tới cuối đường.
+@export var damage_to_base: int = 1
+
+@export_group("Di chuyển")
+## Địch bay: đi theo làn trên không (thẳng tới nhà chính) và chỉ trúng đòn của
+## tháp / kỹ năng bắn được mục tiêu trên không.
+@export var is_flying: bool = false
+
+@export_group("Kháng")
+## Giảm sát thương Vật lý (0.6 = giảm 60%).
+@export_range(0.0, 0.9, 0.05) var armor: float = 0.0
+## Giảm sát thương Phép.
+@export_range(0.0, 0.9, 0.05) var magic_resist: float = 0.0
+## Giảm hiệu quả làm chậm (0.5 = chỉ chịu một nửa).
+@export_range(0.0, 1.0, 0.05) var slow_resistance: float = 0.0
+## Mức làm chậm tối đa áp được (trước khi tính slow_resistance). 1 = không giới hạn.
+@export_range(0.0, 1.0, 0.05) var max_slow: float = 1.0
+
+@export_group("Hồi máu")
+## Bán kính hồi máu cho địch xung quanh (0 = không hồi; > 0 = địch "Thầy lang", xem HealerAura).
+@export var heal_radius: float = 0.0
+## Lượng máu hồi mỗi lần cho mỗi địch (nhân theo hệ số máu của wave).
+@export var heal_amount: float = 0.0
+## Khoảng cách giữa hai lần hồi (giây).
+@export var heal_interval: float = 2.5
+
+@export_group("Gọi quân")
+## Cứ summon_interval giây gọi summon_count con summon_enemy tại chỗ (0 = không gọi).
+## Quân được gọi không cho vàng.
+@export var summon_enemy: EnemyData
+@export var summon_count: int = 0
+@export var summon_interval: float = 0.0
+
+@export_group("Khi chết")
+## Loại địch sinh ra khi con này chết (để trống nếu không có).
+@export var spawn_on_death: EnemyData
+@export var spawn_on_death_count: int = 0
+
+@export_group("Hiển thị")
+@export var color: Color = Color(0.85, 0.25, 0.25)
+@export var radius: float = 14.0
+@export var shape: Shape = Shape.CIRCLE
+## Địch tinh nhuệ / boss: thanh máu luôn hiện (kể cả đầy máu), to hơn, có vạch chia 25%,
+## và giật nhẹ hơn khi trúng đòn.
+@export var elite: bool = false
+
+@export_group("Scene")
+## Scene sẽ được instantiate khi spawn (gốc phải là Enemy / PathFollow2D).
+@export var scene: PackedScene
+## Tuỳ chọn: hình 3D thay cho hình khối mặc định (gốc Node3D, đứng ở y = 0, mặt nhìn về -Z,
+## cao cỡ radius / 16 mét). Chỉ là hình: chỉ số và kích thước va chạm vẫn lấy từ resource này.
+@export var visual_scene: PackedScene
+
+
+## Tỉ lệ sát thương bị giảm theo loại sát thương (armor_pen: phần giáp vật lý bị bỏ qua).
+func get_resistance(damage_type: DamageInfo.Type, armor_pen: float = 0.0) -> float:
+	match damage_type:
+		DamageInfo.Type.PHYSICAL:
+			return armor * (1.0 - armor_pen)
+		DamageInfo.Type.MAGIC:
+			return magic_resist
+		_:
+			return 0.0

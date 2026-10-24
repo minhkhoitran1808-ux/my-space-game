@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="LevelData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/LevelData.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/maps/Map03.tscn" id="2_map"]
+[ext_resource type="Resource" path="res://resources/towers/banner_tower.tres" id="3_unlock"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"level_03"
+display_name = "Đường rắn"
+description = "Con đường dài uốn lượn, địch đông và trâu hơn. Boss xuất hiện hai lần."
+map_scene = ExtResource("2_map")
+waves_file = "res://data/waves/level_03.json"
+starting_gold = 300
+starting_lives = 20
+coin_reward = 250
+unlocks_tower = ExtResource("3_unlock")

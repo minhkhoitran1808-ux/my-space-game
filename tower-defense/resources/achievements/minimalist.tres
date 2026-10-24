@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AchievementDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/AchievementDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"minimalist"
+title = "Tối giản"
+description = "Thắng một màn mà chỉ xây tối đa 5 tháp."
+category = 1
+order = 90
+target = 1
+challenge = &"minimalist"
+reward_coins = 200
+reward_title = "Tối Giản"

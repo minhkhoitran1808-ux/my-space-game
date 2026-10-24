@@ -1,0 +1,50 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Tower Defense"
+config/description="Tower Defense 2D - xây tháp, nâng cấp và giữ vững nhà chính"
+config/version="1.0.0"
+run/main_scene="res://scenes/menus/MainMenu.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+boot_splash/bg_color=Color(0.1, 0.11, 0.13, 1)
+config/icon="res://icon.svg"
+
+[autoload]
+
+Events="*res://scripts/autoload/Events.gd"
+GameManager="*res://scripts/autoload/GameManager.gd"
+AudioManager="*res://scripts/autoload/AudioManager.gd"
+SaveManager="*res://scripts/autoload/SaveManager.gd"
+EconomyManager="*res://scripts/autoload/EconomyManager.gd"
+StatsManager="*res://scripts/autoload/StatsManager.gd"
+ProgressionManager="*res://scripts/autoload/ProgressionManager.gd"
+InventoryManager="*res://scripts/autoload/InventoryManager.gd"
+ShopManager="*res://scripts/autoload/ShopManager.gd"
+AchievementManager="*res://scripts/autoload/AchievementManager.gd"
+DailyManager="*res://scripts/autoload/DailyManager.gd"
+ToastLayer="*res://scripts/autoload/ToastLayer.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[gui]
+
+theme/custom="res://resources/ui/theme.tres"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

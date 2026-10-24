@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AchievementDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/AchievementDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"builder_200"
+title = "Kiến trúc sư"
+description = "Xây tổng cộng 200 tháp."
+category = 0
+order = 70
+stat_key = &"towers_built"
+target = 200
+reward_coins = 300

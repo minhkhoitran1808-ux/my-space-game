@@ -1,0 +1,40 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/main/GameMap.gd" id="1_map"]
+
+[sub_resource type="Curve2D" id="Curve2D_lane0"]
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, -40, 320, 0, 0, 0, 0, 800, 320, 0, 0, 0, 0, 800, 128, 0, 0, 0, 0, 480, 128, 0, 0, 0, 0, 480, 544, 0, 0, 0, 0, 1248, 544),
+"tilts": PackedFloat32Array(0, 0, 0, 0, 0, 0)
+}
+point_count = 6
+
+[node name="Map07" type="Node2D"]
+script = ExtResource("1_map")
+
+[node name="Paths" type="Node2D" parent="."]
+
+[node name="Lane1" type="Path2D" parent="Paths"]
+curve = SubResource("Curve2D_lane0")
+
+[node name="Terrain" type="Node2D" parent="."]
+
+[node name="Mud1" type="Polygon2D" parent="Terrain"]
+color = Color(0.4, 0.6, 0.3, 0.6)
+polygon = PackedVector2Array(424, 264, 536, 264, 536, 376, 424, 376)
+metadata/kind = "mud"
+
+[node name="Mud2" type="Polygon2D" parent="Terrain"]
+color = Color(0.4, 0.6, 0.3, 0.6)
+polygon = PackedVector2Array(880, 500, 1120, 500, 1120, 588, 880, 588)
+metadata/kind = "mud"
+
+[node name="Hill3" type="Polygon2D" parent="Terrain"]
+color = Color(0.4, 0.6, 0.3, 0.6)
+polygon = PackedVector2Array(576, 192, 704, 192, 704, 256, 576, 256)
+metadata/kind = "hill"
+
+[node name="Rock1" type="Polygon2D" parent="Terrain"]
+color = Color(0.5, 0.5, 0.45, 0.6)
+polygon = PackedVector2Array(704, 192, 768, 192, 768, 256, 704, 256)
+metadata/kind = "rock"

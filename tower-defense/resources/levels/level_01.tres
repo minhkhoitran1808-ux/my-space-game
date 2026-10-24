@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="LevelData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/LevelData.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/maps/Map01.tscn" id="2_map"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"level_01"
+display_name = "Đồng cỏ"
+description = "Con đường quanh co qua đồng cỏ. Làm quen với các loại tháp."
+map_scene = ExtResource("2_map")
+waves_file = "res://data/waves/level_01.json"
+starting_gold = 200
+starting_lives = 20
+coin_reward = 150

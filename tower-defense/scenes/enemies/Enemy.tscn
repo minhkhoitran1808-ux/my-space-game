@@ -1,0 +1,19 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/Enemy.gd" id="1_enemy"]
+[ext_resource type="Script" path="res://scripts/combat/StatusEffectHandler.gd" id="2_status"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/HealthBar.tscn" id="3_health_bar"]
+[ext_resource type="Script" path="res://scripts/enemies/HitFeedback.gd" id="4_hit_feedback"]
+
+[node name="Enemy" type="PathFollow2D"]
+rotates = false
+loop = false
+script = ExtResource("1_enemy")
+
+[node name="StatusEffects" type="Node" parent="."]
+script = ExtResource("2_status")
+
+[node name="HealthBar" parent="." instance=ExtResource("3_health_bar")]
+
+[node name="HitFeedback" type="Node" parent="."]
+script = ExtResource("4_hit_feedback")

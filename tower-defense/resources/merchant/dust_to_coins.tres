@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MerchantRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/MerchantRecipe.gd" id="1_recipe"]
+
+[resource]
+script = ExtResource("1_recipe")
+id = &"dust_to_coins"
+title = "Bán Bụi lấy Xu"
+give = {"dust": 100}
+receive = {"coins": 120}
+order = 40

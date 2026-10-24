@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AchievementDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/AchievementDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"boss_fast"
+title = "Đồ tể"
+description = "Hạ Boss trong vòng 10 giây kể từ khi nó xuất hiện."
+category = 1
+order = 120
+target = 1
+challenge = &"boss_fast"
+reward_coins = 300

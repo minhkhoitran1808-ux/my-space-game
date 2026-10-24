@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/EnemyData.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/Enemy.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"wisp"
+display_name = "Hồn ma"
+hint = "Kháng phép 60%: dùng Cung, Pháo"
+max_health = 80.0
+speed = 105.0
+reward = 8
+damage_to_base = 1
+armor = 0.0
+magic_resist = 0.6
+color = Color(0.7, 0.85, 1, 1)
+radius = 13.0
+shape = 6
+scene = ExtResource("2_scene")

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/ItemDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"gold_pouch_small"
+display_name = "Túi vàng nhỏ"
+description = "Dùng ở ván sau: thêm vàng đầu ván."
+kind = 1
+rarity = 0
+effect = &"bonus_gold_pct"
+effect_value = 10.0

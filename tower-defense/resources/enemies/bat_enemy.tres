@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/EnemyData.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/Enemy.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"bat"
+display_name = "Dơi lửa"
+hint = "Bay thẳng tới nhà, Pháo không bắn được"
+max_health = 40.0
+speed = 105.0
+reward = 7
+damage_to_base = 1
+is_flying = true
+armor = 0.0
+magic_resist = 0.0
+slow_resistance = 0.0
+color = Color(1, 0.45, 0.2, 1)
+radius = 12.0
+shape = 4
+scene = ExtResource("2_scene")

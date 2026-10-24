@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/AbilityData.gd" id="1_data"]
+[ext_resource type="Resource" path="res://resources/effects/burn_2.tres" id="2_burn"]
+[ext_resource type="Script" path="res://scripts/resources/StatusEffectData.gd" id="3_effect_script"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"meteor"
+display_name = "Thiên thạch"
+description = "Chọn một vùng: gây 120 sát thương chuẩn (bỏ qua giáp) và thiêu đốt mọi địch trong vùng."
+hotkey = 81
+cooldown = 35.0
+targeted = true
+radius = 96.0
+damage = 120.0
+damage_type = 2
+effects = Array[ExtResource("3_effect_script")]([ExtResource("2_burn")])
+color = Color(1, 0.5, 0.2, 1)

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/EnemyData.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/Enemy.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"splitling"
+display_name = "Mảnh tách"
+max_health = 20.0
+speed = 120.0
+reward = 0
+damage_to_base = 1
+color = Color(0.55, 0.75, 0.3, 1)
+radius = 8.0
+shape = 0
+scene = ExtResource("2_scene")

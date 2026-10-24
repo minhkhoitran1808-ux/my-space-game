@@ -1,0 +1,66 @@
+{
+	"waves": [
+		{
+			"groups": [
+				{ "enemy": "basic", "count": 14, "interval": 0.7, "health_multiplier": 2.51 }
+			]
+		},
+		{
+			"groups": [
+				{ "enemy": "fast", "count": 12, "interval": 0.45, "health_multiplier": 2.51 },
+				{ "enemy": "bat", "count": 6, "interval": 0.8, "delay": 2.0, "health_multiplier": 2.51 }
+			]
+		},
+		{
+			"groups": [
+				{ "enemy": "bat", "count": 12, "interval": 0.6, "health_multiplier": 2.72 },
+				{ "enemy": "basic", "count": 10, "interval": 0.6, "delay": 2.0, "health_multiplier": 2.93 }
+			]
+		},
+		{
+			"groups": [
+				{ "enemy": "armored", "count": 10, "interval": 0.9, "health_multiplier": 2.93 },
+				{ "enemy": "swarm", "count": 30, "interval": 0.15, "delay": 2.0, "health_multiplier": 2.93 }
+			]
+		},
+		{
+			"groups": [
+				{ "enemy": "bat", "count": 16, "interval": 0.5, "health_multiplier": 3.34 },
+				{ "enemy": "healer", "count": 2, "interval": 1.5, "delay": 2.0, "health_multiplier": 3.13 }
+			]
+		},
+		{
+			"test": "Trinh sát",
+			"groups": [
+				{ "enemy": "fast", "count": 28, "interval": 0.25, "health_multiplier": 3.97 },
+				{ "enemy": "bat", "count": 10, "interval": 0.5, "delay": 2.0, "health_multiplier": 3.97 }
+			]
+		},
+		{
+			"groups": [
+				{ "enemy": "basic", "count": 20, "interval": 0.5, "health_multiplier": 3.34 }
+			]
+		},
+		{
+			"test": "Đàn dơi",
+			"groups": [
+				{ "enemy": "bat", "count": 30, "interval": 0.35, "health_multiplier": 4.39 }
+			]
+		},
+		{
+			"test": "Giáp nặng",
+			"groups": [
+				{ "enemy": "armored", "count": 16, "interval": 0.6, "health_multiplier": 4.6 },
+				{ "enemy": "bat", "count": 14, "interval": 0.5, "delay": 2.0, "health_multiplier": 4.81 },
+				{ "enemy": "healer", "count": 3, "interval": 1.2, "delay": 3.0, "health_multiplier": 4.6 }
+			]
+		},
+		{
+			"reward_bonus": 0,
+			"groups": [
+				{ "enemy": "boss", "count": 1, "health_multiplier": 2.3 },
+				{ "enemy": "bat", "count": 20, "interval": 0.4, "delay": 3.0, "health_multiplier": 5.02 }
+			]
+		}
+	]
+}

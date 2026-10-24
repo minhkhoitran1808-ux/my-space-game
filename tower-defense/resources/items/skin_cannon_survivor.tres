@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/ItemDef.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"skin_cannon_survivor"
+display_name = "Pháo Kẻ Sống Sót"
+description = "Sơn chiến của người thắng khi chỉ còn 1 máu."
+kind = 0
+rarity = 3
+source_hint = "Thành tựu ẩn \"Sát nút\""
+droppable = false
+tower_id = &"cannon"
+skin_color = Color(0.239, 0.239, 0.239, 1)
+skin_accent = Color(0.902, 0.224, 0.275, 1)
+pattern = 2
