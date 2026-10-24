@@ -82,6 +82,9 @@ enum AttackType {
 @export_group("Scene")
 ## Scene sẽ được instantiate khi đặt tháp (gốc phải là Tower).
 @export var scene: PackedScene
+## Tuỳ chọn: hình 3D thay cho hình khối mặc định (gốc Node3D, đứng trên đế cao 0.3 m).
+## Chỉ là hình: tầm bắn và chỉ số vẫn lấy từ resource này.
+@export var visual_scene: PackedScene
 
 
 func can_upgrade() -> bool:

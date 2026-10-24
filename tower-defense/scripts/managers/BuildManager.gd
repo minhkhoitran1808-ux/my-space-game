@@ -169,6 +169,9 @@ func _is_on_path(world_pos: Vector2) -> bool:
 func _unhandled_input(event: InputEvent) -> void:
 	if not GameManager.is_playing():
 		return
+	# Đang mở menu tạm dừng: không ra lệnh (tạm dừng chiến thuật thì vẫn được).
+	if get_tree().paused and not GameManager.tactical_pause:
+		return
 
 	if event is InputEventMouseMotion:
 		var cell := event_to_cell(event)
@@ -196,6 +199,17 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 ## Đổi vị trí chuột của event sang ô lưới (tính cả camera / stretch của viewport).
+## Toạ độ cục bộ của node này là toạ độ mô phỏng: ở chế độ 3D transform của nó là phép chiếu
+## mặt đất -> màn hình (GameView), nên đây cũng là raycast từ chuột xuống mặt đất.
 func event_to_cell(event: InputEventMouse) -> Vector2i:
 	var local_event := make_input_local(event) as InputEventMouse
-	return GameConfig.world_to_cell(to_global(local_event.position))
+	return GameConfig.world_to_cell(local_event.position)
+
+
+## Tháp dưới con trỏ. 3D: ưu tiên tháp có thân che chỗ click (tháp cao, đỉnh nằm trên ô phía sau).
+func tower_at_event(event: InputEventMouse) -> Tower:
+	if GameView.is_3d() and GameView.tower_picker.is_valid():
+		var picked: Tower = GameView.tower_picker.call(event.position)
+		if picked:
+			return picked
+	return get_tower_at(event_to_cell(event))

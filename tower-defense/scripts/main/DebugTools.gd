@@ -6,6 +6,7 @@ extends Node2D
 ## Ctrl+1: +1000 vàng          Ctrl+4: lớp phủ (tầm bắn, DPS 5 giây, máu địch)
 ## Ctrl+2: kết thúc wave       Ctrl+5: tốc độ x8 (bấm lại về x1)
 ## Ctrl+3: bất tử (bật / tắt)  Ctrl+6: sinh lần lượt từng loại địch
+## Lớp phủ vẽ đường kẻ từ mỗi tháp tới mục tiêu nó đang nhắm.
 ## Dùng Ctrl+số để không đụng phím 1–6 (chọn tháp) và F (đổi tốc độ).
 
 const GOLD_STEP := 1000
@@ -92,15 +93,15 @@ func _draw() -> void:
 			draw_arc(at, tower.get_range(), 0.0, TAU, 64, Color(1, 1, 1, 0.35), 1.5)
 		elif tower.data.aura_radius > 0.0:
 			draw_arc(at, tower.data.aura_radius, 0.0, TAU, 64, Color(1, 0.85, 0.3, 0.45), 1.5)
-		draw_string_outline(font, at + Vector2(-28, -36), "DPS %d" % roundi(get_dps(tower)),
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 13, 4, Color.BLACK)
-		draw_string(font, at + Vector2(-28, -36), "DPS %d" % roundi(get_dps(tower)),
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1, 0.95, 0.5))
+		# Đường kẻ tới mục tiêu hiện tại: kiểm tra chế độ nhắm (Đầu đoàn / Gần nhất...) bằng mắt.
+		if tower.target and is_instance_valid(tower.target):
+			draw_line(at, tower.target.global_position, Color(1, 0.4, 0.4, 0.8), 2.0)
+		GameView.draw_text(self, font, at + Vector2(-28, -36), "DPS %d" % roundi(get_dps(tower)), 13,
+				Color(1, 0.95, 0.5), Color.BLACK, 4)
 	for enemy: Enemy in get_tree().get_nodes_in_group(Enemy.GROUP):
 		var text := "%d" % ceili(enemy.health)
 		var at := enemy.global_position + Vector2(-12, enemy.data.radius + 16)
-		draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 4, Color.BLACK)
-		draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
+		GameView.draw_text(self, font, at, text, 12, Color.WHITE, Color.BLACK, 4)
 
 
 func _notify(text: String) -> void:

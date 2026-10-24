@@ -61,7 +61,7 @@ func show_tower(p_tower: Tower) -> void:
 		return
 	_refresh()
 	show()
-	_place_away_from(tower.global_position)
+	_place_away_from(GameView.sim_to_screen(tower.global_position))
 
 
 func _process(_delta: float) -> void:

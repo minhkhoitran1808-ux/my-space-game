@@ -70,6 +70,9 @@ enum Shape { CIRCLE, SQUARE, TRIANGLE, DIAMOND, BAT, CROSS, BLOB }
 @export_group("Scene")
 ## Scene sẽ được instantiate khi spawn (gốc phải là Enemy / PathFollow2D).
 @export var scene: PackedScene
+## Tuỳ chọn: hình 3D thay cho hình khối mặc định (gốc Node3D, đứng ở y = 0, mặt nhìn về -Z,
+## cao cỡ radius / 16 mét). Chỉ là hình: chỉ số và kích thước va chạm vẫn lấy từ resource này.
+@export var visual_scene: PackedScene
 
 
 ## Tỉ lệ sát thương bị giảm theo loại sát thương (armor_pen: phần giáp vật lý bị bỏ qua).

@@ -17,6 +17,9 @@ signal next_level_pressed
 signal level_select_pressed
 signal speed_pressed
 signal pause_pressed
+## Đang tạm dừng chiến thuật: P = chơi tiếp, Esc = mở menu tạm dừng.
+signal tactical_resume_requested
+signal tactical_menu_requested
 signal ability_pressed(ability: AbilityData)
 signal tutorial_skip_pressed
 
@@ -76,6 +79,9 @@ var reward_summary: RewardSummary
 @onready var tutorial_skip_button: Button = %TutorialSkipButton
 
 var _buttons_by_tower: Dictionary = {} # TowerData -> Button
+var _tactical_banner: PanelContainer
+## Esc khi đang tạm dừng chiến thuật chỉ mở menu nếu không còn việc khác để huỷ (Main gán).
+var tactical_escape_allowed: Callable = func() -> bool: return true
 var _buttons_by_ability: Dictionary = {} # AbilityData -> Button
 var _message_tween: Tween
 var _gold_tween: Tween
@@ -239,6 +245,39 @@ func update_speed(speed: float) -> void:
 
 
 ## Hiện thông báo ngắn ở cuối màn hình rồi mờ dần.
+## Dải báo "đang tạm dừng chiến thuật" ngay dưới thanh trên.
+func show_tactical_pause(on: bool) -> void:
+	if _tactical_banner == null:
+		_tactical_banner = PanelContainer.new()
+		_tactical_banner.name = "TacticalPauseBanner"
+		_tactical_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_tactical_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+		var label := Label.new()
+		label.text = "ĐANG TẠM DỪNG  ·  vẫn xây / bán / nâng cấp / đổi cách nhắm được  ·  [P] chơi tiếp  ·  [Esc] menu"
+		label.add_theme_font_size_override("font_size", 15)
+		label.add_theme_color_override("font_color", Color("#FFD54F"))
+		_tactical_banner.add_child(label)
+		add_child(_tactical_banner)
+		_tactical_banner.position = Vector2((get_viewport_rect().size.x - _tactical_banner.get_combined_minimum_size().x) * 0.5, 72.0)
+	_tactical_banner.visible = on
+	pause_button.text = "▶ [P]" if on else "II [P]"
+
+
+func is_tactical_banner_shown() -> bool:
+	return _tactical_banner != null and _tactical_banner.visible
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not GameManager.tactical_pause or not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	if event.keycode == KEY_P:
+		tactical_resume_requested.emit()
+		get_viewport().set_input_as_handled()
+	elif event.keycode == KEY_ESCAPE and tactical_escape_allowed.call():
+		tactical_menu_requested.emit()
+		get_viewport().set_input_as_handled()
+
+
 func show_message(text: String, color: Color = Color(1.0, 0.45, 0.45)) -> void:
 	message_label.text = text
 	message_label.modulate = color

@@ -40,6 +40,8 @@ const DEFAULT_SETTINGS := {
 	"hit_flash": VisualSettings.HitFlash.ON,
 	"health_bar_mode": VisualSettings.HealthBarMode.DAMAGED_ONLY,
 	"colorblind": false,
+	"view_3d": true,
+	"shadows_3d": true,
 }
 
 ## Đổi được (vd test dùng file riêng để không ghi đè tiến độ thật). Đổi là nạp lại cả hai file.

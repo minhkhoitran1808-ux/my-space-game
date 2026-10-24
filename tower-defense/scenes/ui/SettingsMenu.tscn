@@ -132,6 +132,16 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Màu cho người mù màu đỏ - lục"
 
+[node name="View3DCheck" type="CheckBox" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Đồ hoạ 3D (bỏ chọn = 2D, nhẹ hơn)"
+
+[node name="Shadows3DCheck" type="CheckBox" parent="Center/Panel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Bóng đổ (3D)"
+
 [node name="TutorialButton" type="Button" parent="Center/Panel/Margin/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 36)

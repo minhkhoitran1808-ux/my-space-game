@@ -85,6 +85,11 @@ func _ready() -> void:
 		record_spend(total_invested)
 
 
+## Hướng nòng hiện tại (radian, toạ độ 2D). Lớp hiển thị 3D đọc để xoay nòng.
+func get_aim_angle() -> float:
+	return _aim_angle
+
+
 func get_level() -> int:
 	return data.level
 

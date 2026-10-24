@@ -27,6 +27,8 @@ const FONT := preload("res://assets/fonts/BeVietnamPro-SemiBold.ttf")
 
 var build_manager: BuildManager
 var selection_manager: SelectionManager
+## Vẽ thân tháp 2D trong ghost (chế độ 3D tắt đi vì đã có ghost 3D).
+var draw_ghost_body := true
 
 # Các lớp con (tạo trong _ready).
 var _placement_ring: RangeIndicator
@@ -96,6 +98,16 @@ func get_upgrade_ring() -> RangeIndicator:
 
 func is_ghost_visible() -> bool:
 	return _ghost.visible
+
+
+## Ô đang xem trước có đặt tháp được không (kể cả tháp không có tầm bắn như Mỏ vàng).
+func is_placement_valid() -> bool:
+	return _placement_error.is_empty()
+
+
+## Tâm ô đang xem trước (toạ độ mô phỏng, gồm cả độ rung khi đặt lỗi).
+func get_ghost_position() -> Vector2:
+	return _ghost.position
 
 
 func get_effect_count() -> int:
@@ -243,10 +255,11 @@ func _draw_ghost() -> void:
 	# Khung ô tháp sẽ chiếm (footprint) + bóng đổ để ghost "bám đất".
 	_ghost.draw_rect(Rect2(-cell * 0.5, cell), Color(state_color, 0.12))
 	_ghost.draw_rect(Rect2(-cell * 0.5 + Vector2.ONE, cell - Vector2.ONE * 2.0), Color(state_color, 0.9), false, 2.0)
-	_draw_ellipse(_ghost, Vector2(0, 18), Vector2(24, 8), Color(0, 0, 0, 0.25))
-	# Hình tháp thật, trong suốt và pha màu trạng thái.
-	Tower.draw_body(_ghost, data, -PI * 0.5, Color(state_color, GHOST_TINT), GHOST_ALPHA,
-			InventoryManager.get_equipped_skin(data.id))
+	# Hình tháp thật, trong suốt và pha màu trạng thái (3D: View3D dựng ghost 3D riêng).
+	if draw_ghost_body:
+		_draw_ellipse(_ghost, Vector2(0, 18), Vector2(24, 8), Color(0, 0, 0, 0.25))
+		Tower.draw_body(_ghost, data, -PI * 0.5, Color(state_color, GHOST_TINT), GHOST_ALPHA,
+				InventoryManager.get_equipped_skin(data.id))
 
 	# Không đặt được: thêm ✕ ở tâm (không chỉ dựa vào màu).
 	if not valid:
@@ -290,8 +303,7 @@ func _draw_text(canvas: CanvasItem, at: Vector2, text: String, color: Color, siz
 		alignment: HorizontalAlignment) -> void:
 	var width := FONT.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 	var origin := at - Vector2(width * 0.5, 0) if alignment == HORIZONTAL_ALIGNMENT_CENTER else at
-	canvas.draw_string_outline(FONT, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 4, Color(OUTLINE_DARK, color.a))
-	canvas.draw_string(FONT, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+	GameView.draw_text(canvas, FONT, origin, text, size, color, Color(OUTLINE_DARK, color.a), 4)
 
 
 func _draw_ellipse(canvas: CanvasItem, center: Vector2, radii: Vector2, color: Color) -> void:

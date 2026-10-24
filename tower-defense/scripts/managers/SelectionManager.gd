@@ -63,10 +63,12 @@ func _on_selected_tower_exiting() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not GameManager.is_playing():
 		return
+	if get_tree().paused and not GameManager.tactical_pause:
+		return
 
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			var tower := build_manager.get_tower_at(build_manager.event_to_cell(event))
+			var tower := build_manager.tower_at_event(event)
 			if tower:
 				build_manager.cancel_build()
 				select(tower)

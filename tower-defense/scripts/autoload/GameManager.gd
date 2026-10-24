@@ -62,6 +62,9 @@ var difficulty: Difficulty = Difficulty.NORMAL
 var unlock_all_towers := false
 ## Debug (Ctrl+3): nhà chính không mất máu.
 var debug_invincible := false
+## Tạm dừng chiến thuật (phím P): game đứng yên nhưng vẫn xây / bán / nâng cấp / đổi cách nhắm.
+## Khác menu tạm dừng (Esc): khi menu mở thì không ra lệnh được.
+var tactical_pause := false
 
 ## Test hook: true thì các hàm chuyển cảnh chỉ ghi lại scene được yêu cầu, không đổi thật.
 var block_scene_changes := false

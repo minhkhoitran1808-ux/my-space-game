@@ -112,7 +112,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if targeting == null or not event is InputEventMouse:
 		return
-	_aim_position = to_global((make_input_local(event) as InputEventMouse).position)
+	# Toạ độ cục bộ = toạ độ mô phỏng (ở 3D, transform của node là phép chiếu mặt đất, xem GameView).
+	_aim_position = (make_input_local(event) as InputEventMouse).position
 	if event is InputEventMouseMotion:
 		queue_redraw()
 	elif event is InputEventMouseButton and event.pressed:
@@ -126,7 +127,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _draw() -> void:
 	if targeting == null:
 		return
-	var center := to_local(_aim_position)
+	var center := _aim_position
 	draw_circle(center, targeting.radius, Color(targeting.color, 0.15))
 	draw_arc(center, targeting.radius, 0.0, TAU, 48, Color(targeting.color, 0.9), 3.0)
 	draw_circle(center, 4.0, targeting.color)

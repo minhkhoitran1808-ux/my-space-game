@@ -232,12 +232,18 @@ func _process(delta: float) -> void:
 func _update_shake(delta: float) -> void:
 	if camera == null:
 		return
+	var offset := Vector2.ZERO
 	if _shake_strength > 0.05:
-		camera.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * _shake_strength
+		offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * _shake_strength
 		_shake_strength = lerpf(_shake_strength, 0.0, minf(1.0, SHAKE_DECAY * delta))
-	elif camera.offset != Vector2.ZERO:
+	else:
 		_shake_strength = 0.0
+	# 3D: rung camera 3D (mét); camera 2D đứng yên vì hình 2D đã bám theo phép chiếu của camera 3D.
+	if GameView.is_3d():
+		GameView.camera.shake = Vector2(offset.x, -offset.y) / Space3D.PX_PER_M
 		camera.offset = Vector2.ZERO
+	elif camera.offset != offset:
+		camera.offset = offset
 
 
 func _draw() -> void:
@@ -264,5 +270,4 @@ func _draw() -> void:
 		var size: int = item.size
 		var width := font.get_string_size(item.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 		var text_pos: Vector2 = item.position - Vector2(width * 0.5, 0)
-		draw_string_outline(font, text_pos, item.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 4, Color(0, 0, 0, alpha * 0.8))
-		draw_string(font, text_pos, item.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(item.color, alpha))
+		GameView.draw_text(self, font, text_pos, item.text, size, Color(item.color, alpha), Color(0, 0, 0, alpha * 0.8), 4)

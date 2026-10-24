@@ -28,6 +28,10 @@ static var hit_flash: HitFlash = HitFlash.ON
 static var health_bar_mode: HealthBarMode = HealthBarMode.DAMAGED_ONLY
 ## Bảng màu thân thiện với người mù màu đỏ - lục.
 static var colorblind := false
+## Trận đấu hiển thị bằng cảnh 3D hình khối (false = bản 2D cũ). Luật chơi như nhau.
+static var view_3d := true
+## Bóng đổ trong cảnh 3D.
+static var shadows_3d := true
 
 
 ## Cập nhật một cài đặt (bỏ qua các key không thuộc nhóm hiển thị).
@@ -41,6 +45,10 @@ static func apply(key: String, value: Variant) -> void:
 			health_bar_mode = clampi(int(value), 0, HealthBarMode.size() - 1) as HealthBarMode
 		"colorblind":
 			colorblind = bool(value)
+		"view_3d":
+			view_3d = bool(value)
+		"shadows_3d":
+			shadows_3d = bool(value)
 
 
 ## Cường độ tối đa của nháy trắng theo cài đặt (0..1).

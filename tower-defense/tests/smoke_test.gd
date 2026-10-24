@@ -53,6 +53,8 @@ func _ready() -> void:
 	SaveManager.save_path = TEST_SAVE_PATH
 	SaveManager.reset_progress()
 	MatchTracker.log_dir = TEST_LOG_DIR
+	# Các phần test cũ click theo toạ độ 2D: chạy ở chế độ 2D; phần [3x] và bot chạy ở 3D.
+	SaveManager.set_setting("view_3d", false)
 
 	await _test_systems()
 	await _test_tower_management()
@@ -62,6 +64,10 @@ func _ready() -> void:
 	await _test_difficulty()
 	await _test_terrain_and_unlocks()
 	await _test_debug_tools_and_logs()
+	await _test_view3d_foundation()
+	await _test_view3d_units()
+	await _test_view3d_input()
+	await _test_tactical_pause()
 	await _test_match_flow()
 	await _test_level_flow()
 	await _test_abilities_and_flying()
@@ -74,6 +80,8 @@ func _ready() -> void:
 	await _test_inventory()
 	await _test_shop()
 	await _test_daily_and_codex()
+	# Bot chơi ở chế độ 3D (mặc định của game): kết quả phải y hệt bản 2D vì 3D chỉ là lớp hiển thị.
+	SaveManager.set_setting("view_3d", true)
 	for level in GameManager.LEVEL_CATALOG.levels:
 		await _test_bot_playthrough(level)
 	for level in GameManager.LEVEL_CATALOG.levels:
@@ -263,6 +271,11 @@ func _test_tower_mechanics() -> void:
 	_check(archer._score_target(near_base) > archer._score_target(far_away), "Yếu nhất: ưu tiên con ít máu hơn")
 	archer.target_mode = Tower.TargetMode.STRONGEST
 	_check(archer._score_target(far_away) > archer._score_target(near_base), "Mạnh nhất: ưu tiên con nhiều máu hơn")
+	archer.target_mode = Tower.TargetMode.CLOSEST
+	var closer := near_base if archer.global_position.distance_to(near_base.global_position) < archer.global_position.distance_to(far_away.global_position) else far_away
+	var farther := far_away if closer == near_base else near_base
+	_check(archer._score_target(closer) > archer._score_target(farther), "Gần nhất: ưu tiên con gần tháp hơn")
+	_check(Tower.TargetMode.size() == 5 and TowerInfoPanel.TARGET_MODE_NAMES.size() == 5, "đủ 5 chế độ nhắm (Đầu / Cuối / Gần nhất / Nhiều máu / Ít máu)")
 	for enemy in [armored, near_base, far_away]:
 		enemy.queue_free()
 
@@ -746,6 +759,329 @@ func _remove_test_logs() -> void:
 	for file_name in DirAccess.get_files_at(TEST_LOG_DIR):
 		DirAccess.remove_absolute(TEST_LOG_DIR.path_join(file_name))
 	DirAccess.remove_absolute(TEST_LOG_DIR)
+
+
+# --- Phần 3a: nền 3D (quy đổi toạ độ, camera cố định, chế độ hiển thị) ------------------
+
+func _test_view3d_foundation() -> void:
+	print("[3a] Nền 3D")
+	var sample := Vector2(437.0, 291.0)
+	_check(Space3D.to_2d(Space3D.to_3d(sample, 1.5)).is_equal_approx(sample)
+			and Space3D.to_3d(Vector2(64, 64)).is_equal_approx(Vector3(2, 0, 2)), "quy đổi 2D <-> 3D: 1 ô 64px = 2m")
+
+	# Camera căn vùng chơi vào dải giữa 2 thanh UI ở 16:9 và 4:3.
+	for viewport_size: Vector2i in [Vector2i(1280, 720), Vector2i(960, 720)]:
+		var sub := SubViewport.new()
+		sub.size = viewport_size
+		sub.disable_3d = false
+		add_child(sub)
+		var cam := FixedCamera.new()
+		sub.add_child(cam)
+		await get_tree().process_frame
+		var scale_y := viewport_size.y / 720.0
+		var area := GameConfig.BUILD_AREA
+		var inside := true
+		var worst := ""
+		for corner: Vector2 in [area.position, Vector2(area.end.x, area.position.y), Vector2(area.position.x, area.end.y), area.end]:
+			for height: float in [0.0, FixedCamera.MAX_OBJECT_HEIGHT]:
+				var screen := cam.unproject_position(Space3D.to_3d(corner, height))
+				var ok := screen.x >= -1.0 and screen.x <= viewport_size.x + 1.0 \
+						and screen.y >= area.position.y * scale_y - 1.0 and screen.y <= area.end.y * scale_y + 1.0
+				if not ok:
+					inside = false
+					worst = "%s h%.1f -> %s" % [corner, height, screen]
+		_check(inside, "camera %dx%d: cả vùng chơi (kể cả đỉnh tháp) nằm giữa 2 thanh UI %s" % [viewport_size.x, viewport_size.y, worst])
+		var ground_hit: Variant = cam.screen_to_ground(cam.unproject_position(Space3D.to_3d(area.get_center())))
+		_check(ground_hit != null and Space3D.to_2d(ground_hit).distance_to(area.get_center()) < 1.0,
+				"camera %dx%d: tia chuột chạm đúng điểm mặt đất" % [viewport_size.x, viewport_size.y])
+		sub.queue_free()
+
+	# Chế độ 3D ẩn hình 2D của thế giới; đổi sang 2D ngay giữa trận.
+	SaveManager.set_flag(TutorialManager.DONE_FLAG, true)
+	SaveManager.set_setting("view_3d", true)
+	GameManager.current_level = GameManager.LEVEL_CATALOG.levels[6]
+	var main := await _new_main()
+	var view: View3D = main.view_3d
+	_check(VisualSettings.view_3d and view.visible and view.camera.current and not main.ground.visible and not main.map_root.visible,
+			"chế độ 3D: cảnh 3D bật, hình 2D của thế giới ẩn")
+	var terrain_counts := [view.find_children("*Hill*", "MeshInstance3D", false, false).size(),
+			view.find_children("*Mud*", "MeshInstance3D", false, false).size(), view.find_children("*Rock*", "MeshInstance3D", false, false).size()]
+	_check(terrain_counts == [1, 2, 3], "cảnh 3D dựng đủ đồi / bùn / đá của Đầm lầy (%s)" % [terrain_counts])
+	SaveManager.set_setting("view_3d", false)
+	_check(not view.visible and main.ground.visible and main.map_root.visible, "tắt 3D giữa trận: về hình 2D")
+	SaveManager.set_setting("shadows_3d", false)
+	_check(not view.sun.shadow_enabled, "tắt bóng đổ")
+	SaveManager.set_setting("shadows_3d", true)
+	SaveManager.set_setting("view_3d", true)
+	_check(view.visible and not main.ground.visible, "bật lại 3D")
+	await _free_main(main)
+	GameManager.current_level = null
+
+
+# --- Phần 3b: đơn vị 3D (đồng bộ địch / tháp / đạn, pool) ---------------------------
+
+func _test_view3d_units() -> void:
+	print("[3b] Đơn vị 3D")
+	SaveManager.set_setting("view_3d", true)
+	GameManager.current_level = GameManager.LEVEL_CATALOG.levels[0]
+	var main := await _new_main()
+	var units: UnitSync = main.view_3d.units
+	var waves: WaveManager = main.wave_manager
+	var build: BuildManager = main.build_manager
+	GameManager.add_gold(5000)
+
+	var walker: Enemy = waves._spawn_enemy(waves.get_enemy_type(&"basic"), 1.0, 0.0, 300.0)
+	var bat: Enemy = waves._spawn_enemy(waves.get_enemy_type(&"bat"), 1.0, 0.0, 200.0)
+	walker.base_speed = 0.0
+	bat.base_speed = 0.0
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var walker_view := units.get_enemy_view(walker)
+	var bat_view := units.get_enemy_view(bat)
+	_check(walker_view != null and walker_view.position.distance_to(Space3D.to_3d(walker.global_position)) < 0.05,
+			"địch có hình 3D đúng vị trí")
+	_check(bat_view != null and absf(bat_view.position.y - EnemyView.FLY_HEIGHT) < 0.2, "địch bay ở độ cao %.1fm" % EnemyView.FLY_HEIGHT)
+	_check(not walker_view.is_health_bar_shown(), "đầy máu: ẩn thanh máu")
+	walker.take_damage(DamageInfo.new(10.0, DamageInfo.Type.TRUE))
+	await get_tree().process_frame
+	_check(walker_view.is_health_bar_shown(), "mất máu: hiện thanh máu")
+	var basic_data := walker.data
+	walker.take_damage(DamageInfo.new(9999.0, DamageInfo.Type.TRUE))
+	await get_tree().process_frame
+	_check(units.active_enemy_count() == 1 and not walker_view.visible and units.pool.free_count(basic_data) == 1,
+			"địch chết: hình 3D trả về pool")
+	var created := units.pool.created
+	var again: Enemy = waves._spawn_enemy(waves.get_enemy_type(&"basic"), 1.0, 0.0, 300.0)
+	again.base_speed = 0.0
+	await get_tree().process_frame
+	_check(units.pool.created == created and units.get_enemy_view(again) == walker_view, "địch mới cùng loại dùng lại hình trong pool")
+
+	# Tháp: hình theo cấp, nâng cấp đổi số vòng, bán thì mất hình.
+	var archer: TowerData = build.available_towers[0]
+	_choose(build, archer)
+	var cell := _bot_best_cell(build, archer, _path_samples(main.map.get_paths()))
+	var tower := build.try_place_tower(cell)
+	await get_tree().process_frame
+	var tower_view := units.get_tower_view(tower)
+	_check(tower_view != null and tower_view.ring_count == 0
+			and Vector2(tower_view.position.x, tower_view.position.z).distance_to(Vector2(Space3D.to_3d(tower.global_position).x, Space3D.to_3d(tower.global_position).z)) < 0.01,
+			"xây tháp: có hình 3D ở đúng ô, cấp 1 chưa có vòng")
+	var rings: Array[int] = []
+	for i in 3:
+		build.upgrade_tower(tower, 1)
+		await get_tree().process_frame
+		rings.append(units.get_tower_view(tower).ring_count)
+	_check(rings == [1, 2, 3], "nâng cấp: số vòng cấp 1 / 2 / 3 (%s)" % [rings])
+	# Nòng xoay về phía địch đang bị nhắm.
+	for i in 40:
+		await get_tree().process_frame
+	if tower.target:
+		var yaw := Space3D.yaw_of(tower.global_position.direction_to(tower.target.global_position))
+		_check(absf(angle_difference(units.get_tower_view(tower).get_turret_yaw(), yaw)) < 0.3, "nòng 3D xoay theo mục tiêu")
+	var sold_view := units.get_tower_view(tower)
+	build.sell_tower(tower)
+	await get_tree().process_frame
+	_check(not sold_view.visible and sold_view.tower == null, "bán tháp: hình 3D biến mất")
+
+	# Đạn bay có hình 3D, tia bắn (Băng) có hiệu ứng ngắn.
+	var cannon: TowerData = build.available_towers[1]
+	_choose(build, cannon)
+	build.try_place_tower(_bot_best_cell(build, cannon, _path_samples(main.map.get_paths())))
+	var frost: TowerData = build.available_towers[2]
+	_choose(build, frost)
+	build.try_place_tower(_bot_best_cell(build, frost, _path_samples(main.map.get_paths())))
+	var shell := (load("res://scenes/projectiles/Projectile.tscn") as PackedScene).instantiate() as Projectile
+	shell.setup(again, DamageInfo.new(1.0), 10.0, 40.0, Color.ORANGE)
+	build.projectile_container.add_child(shell)
+	shell.global_position = Vector2(200, 200)
+	await get_tree().process_frame
+	var shell_view := units.get_projectile_view(shell)
+	_check(shell_view != null and Vector2(shell_view.position.x, shell_view.position.z).distance_to(Vector2(200, 200) / Space3D.PX_PER_M) < 0.5,
+			"đạn bay có hình 3D bám theo")
+	var saw_beam := false
+	for i in 120:
+		await get_tree().process_frame
+		saw_beam = saw_beam or units.active_effect_count() > 0
+	_check(saw_beam, "tia bắn có hiệu ứng 3D")
+
+	# Đổi sang 2D giữa trận: trả hết hình 3D, sinh địch mới không dựng hình; đổi lại 3D: dựng đủ.
+	SaveManager.set_setting("view_3d", false)
+	var created_2d := units.pool.created
+	var late: Enemy = waves._spawn_enemy(waves.get_enemy_type(&"armored"), 1.0, 0.0, 250.0)
+	late.base_speed = 0.0
+	await get_tree().process_frame
+	_check(units.active_enemy_count() == 0 and units.pool.created == created_2d, "chế độ 2D: không dựng / đồng bộ hình 3D")
+	SaveManager.set_setting("view_3d", true)
+	await get_tree().process_frame
+	var alive := 0
+	for enemy: Enemy in get_tree().get_nodes_in_group(Enemy.GROUP):
+		if main.map.is_ancestor_of(enemy) and enemy.is_alive():
+			alive += 1
+	_check(units.active_enemy_count() == alive and units.get_enemy_view(late) != null and build.get_towers().size() == 2
+			and units.get_tower_view(build.get_towers()[0]) != null, "bật lại 3D giữa trận: dựng hình cho mọi địch / tháp đang có")
+	await _free_main(main)
+	GameManager.current_level = null
+
+
+# --- Phần 3c: chuột và tương tác ở chế độ 3D ---------------------------------------
+
+func _test_view3d_input() -> void:
+	print("[3c] Chuột và tương tác 3D")
+	SaveManager.set_setting("view_3d", true)
+	GameManager.current_level = GameManager.LEVEL_CATALOG.levels[0]
+	var main := await _new_main()
+	var build: BuildManager = main.build_manager
+	var units: UnitSync = main.view_3d.units
+	var archer: TowerData = build.available_towers[0]
+	GameManager.add_gold(5000)
+	await get_tree().process_frame
+
+	# Click vào tâm ô (toạ độ màn hình tính bằng phép chiếu 3D) ở 4 góc và giữa vùng chơi => xây đúng ô.
+	var area := GameConfig.BUILD_AREA
+	var targets := [area.position + Vector2(40, 40), Vector2(area.end.x - 40, area.position.y + 40),
+			Vector2(area.position.x + 40, area.end.y - 40), area.end - Vector2(40, 40), area.get_center()]
+	var placed := 0
+	var first_cell := Vector2i(-1, -1)
+	for target: Vector2 in targets:
+		var cell := _nearest_buildable(build, archer, GameConfig.world_to_cell(target))
+		_choose(build, archer)
+		var screen := GameView.sim_to_screen(GameConfig.cell_to_world(cell))
+		_move_mouse(screen)
+		_click(screen, MOUSE_BUTTON_LEFT)
+		await get_tree().process_frame
+		if build.get_tower_at(cell) != null:
+			placed += 1
+			if first_cell.x < 0:
+				first_cell = cell
+	_check(placed == targets.size(), "3D: click ở 4 góc và giữa bản đồ xây đúng ô (%d/%d)" % [placed, targets.size()])
+
+	# Click vào đỉnh thân tháp (nằm trên ô phía sau trên màn hình) vẫn chọn đúng tháp.
+	build.cancel_build()
+	var tower := build.get_tower_at(first_cell)
+	_click(GameView.sim_to_screen(tower.global_position, 1.9), MOUSE_BUTTON_LEFT)
+	await get_tree().process_frame
+	_check(main.selection_manager.selected_tower == tower, "3D: click vào thân tháp chọn được tháp")
+	_check(units.get_tower_view(tower).find_child("SelectRing", true, false).visible, "3D: tháp đang chọn có viền trắng")
+	main.selection_manager.deselect()
+
+	# Ghost 3D theo ô dưới con trỏ, đổi màu khi không đặt được.
+	_choose(build, archer)
+	var free_cell := _nearest_buildable(build, archer, Vector2i(10, 5))
+	_move_mouse(GameView.sim_to_screen(GameConfig.cell_to_world(free_cell)))
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var ghost := units.ghost
+	_check(ghost != null and ghost.visible and Vector2(ghost.position.x, ghost.position.z).distance_to(
+			Vector2(Space3D.to_3d(GameConfig.cell_to_world(free_cell)).x, Space3D.to_3d(GameConfig.cell_to_world(free_cell)).z)) < 0.05,
+			"3D: ghost tháp đứng đúng ô dưới con trỏ")
+	var path_point: Vector2 = main.map.get_paths()[0].to_global(main.map.get_paths()[0].curve.sample_baked(400.0))
+	_move_mouse(GameView.sim_to_screen(path_point))
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(units.ghost != null and units.ghost != ghost and not ghost.visible, "3D: ô trên đường => ghost đổi sang màu không hợp lệ")
+	build.cancel_build()
+	await get_tree().process_frame
+	_check(units.ghost == null, "3D: huỷ xây => ẩn ghost")
+
+	# Ngắm kỹ năng Thiên thạch: click vào màn hình rơi đúng điểm trên mặt đất.
+	var meteor: AbilityData = main.ability_manager.abilities[0]
+	var casts: Array[Vector2] = []
+	main.ability_manager.ability_cast.connect(func(_ability: AbilityData, at: Vector2) -> void: casts.append(at))
+	main.ability_manager.request(meteor)
+	var aim := Vector2(700, 420)
+	_move_mouse(GameView.sim_to_screen(aim))
+	_click(GameView.sim_to_screen(aim), MOUSE_BUTTON_LEFT)
+	await get_tree().process_frame
+	_check(casts.size() == 1 and casts[0].distance_to(aim) < 2.0, "3D: Thiên thạch rơi đúng điểm click (%s)" % [casts])
+
+	# Rung màn hình chuyển sang camera 3D; camera 2D đứng yên.
+	main.fx_manager.shake(12.0)
+	await get_tree().process_frame
+	_check(GameView.camera.shake != Vector2.ZERO and main.get_node("Camera2D").offset == Vector2.ZERO, "3D: rung màn hình rung camera 3D")
+	await _free_main(main)
+	_check(not GameView.is_3d(), "rời trận: bỏ camera 3D khỏi GameView")
+	GameManager.current_level = null
+	SaveManager.set_setting("view_3d", false)
+
+
+## Ô xây được gần ô cho trước nhất (tìm lan ra tối đa 4 ô).
+func _nearest_buildable(build: BuildManager, data: TowerData, around: Vector2i) -> Vector2i:
+	for radius in 5:
+		for dx in range(-radius, radius + 1):
+			for dy in range(-radius, radius + 1):
+				var cell := around + Vector2i(dx, dy)
+				if build.get_placement_error(cell, data).is_empty():
+					return cell
+	return around
+
+
+# --- Phần 3d: tạm dừng chiến thuật (P) vẫn ra lệnh được --------------------------------
+
+func _test_tactical_pause() -> void:
+	print("[3d] Tạm dừng chiến thuật")
+	GameManager.current_level = GameManager.LEVEL_CATALOG.levels[0]
+	var main := await _new_main()
+	# Node test chạy ALWAYS (để test không dừng khi game pause); trong game thật Main là scene gốc
+	# nên bị pause như mọi node thường. Đặt lại cho giống game.
+	main.process_mode = Node.PROCESS_MODE_PAUSABLE
+	var build: BuildManager = main.build_manager
+	var waves: WaveManager = main.wave_manager
+	GameManager.add_gold(2000)
+	var spawned: Array[Enemy] = []
+	waves.enemy_spawned.connect(func(enemy: Enemy) -> void: spawned.append(enemy))
+	waves.start_next_wave()
+	for i in 60:
+		await get_tree().process_frame
+	var walker: Enemy = spawned[0]
+
+	_press_key(KEY_P)
+	await get_tree().process_frame
+	_check(get_tree().paused and GameManager.tactical_pause and not main.pause_menu.visible and main.hud.is_tactical_banner_shown(),
+			"P: tạm dừng chiến thuật (không mở menu, có dải báo)")
+	var progress := walker.progress
+	var cell := _nearest_buildable(build, build.available_towers[0], Vector2i(6, 5))
+	build.cancel_build()
+	_press_key(KEY_1)
+	_click(GameConfig.cell_to_world(cell), MOUSE_BUTTON_LEFT)
+	await get_tree().process_frame
+	var tower := build.get_tower_at(cell)
+	_check(tower != null, "đang tạm dừng: vẫn xây tháp bằng phím + chuột")
+	if tower == null:
+		await _free_main(main)
+		return
+	build.cancel_build()
+	_click(GameConfig.cell_to_world(cell), MOUSE_BUTTON_LEFT)
+	_press_key(KEY_U)
+	_press_key(KEY_T)
+	await get_tree().process_frame
+	_check(tower.get_level() == 2 and tower.target_mode == Tower.TargetMode.LAST, "đang tạm dừng: vẫn nâng cấp và đổi cách nhắm")
+	for i in 30:
+		await get_tree().process_frame
+	_check(is_equal_approx(walker.progress, progress), "đang tạm dừng: địch đứng yên (%.1f -> %.1f)" % [progress, walker.progress])
+	_press_key(KEY_X)
+	await get_tree().process_frame
+	_check(build.get_tower_at(cell) == null, "đang tạm dừng: vẫn bán tháp")
+
+	_press_key(KEY_ESCAPE)
+	await get_tree().process_frame
+	_check(main.pause_menu.visible and not GameManager.tactical_pause and not main.hud.is_tactical_banner_shown(),
+			"Esc khi tạm dừng chiến thuật: mở menu tạm dừng")
+	_choose(build, build.available_towers[0])
+	_click(GameConfig.cell_to_world(cell), MOUSE_BUTTON_LEFT)
+	await get_tree().process_frame
+	_check(build.get_tower_at(cell) == null, "menu tạm dừng đang mở: không xây được")
+	_press_key(KEY_P)
+	await get_tree().process_frame
+	_check(not get_tree().paused, "P đóng menu, chơi tiếp")
+	_press_key(KEY_P)
+	_press_key(KEY_P)
+	await get_tree().process_frame
+	_check(not get_tree().paused and not GameManager.tactical_pause, "P lần nữa: hết tạm dừng chiến thuật")
+	for i in 5:
+		await get_tree().process_frame
+	_check(walker.progress > progress, "chơi tiếp: địch đi tiếp")
+	await _free_main(main)
+	GameManager.current_level = null
 
 
 # --- Phần 1d: luồng màn (menu, chọn màn, khoá / mở, sao) ----------------------

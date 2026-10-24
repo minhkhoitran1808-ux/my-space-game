@@ -8,7 +8,7 @@ extends Node2D
 ## vào node "Map" rồi đưa các làn đường cho Ground / BuildManager / WaveManager.
 ##
 ## Phím tắt chung (Main nhận SAU CÙNG, chỉ khi không hệ thống nào khác dùng phím đó):
-##   Space: bắt đầu / gọi sớm wave   F: đổi tốc độ   P / Esc: tạm dừng
+##   Space: bắt đầu / gọi sớm wave   F: đổi tốc độ   P: tạm dừng chiến thuật (vẫn ra lệnh)   Esc: menu tạm dừng
 
 @onready var ground: Node2D = $Ground
 @onready var map_root: Node2D = $Map
@@ -32,10 +32,16 @@ var tracker: MatchTracker
 var last_rewards: Dictionary = {}
 ## Vàng / máu thêm đầu ván nhờ đồ tiêu hao (test đọc để kiểm tra).
 var meta_bonuses: Dictionary = {}
+## Lớp hiển thị 3D (luôn được tạo; chế độ 2D thì ẩn đi).
+var view_3d: View3D
 
 
 func _ready() -> void:
 	_load_level(GameManager.get_current_level())
+	view_3d = View3D.new()
+	add_child(view_3d)
+	view_3d.setup(map)
+	view_3d.setup_units(wave_manager, build_manager, range_display)
 	GameManager.reset(wave_manager.get_total_waves(), level.starting_gold, GameManager.get_starting_lives(level))
 	_apply_meta_bonuses()
 	tracker = MatchTracker.new()
@@ -47,6 +53,16 @@ func _ready() -> void:
 		debug_tools.name = "DebugTools"
 		add_child(debug_tools)
 		debug_tools.setup(self)
+	# Các node 2D vẽ / nhận chuột trên mặt đất: ở chế độ 3D chúng đi theo phép chiếu của camera 3D.
+	view_3d.ground_space_nodes.assign([build_manager, range_display, fx_manager, ability_manager])
+	if has_node("DebugTools"):
+		view_3d.ground_space_nodes.append(get_node("DebugTools"))
+	apply_view_mode()
+	SaveManager.settings_changed.connect(_on_setting_changed)
+	# Các hệ thống ra lệnh vẫn chạy khi tạm dừng chiến thuật (địch, đạn, wave thì dừng).
+	for node: Node in [build_manager, selection_manager, range_display, hud]:
+		node.process_mode = Node.PROCESS_MODE_ALWAYS
+	GameManager.tactical_pause = false
 
 	# HUD -> hệ thống
 	hud.setup_tower_buttons(build_manager.available_towers)
@@ -58,7 +74,11 @@ func _ready() -> void:
 	hud.next_level_pressed.connect(_go_to_next_level)
 	hud.level_select_pressed.connect(GameManager.go_to_level_select)
 	hud.speed_pressed.connect(GameManager.cycle_game_speed)
-	hud.pause_pressed.connect(set_paused.bind(true))
+	hud.pause_pressed.connect(func() -> void: set_tactical_pause(not GameManager.tactical_pause))
+	hud.tactical_resume_requested.connect(set_tactical_pause.bind(false))
+	hud.tactical_menu_requested.connect(set_paused.bind(true))
+	hud.tactical_escape_allowed = func() -> bool:
+		return not build_manager.is_building() and not selection_manager.has_selection() and ability_manager.targeting == null
 	pause_menu.resume_requested.connect(set_paused.bind(false))
 	pause_menu.restart_requested.connect(GameManager.restart_level)
 	pause_menu.level_select_requested.connect(GameManager.go_to_level_select)
@@ -172,7 +192,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			_start_next_wave()
 		KEY_F:
 			GameManager.cycle_game_speed()
-		KEY_P, KEY_ESCAPE:
+		KEY_P:
+			set_tactical_pause(true)
+		KEY_ESCAPE:
 			# Esc chỉ tới được đây khi không đang xây và không chọn tháp nào.
 			set_paused(true)
 		_:
@@ -180,12 +202,42 @@ func _unhandled_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
-## Mở / đóng menu tạm dừng.
+## Chế độ hiển thị theo cài đặt: 3D thì ẩn hình 2D của thế giới (node 2D vẫn chạy luật chơi),
+## 2D thì tắt cảnh 3D. Đổi được ngay giữa trận.
+func apply_view_mode() -> void:
+	var use_3d := VisualSettings.view_3d
+	view_3d.set_active(use_3d)
+	for node: CanvasItem in [ground, map_root, build_manager.tower_container, build_manager.projectile_container]:
+		node.visible = not use_3d
+	# Vòng tầm bắn / ô đặt vẫn vẽ 2D (nằm trên mặt đất nhờ phép chiếu); thân ghost thì 3D vẽ.
+	range_display.draw_ghost_body = not use_3d
+	range_display.queue_redraw()
+
+
+func _on_setting_changed(key: String, _value: Variant) -> void:
+	if key == "view_3d":
+		apply_view_mode()
+	elif key == "shadows_3d":
+		view_3d.apply_settings()
+
+
+## Mở / đóng menu tạm dừng (Esc). Mở menu thì thôi tạm dừng chiến thuật.
 func set_paused(paused: bool) -> void:
 	if not GameManager.is_playing():
 		return
+	GameManager.tactical_pause = false
+	hud.show_tactical_pause(false)
 	get_tree().paused = paused
 	pause_menu.visible = paused
+
+
+## Tạm dừng chiến thuật (P): địch, đạn, wave đứng yên; vẫn xây / bán / nâng cấp / đổi cách nhắm.
+func set_tactical_pause(on: bool) -> void:
+	if not GameManager.is_playing() or pause_menu.visible:
+		return
+	GameManager.tactical_pause = on
+	get_tree().paused = on
+	hud.show_tactical_pause(on)
 
 
 ## Mở cài đặt từ menu tạm dừng: tạm ẩn menu tạm dừng để hai bảng không chồng lên nhau.
