@@ -200,7 +200,14 @@ func set_flag(flag: String, value: bool) -> void:
 # --- Cài đặt ------------------------------------------------------------------------
 
 func get_setting(key: String) -> Variant:
-	return _config.get_value(SECTION_SETTINGS, key, DEFAULT_SETTINGS.get(key))
+	return _config.get_value(SECTION_SETTINGS, key, _default_setting(key))
+
+
+## Giá trị mặc định; riêng bản Web tắt bóng đổ 3D (WebGL trên máy yếu dễ tụt khung hình).
+func _default_setting(key: String) -> Variant:
+	if key == "shadows_3d" and OS.has_feature("web"):
+		return false
+	return DEFAULT_SETTINGS.get(key)
 
 
 func set_setting(key: String, value: Variant) -> void:

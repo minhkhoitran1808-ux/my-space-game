@@ -1,6 +1,7 @@
-# Tower Defense 2D (Godot 4.7)
+# Tower Defense (Godot 4.7)
 
-Game Tower Defense 2D viết bằng GDScript. Chưa cần asset nào: mọi thứ được vẽ tạm bằng code,
+Game Tower Defense viết bằng GDScript, hiển thị **3D bằng hình khối** (camera cố định nhìn chéo)
+hoặc **2D** (chọn trong Cài đặt). Chưa cần asset nào: mọi thứ được dựng bằng code,
 mở project và bấm Play là chơi được ngay.
 
 ## Chạy game
@@ -22,7 +23,8 @@ mở project và bấm Play là chơi được ngay.
 | `E` | Kỹ năng **Băng giá**: làm chậm 90% toàn bộ địch trong 3 giây |
 | `Space` | Bắt đầu wave, hoặc **gọi sớm** wave sau (thưởng thêm vàng) |
 | `F` | Tốc độ x1 / x2 / x3 |
-| `P` (hoặc `Esc` khi không chọn gì) | Tạm dừng (trong menu có Cài đặt) |
+| `P` hoặc nút `II` | **Tạm dừng chiến thuật**: game đứng yên nhưng vẫn xây / bán / nâng cấp / đổi cách nhắm; `P` lần nữa để chơi tiếp |
+| `Esc` (khi không chọn gì) | Menu tạm dừng (Cài đặt, chơi lại, chọn màn) |
 | `Ctrl+1`…`Ctrl+6` | Phím debug, chỉ có ở bản debug (xem "Công cụ cân bằng và debug") |
 
 ## Nội dung
@@ -218,6 +220,56 @@ khi có thứ để nhận.
   `resources/quests/`. **`id` không được đổi sau khi phát hành** (là khoá trong file save).
 - `tradeable_p2p` luôn false: trao đổi giữa người chơi để dành cho khi có server.
 
+## Hiển thị 3D (hình khối, camera cố định)
+
+Mặc định trận đấu hiện bằng cảnh 3D dựng từ hình khối cơ bản (blockout). Cài đặt → "Đồ hoạ 3D"
+tắt đi để về bản 2D (nhẹ hơn); đổi được ngay giữa trận. "Bóng đổ" bật / tắt bóng (bản Web mặc định tắt).
+
+- **Luật chơi không đổi:** mô phỏng vẫn chạy trên 2D; cảnh 3D chỉ "soi" lại. Bot chơi 8 màn ở chế độ
+  3D ra đúng số máu như bản 2D.
+- **Quy ước không gian:** 1 ô lưới = 64 px = **2 m**; mặt đất là mặt phẳng y = 0, mọi tính toán
+  (tầm bắn, khoảng cách) vẫn trên mặt phẳng XZ (`scripts/view3d/Space3D.gd`).
+- **Camera** (`FixedCamera`): chiếu trực giao (Orthogonal), nghiêng 55°, không xoay; tự căn để cả vùng
+  chơi nằm giữa thanh trên và thanh dưới ở mọi tỉ lệ màn hình.
+- **Chuột:** vì camera trực giao, phép chiếu mặt đất lên màn hình là phép biến đổi affine
+  (`GameView.ground_transform`). Các lớp 2D vẽ / nhận chuột trên mặt đất (xây tháp, vòng tầm bắn,
+  hiệu ứng, ngắm kỹ năng, lớp phủ debug) nhận ma trận đó làm transform: click tự quy về đúng ô,
+  vòng tầm bắn thành elip nằm đúng trên mặt đất. Tháp cao nên click vào thân tháp cũng chọn được.
+
+| Địch | Hình khối |
+|---|---|
+| Lính thường, Bầy chuột, Mảnh tách | Viên nang (to / nhỏ theo bán kính) |
+| Trinh sát | Viên nang nhỏ nghiêng về trước |
+| Bọc thép, Kẻ tách đôi | Khối hộp; giáp ≥ 50% có "mũ giáp" xám |
+| Dơi lửa | Cầu + 2 cánh vỗ, bay cao 1.8 m |
+| Thầy lang | Viên nang + dấu cộng trắng trên đỉnh |
+| Hồn ma | Cầu mờ lơ lửng có đuôi |
+| Chúa quỷ | Khối kim cương + vương miện |
+
+Địch kháng phép ≥ 30% có "khiên" cầu tím trong suốt; mọi địch có "mũi" chỉ hướng đi, thanh máu
+luôn quay về camera, nháy trắng khi trúng đòn, vòng màu dưới chân khi bị làm chậm / thiêu đốt.
+
+| Tháp | Hình khối |
+|---|---|
+| Cung thủ | Trụ cao mảnh + đầu vuông có nòng (xoay theo mục tiêu) |
+| Pháo | Trụ rộng thấp + vòm + nòng dày |
+| Băng | Khối pha lê xoay 45°, hơi trong |
+| Phép | Nón + quả cầu phát sáng |
+| Cờ hiệu | Cột trắng + lá cờ |
+| Mỏ vàng | Miệng mỏ + cục vàng |
+
+Mọi tháp đứng trên đế xám 1.6 m. Cấp 2: 1 vòng bạc; cấp 3: 2 vòng vàng; cấp 4: thêm vòng màu nhánh
+(cam = A, xanh = B), tháp to dần theo cấp. Màu thân theo màu nút xây ở HUD (hoặc skin đang trang bị).
+
+**Thay bằng model thật sau này:** gán `visual_scene` trong `EnemyData` / `TowerData` (scene gốc Node3D,
+đứng ở y = 0, mặt nhìn về −Z). Chỉ số, tầm bắn và kích thước vẫn lấy từ resource, không đọc từ mesh,
+nên đổi model không đổi cân bằng. Bộ low-poly miễn phí phù hợp: Kenney "Tower Defense Kit",
+Quaternius (giấy phép CC0; lưu `LICENSE` của từng bộ vào `res://third_party/<tên bộ>/`).
+
+**Hiệu năng:** mesh và material dùng chung theo loại (renderer gộp vẽ được), hình 3D lấy từ pool,
+không dùng physics cho di chuyển / nhắm. `tests/benchmark.tscn` đo 150 địch ở x3: khoảng 5 ms / khung
+cho logic + đồng bộ 3D (máy test, headless, chưa tính vẽ); chế độ 2D khoảng 4.2 ms.
+
 ## Kiến trúc
 
 ```
@@ -250,6 +302,8 @@ tower-defense/
 │   ├── fx/FxManager.gd         # số sát thương, vụ nổ, rung màn hình
 │   ├── enemies/                # Enemy + HealthBar + HitFeedback + HealerAura + SummonerAura
 │   ├── main/                   # Main, Ground, GameMap, MatchTracker, DebugTools
+│   ├── view3d/                 # Lớp hiển thị 3D: View3D, FixedCamera, GameView, UnitSync,
+│   │                           # EnemyView, TowerView, Shapes3D (mesh/material dùng chung), VisualPool
 │   ├── ui/meta/                # MetaScreen + Thành tựu, Kho đồ, Cửa hàng, Nhiệm vụ, Codex, ItemSlot
 │   ├── menus/, ui/, resources/, enemies/, towers/, core/
 └── tests/smoke_test.tscn       # test tự động
@@ -386,5 +440,15 @@ Chạy khoảng 10 phút. Gồm:
   màn 7 bot còn 20 máu vì độ khó dồn vào wave Boss cuối (lọt Boss là mất 10 máu).
 - **Độ phủ:** mỗi bản đồ, ô tốt nhất không phủ quá 2.5 lần ô trung vị (tầm 130px).
 - **Chỉ một loại tháp:** từ màn 3, bot chỉ xây Cung thủ, hoặc chỉ xây Phép, phải **thua**.
+- **3D:** camera căn khung đúng ở 16:9 và 4:3; hình 3D đúng vị trí / độ cao bay / số vòng cấp; click
+  ở 4 góc và giữa bản đồ xây đúng ô; click thân tháp chọn được tháp; ghost đổi màu khi không đặt được;
+  Thiên thạch rơi đúng điểm; đổi 2D ↔ 3D giữa trận; tạm dừng chiến thuật vẫn ra lệnh, địch đứng yên.
+  Bot chơi 8 màn ở chế độ 3D.
+
+Đo hiệu năng (không nằm trong smoke test vì phụ thuộc máy):
+
+```
+godot --headless --path tower-defense --fixed-fps 60 res://tests/benchmark.tscn -- 150 300 3d
+```
 
 Exit code 0 = đạt. Test dùng file save và thư mục log riêng nên không ảnh hưởng tiến độ thật.
