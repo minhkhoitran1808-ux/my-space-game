@@ -260,7 +260,7 @@ func show_tactical_pause(on: bool) -> void:
 		add_child(_tactical_banner)
 		_tactical_banner.position = Vector2((get_viewport_rect().size.x - _tactical_banner.get_combined_minimum_size().x) * 0.5, 72.0)
 	_tactical_banner.visible = on
-	pause_button.text = "▶ [P]" if on else "II [P]"
+	pause_button.text = "Tiếp [P]" if on else "II [P]"
 
 
 func is_tactical_banner_shown() -> bool:
