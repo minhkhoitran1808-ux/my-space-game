@@ -1,0 +1,3992 @@
+<roblox version="4">
+  <Item class="Lighting" referent="0">
+    <Properties>
+      <string name="Name">Lighting</string>
+      <float name="Brightness">2.5</float>
+      <float name="ClockTime">8</float>
+    </Properties>
+  </Item>
+  <Item class="Players" referent="1">
+    <Properties>
+      <string name="Name">Players</string>
+      <bool name="CharacterAutoLoads">true</bool>
+    </Properties>
+  </Item>
+  <Item class="ReplicatedStorage" referent="2">
+    <Properties>
+      <string name="Name">ReplicatedStorage</string>
+    </Properties>
+    <Item class="Folder" referent="3">
+      <Properties>
+        <string name="Name">Shared</string>
+      </Properties>
+      <Item class="Folder" referent="4">
+        <Properties>
+          <string name="Name">Config</string>
+        </Properties>
+        <Item class="ModuleScript" referent="5">
+          <Properties>
+            <string name="Name">Crops</string>
+            <string name="Source"><![CDATA[--[[
+	Danh sách cây trồng. Dữ liệu thuần (không dùng kiểu Roblox) để chạy được test.
+
+	Season   : mùa trồng được ("Xuân" | "Hạ" | "Thu" | "Đông")
+	Days     : số ngày được tưới cần để chín
+	SeedPrice: giá 1 hạt   | SellPrice: giá bán 1 nông sản 1 sao
+	Regrow   : (tuỳ chọn) cây thu nhiều lần, ra quả lại sau bấy nhiêu ngày
+	Color    : {r, g, b} màu nông sản
+	Shape    : hình khi chín: "ball" | "root" | "tall" | "leafy" | "bush"
+	Size     : (tuỳ chọn) độ to của nông sản khi Shape = "ball"
+]]
+
+local Crops = {}
+
+Crops.Order = {
+	"RauMuong", "CaRot", "DauTay",
+	"Ngo", "DuaHau", "ThanhLong",
+	"KhoaiLang", "LuaNuoc", "BiNgo",
+	"CuCaiTrang", "SuHao", "CaiBap",
+}
+
+Crops.List = {
+	-- Xuân
+	RauMuong = { Name = "Rau muống", Season = "Xuân", Days = 2, SeedPrice = 10, SellPrice = 25, Color = { 76, 175, 80 }, Shape = "leafy" },
+	CaRot = { Name = "Cà rốt", Season = "Xuân", Days = 3, SeedPrice = 20, SellPrice = 50, Color = { 255, 140, 40 }, Shape = "root" },
+	DauTay = { Name = "Dâu tây", Season = "Xuân", Days = 4, SeedPrice = 60, SellPrice = 45, Regrow = 2, Color = { 229, 57, 80 }, Shape = "bush" },
+	-- Hạ
+	Ngo = { Name = "Ngô", Season = "Hạ", Days = 4, SeedPrice = 30, SellPrice = 80, Color = { 244, 196, 48 }, Shape = "tall" },
+	DuaHau = { Name = "Dưa hấu", Season = "Hạ", Days = 6, SeedPrice = 80, SellPrice = 240, Color = { 62, 158, 74 }, Shape = "ball", Size = 2.8 },
+	ThanhLong = { Name = "Thanh long", Season = "Hạ", Days = 5, SeedPrice = 120, SellPrice = 90, Regrow = 3, Color = { 224, 64, 138 }, Shape = "bush" },
+	-- Thu
+	KhoaiLang = { Name = "Khoai lang", Season = "Thu", Days = 4, SeedPrice = 35, SellPrice = 95, Color = { 156, 79, 122 }, Shape = "root" },
+	LuaNuoc = { Name = "Lúa nước", Season = "Thu", Days = 5, SeedPrice = 40, SellPrice = 120, Color = { 217, 194, 90 }, Shape = "tall" },
+	BiNgo = { Name = "Bí ngô", Season = "Thu", Days = 6, SeedPrice = 90, SellPrice = 270, Color = { 255, 122, 0 }, Shape = "ball", Size = 2.6 },
+	-- Đông
+	CuCaiTrang = { Name = "Củ cải trắng", Season = "Đông", Days = 2, SeedPrice = 15, SellPrice = 38, Color = { 242, 242, 242 }, Shape = "root" },
+	SuHao = { Name = "Su hào", Season = "Đông", Days = 3, SeedPrice = 25, SellPrice = 65, Color = { 139, 199, 122 }, Shape = "ball", Size = 1.7 },
+	CaiBap = { Name = "Cải bắp", Season = "Đông", Days = 4, SeedPrice = 45, SellPrice = 120, Color = { 111, 191, 94 }, Shape = "ball", Size = 2.3 },
+}
+
+return Crops
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="6">
+          <Properties>
+            <string name="Name">Game</string>
+            <string name="Source"><![CDATA[--[[
+	Thông số chung của game. Dữ liệu thuần (không dùng kiểu Roblox) để chạy được test.
+	Muốn cân bằng lại game: sửa các con số ở đây.
+]]
+
+local Game = {}
+
+Game.DataStoreName = "NongTraiVuiVe_v1" -- đổi tên = xoá sạch tiến trình mọi người
+
+-- ===== Người chơi mới =====
+Game.StartingCoins = 100
+Game.StartingSeedCount = 6 -- tặng 6 hạt cây rẻ nhất của mùa hiện tại
+Game.StartingFertilizer = 3
+
+-- ===== Thời gian =====
+Game.Time = {
+	DayLength = 720, -- 1 ngày trong game = 720 giây thật (12 phút)
+	DaysPerSeason = 7,
+	Seasons = { "Xuân", "Hạ", "Thu", "Đông" },
+	DawnHour = 6, -- ngày mới bắt đầu lúc 6:00 sáng
+	Epoch = 1735689600, -- mốc tính lịch (mọi server dùng chung một lịch)
+}
+
+-- ===== Công cụ =====
+Game.ToolOrder = { "Hoe", "WateringCan", "SeedBag", "Sickle", "Fertilizer", "Sprayer" }
+Game.Tools = {
+	Hoe = { Name = "Cuốc" },
+	WateringCan = { Name = "Bình tưới" },
+	SeedBag = { Name = "Túi hạt" },
+	Sickle = { Name = "Liềm" },
+	Fertilizer = { Name = "Phân bón" },
+	Sprayer = { Name = "Bình xịt" },
+}
+Game.ToolRange = 16 -- khoảng cách tối đa (stud) từ nhân vật tới ô đất
+Game.ToolCooldown = 0.2 -- giây giữa 2 lần dùng công cụ
+
+-- ===== Đất & cây =====
+Game.WaterCapacity = 15 -- số lần tưới mỗi bình
+Game.DebrisHp = 3 -- số nhát cuốc để dọn đá/gốc cây
+Game.Fertility = {
+	Start = 50,
+	HarvestCost = 15, -- mỗi lần thu hoạch đất mất bấy nhiêu màu mỡ
+	FertilizerGain = 40,
+	Good = 60, -- từ mức này trở lên được tính là "đất tốt"
+}
+Game.WeedChancePerHour = 0.01 -- xác suất cỏ mọc mỗi giờ trong game (mỗi ô)
+Game.PestChancePerHour = 0.006 -- xác suất sâu xuất hiện mỗi giờ trong game (mỗi cây)
+Game.QualityMultiplier = { 1, 1.25, 1.5 } -- giá bán theo số sao
+
+-- ===== Cửa hàng =====
+Game.FertilizerPrice = 25
+
+-- ===== Đảo =====
+Game.MaxIslands = 8
+Game.TileSize = 4
+-- Các khu đất trên đảo (toạ độ tính từ tâm đảo, đơn vị stud)
+Game.Zones = {
+	{ Id = 1, Name = "Khu 1", Cols = 6, Rows = 6, X = -36, Z = -24, Price = 0, DebrisChance = 0.15 },
+	{ Id = 2, Name = "Khu 2", Cols = 4, Rows = 6, X = -8, Z = -24, Price = 500, DebrisChance = 0.35 },
+	{ Id = 3, Name = "Khu 3", Cols = 6, Rows = 4, X = -36, Z = 6, Price = 1500, DebrisChance = 0.35 },
+	{ Id = 4, Name = "Khu 4", Cols = 4, Rows = 4, X = -8, Z = 6, Price = 4000, DebrisChance = 0.4 },
+}
+
+return Game
+]]></string>
+          </Properties>
+        </Item>
+      </Item>
+      <Item class="ModuleScript" referent="7">
+        <Properties>
+          <string name="Name">FarmLogic</string>
+          <string name="Source"><![CDATA[--[[
+	FarmLogic: toàn bộ luật trồng trọt, viết THUẦN (không đụng tới Roblox)
+	nên chạy test được bằng Luau CLI. Server gọi các hàm này rồi vẽ kết quả.
+
+	Một ô đất (tile):
+	{
+		s = "grass" | "debris" | "tilled",
+		hp = số nhát cuốc còn lại (khi s = "debris"),
+		dk = "rock" | "stump" (loại vật cản),
+		w = true nếu đất đã được tưới hôm nay,
+		f = độ màu mỡ 0..100,
+		weed = có cỏ dại, pest = có sâu,
+		crop = nil | { id = cropId, g = số ngày đã lớn, pen = điểm phạt chăm sóc },
+	}
+]]
+
+local FarmLogic = {}
+
+export type Crop = { id: string, g: number, pen: number }
+export type Tile = {
+	s: string,
+	hp: number?,
+	dk: string?,
+	w: boolean,
+	f: number,
+	weed: boolean,
+	pest: boolean,
+	crop: Crop?,
+}
+export type Result = {
+	ok: boolean,
+	msg: string?,
+	waterUsed: number?,
+	seedUsed: string?,
+	fertilizerUsed: number?,
+	harvest: { id: string, stars: number }?,
+	helped: boolean?,
+}
+
+function FarmLogic.newTile(kind: string, cfg, debrisKind: string?): Tile
+	local tile: Tile = { s = kind, w = false, f = cfg.Fertility.Start, weed = false, pest = false }
+	if kind == "debris" then
+		tile.hp = cfg.DebrisHp
+		tile.dk = debrisKind or "rock"
+	end
+	return tile
+end
+
+-- Sinh các ô đất của một khu, vị trí đá/gốc cây cố định theo `seed`
+function FarmLogic.generateZone(zone, cfg, seed: number): { [number]: Tile }
+	local state = (seed * 7919 + zone.Id * 104729) % 2147483647
+	if state <= 0 then
+		state += 2147483646
+	end
+	local function rand(): number
+		state = (state * 48271) % 2147483647
+		return state / 2147483647
+	end
+
+	local tiles = {}
+	for i = 1, zone.Cols * zone.Rows do
+		if rand() < zone.DebrisChance then
+			tiles[i] = FarmLogic.newTile("debris", cfg, if rand() < 0.5 then "rock" else "stump")
+		else
+			tiles[i] = FarmLogic.newTile("grass", cfg)
+		end
+	end
+	return tiles
+end
+
+function FarmLogic.isRipe(tile: Tile, crops): boolean
+	local crop = tile.crop
+	if not crop then
+		return false
+	end
+	return crop.g >= crops.List[crop.id].Days
+end
+
+-- 0 = không có cây, 1 = hạt, 2 = mầm, 3 = cây non, 4 = chín
+function FarmLogic.stage(tile: Tile, crops): number
+	local crop = tile.crop
+	if not crop then
+		return 0
+	end
+	local days = crops.List[crop.id].Days
+	if crop.g >= days then
+		return 4
+	elseif crop.g <= 0 then
+		return 1
+	elseif crop.g < days / 2 then
+		return 2
+	end
+	return 3
+end
+
+-- Số sao dự kiến nếu thu hoạch bây giờ
+function FarmLogic.stars(tile: Tile, cfg): number
+	local crop = tile.crop
+	if not crop then
+		return 0
+	end
+	local care = if crop.pen <= 0.5 then 2 elseif crop.pen <= 2 then 1 else 0
+	local soil = if tile.f >= cfg.Fertility.Good then 1 else 0
+	local total = care + soil
+	return if total >= 3 then 3 elseif total >= 2 then 2 else 1
+end
+
+function FarmLogic.sellPrice(cropId: string, stars: number, crops, cfg): number
+	local mult = cfg.QualityMultiplier[stars] or 1
+	return math.floor(crops.List[cropId].SellPrice * mult + 0.5)
+end
+
+function FarmLogic.inSeason(cropId: string, season: string, crops): boolean
+	return crops.List[cropId].Season == season
+end
+
+local function fail(msg: string): Result
+	return { ok = false, msg = msg }
+end
+
+--[[
+	Dùng công cụ lên một ô đất. Thay đổi `tile` trực tiếp.
+	ctx = {
+		crops, cfg, season,
+		isOwner = người dùng có phải chủ đảo,
+		water = số nước trong bình,
+		seedId = hạt đang chọn, seedCount = số hạt đó còn,
+		fertilizer = số bao phân,
+	}
+]]
+function FarmLogic.useTool(tile: Tile, toolId: string, ctx): Result
+	local crops, cfg = ctx.crops, ctx.cfg
+
+	if toolId == "Hoe" then
+		if not ctx.isOwner then
+			return fail("Chỉ chủ đảo mới được cuốc đất.")
+		end
+		if tile.s == "debris" then
+			tile.hp = (tile.hp or 1) - 1
+			if (tile.hp :: number) <= 0 then
+				tile.s = "grass"
+				tile.hp = nil
+				tile.dk = nil
+				return { ok = true, msg = "Đã dọn sạch!" }
+			end
+			return { ok = true, msg = "Còn " .. tostring(tile.hp) .. " nhát nữa" }
+		elseif tile.s == "grass" then
+			tile.s = "tilled"
+			tile.w = false
+			tile.weed = false
+			tile.pest = false
+			return { ok = true }
+		elseif tile.crop then
+			return fail("Ô này đang có cây.")
+		end
+		return fail("Đất đã được cuốc rồi.")
+	elseif toolId == "WateringCan" then
+		if tile.s ~= "tilled" then
+			return fail("Chỉ tưới được đất đã cuốc.")
+		end
+		if tile.w then
+			return fail("Đất đã ướt rồi.")
+		end
+		if (ctx.water or 0) <= 0 then
+			return fail("Bình hết nước! Ra giếng múc nước.")
+		end
+		tile.w = true
+		return { ok = true, waterUsed = 1, helped = not ctx.isOwner }
+	elseif toolId == "SeedBag" then
+		if not ctx.isOwner then
+			return fail("Chỉ chủ đảo mới được gieo hạt.")
+		end
+		if tile.s ~= "tilled" then
+			return fail("Hãy cuốc đất trước khi gieo.")
+		end
+		if tile.crop then
+			return fail("Ô này đã có cây.")
+		end
+		if tile.weed then
+			return fail("Cắt cỏ dại trước đã.")
+		end
+		local seedId = ctx.seedId
+		if not seedId or not crops.List[seedId] or (ctx.seedCount or 0) <= 0 then
+			return fail("Bạn chưa có hạt giống. Mua ở Đảo Chợ.")
+		end
+		if not FarmLogic.inSeason(seedId, ctx.season, crops) then
+			return fail(crops.List[seedId].Name .. " chỉ trồng được vào mùa " .. crops.List[seedId].Season .. ".")
+		end
+		tile.crop = { id = seedId, g = 0, pen = 0 }
+		return { ok = true, seedUsed = seedId }
+	elseif toolId == "Sickle" then
+		if tile.weed then
+			tile.weed = false
+			return { ok = true, msg = "Đã cắt cỏ dại", helped = not ctx.isOwner }
+		end
+		local crop = tile.crop
+		if not crop then
+			return fail("Không có gì để cắt.")
+		end
+		if not FarmLogic.isRipe(tile, crops) then
+			return fail("Cây chưa chín.")
+		end
+		if not ctx.isOwner then
+			return fail("Chỉ chủ đảo mới được thu hoạch.")
+		end
+		local stars = FarmLogic.stars(tile, cfg)
+		local def = crops.List[crop.id]
+		local harvest = { id = crop.id, stars = stars }
+		if def.Regrow then
+			crop.g = math.max(0, def.Days - def.Regrow)
+			crop.pen = 0
+		else
+			tile.crop = nil
+		end
+		tile.f = math.max(0, tile.f - cfg.Fertility.HarvestCost)
+		return { ok = true, harvest = harvest }
+	elseif toolId == "Fertilizer" then
+		if not ctx.isOwner then
+			return fail("Chỉ chủ đảo mới được bón phân.")
+		end
+		if tile.s ~= "tilled" then
+			return fail("Chỉ bón phân cho đất đã cuốc.")
+		end
+		if tile.f >= 100 then
+			return fail("Đất đã rất màu mỡ.")
+		end
+		if (ctx.fertilizer or 0) <= 0 then
+			return fail("Hết phân bón! Mua ở Đảo Chợ.")
+		end
+		tile.f = math.min(100, tile.f + cfg.Fertility.FertilizerGain)
+		return { ok = true, fertilizerUsed = 1 }
+	elseif toolId == "Sprayer" then
+		if not tile.pest then
+			return fail("Không có sâu ở đây.")
+		end
+		tile.pest = false
+		return { ok = true, msg = "Đã diệt sâu", helped = not ctx.isOwner }
+	end
+	return fail("Công cụ không hợp lệ.")
+end
+
+--[[
+	Mỗi giờ trong game: cỏ có thể mọc, sâu có thể xuất hiện.
+	`rand` là hàm trả về số ngẫu nhiên trong [0, 1). Trả về true nếu ô thay đổi.
+]]
+function FarmLogic.hourTick(tile: Tile, cfg, crops, rand: () -> number): boolean
+	if tile.s ~= "tilled" then
+		return false
+	end
+	local changed = false
+	if not tile.weed and rand() < cfg.WeedChancePerHour then
+		tile.weed = true
+		changed = true
+	end
+	if tile.crop and not tile.pest and not FarmLogic.isRipe(tile, crops) and rand() < cfg.PestChancePerHour then
+		tile.pest = true
+		changed = true
+	end
+	return changed
+end
+
+--[[
+	Bình minh (ngày mới): cây được tưới hôm qua thì lớn thêm, đất khô lại.
+	- Có sâu: không lớn, bị phạt 1
+	- Không tưới: không lớn, bị phạt 1
+	- Có cỏ: chỉ lớn nửa ngày, bị phạt 0,5
+	- Trái mùa: đứng yên, không bị phạt
+]]
+function FarmLogic.dawnTick(tile: Tile, season: string, crops)
+	local crop = tile.crop
+	if tile.s == "tilled" and crop and not FarmLogic.isRipe(tile, crops) and FarmLogic.inSeason(crop.id, season, crops) then
+		local days = crops.List[crop.id].Days
+		if tile.pest then
+			crop.pen += 1
+		elseif tile.w then
+			if tile.weed then
+				crop.g = math.min(days, crop.g + 0.5)
+				crop.pen += 0.5
+			else
+				crop.g = math.min(days, crop.g + 1)
+			end
+		else
+			crop.pen += 1
+		end
+	end
+	tile.w = false
+end
+
+return FarmLogic
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="8">
+        <Properties>
+          <string name="Name">Format</string>
+          <string name="Source"><![CDATA[local Format = {}
+
+-- 1234567 -> "1.234.567"
+function Format.number(n: number): string
+	local s = tostring(math.floor(n))
+	local formatted = s:reverse():gsub("(%d%d%d)", "%1."):reverse()
+	if formatted:sub(1, 1) == "." then
+		formatted = formatted:sub(2)
+	end
+	return formatted
+end
+
+-- Khoá nông sản trong túi: "CaRot:3" = cà rốt 3 sao
+function Format.produceKey(cropId: string, stars: number): string
+	return cropId .. ":" .. tostring(stars)
+end
+
+function Format.parseProduceKey(key: string): (string?, number?)
+	local cropId, stars = string.match(key, "^(%w+):(%d)$")
+	if not cropId then
+		return nil, nil
+	end
+	return cropId, tonumber(stars)
+end
+
+function Format.stars(n: number): string
+	return string.rep("★", n) .. string.rep("☆", 3 - n)
+end
+
+return Format
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="9">
+        <Properties>
+          <string name="Name">GameTime</string>
+          <string name="Source"><![CDATA[--[[
+	GameTime: đổi thời gian thật (giây) sang lịch trong game.
+	Thuần, không đụng tới Roblox. Server & client cùng gọi với
+	workspace:GetServerTimeNow() nên mọi người thấy cùng một giờ.
+]]
+
+local GameTime = {}
+
+export type Info = {
+	day: number, -- số ngày tuyệt đối kể từ mốc (tăng mãi)
+	hourIndex: number, -- số giờ tuyệt đối (dùng để biết khi nào sang giờ mới)
+	hour: number, -- 0..24 (số thực)
+	season: string,
+	seasonIndex: number,
+	dayOfSeason: number,
+	year: number,
+	clock: string, -- "06:30"
+}
+
+function GameTime.at(seconds: number, timeCfg): Info
+	local total = math.max(0, seconds - timeCfg.Epoch)
+	local day = total // timeCfg.DayLength
+	local frac = (total % timeCfg.DayLength) / timeCfg.DayLength
+	local hour = (timeCfg.DawnHour + frac * 24) % 24
+	local seasonCount = #timeCfg.Seasons
+	local seasonIndex = (day // timeCfg.DaysPerSeason) % seasonCount + 1
+	local minutes = math.floor(hour * 60)
+
+	return {
+		day = day,
+		hourIndex = total // (timeCfg.DayLength / 24),
+		hour = hour,
+		season = timeCfg.Seasons[seasonIndex],
+		seasonIndex = seasonIndex,
+		dayOfSeason = day % timeCfg.DaysPerSeason + 1,
+		year = day // (timeCfg.DaysPerSeason * seasonCount) + 1,
+		clock = string.format("%02d:%02d", minutes // 60, minutes % 60),
+	}
+end
+
+return GameTime
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="10">
+        <Properties>
+          <string name="Name">Remotes</string>
+          <string name="Source"><![CDATA[--[[
+	Danh sách RemoteEvent/RemoteFunction. Server tạo, client chờ.
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Remotes = {}
+
+local EVENTS = {
+	-- client -> server
+	"UseTool", -- (tilePart: BasePart, toolId: string)
+	"SelectSeed", -- (cropId: string)
+	"BuySeed", -- (cropId: string, amount: number)
+	"BuyItem", -- (itemId: string, amount: number)
+	"Travel", -- (target: "market" | "home" | userId)
+	-- server -> client
+	"StateChanged", -- (state)
+	"Notify", -- (text, kind)
+	"OpenShop",
+}
+local FUNCTIONS = {
+	"GetState",
+}
+
+local folder: Folder
+
+if RunService:IsServer() then
+	local existing = ReplicatedStorage:FindFirstChild("Remotes")
+	if existing then
+		existing:Destroy()
+	end
+	folder = Instance.new("Folder")
+	folder.Name = "Remotes"
+	for _, name in ipairs(EVENTS) do
+		local remote = Instance.new("RemoteEvent")
+		remote.Name = name
+		remote.Parent = folder
+	end
+	for _, name in ipairs(FUNCTIONS) do
+		local remote = Instance.new("RemoteFunction")
+		remote.Name = name
+		remote.Parent = folder
+	end
+	folder.Parent = ReplicatedStorage
+else
+	folder = ReplicatedStorage:WaitForChild("Remotes") :: Folder
+end
+
+function Remotes.event(name: string): RemoteEvent
+	return folder:WaitForChild(name) :: RemoteEvent
+end
+
+function Remotes.func(name: string): RemoteFunction
+	return folder:WaitForChild(name) :: RemoteFunction
+end
+
+return Remotes
+]]></string>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="ServerScriptService" referent="11">
+    <Properties>
+      <string name="Name">ServerScriptService</string>
+    </Properties>
+    <Item class="Folder" referent="12">
+      <Properties>
+        <string name="Name">Server</string>
+      </Properties>
+      <Item class="ModuleScript" referent="13">
+        <Properties>
+          <string name="Name">DataService</string>
+          <string name="Source"><![CDATA[--[[
+	DataService: tải / lưu tiến trình bằng DataStore.
+
+	- Khoá phiên: khi một server đang giữ dữ liệu của bạn, server khác phải chờ
+	  (tránh mất đồ hoặc nhân bản đồ khi chuyển server nhanh, rất quan trọng khi
+	  có giao dịch ở giai đoạn 4).
+	- Thử lại khi Roblox báo lỗi, tự lưu định kỳ, lưu khi thoát & khi server tắt.
+	- Tải thất bại: vẫn cho chơi nhưng KHÔNG ghi đè dữ liệu cũ.
+]]
+
+local DataStoreService = game:GetService("DataStoreService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+
+local DataService = {}
+
+local AUTOSAVE_INTERVAL = 60
+local LOCK_TIMEOUT = 30 * 60 -- khoá cũ hơn 30 phút coi như server kia đã chết
+local LOAD_ATTEMPTS = 5
+
+local store: DataStore? = nil
+do
+	local ok, err = pcall(function()
+		store = DataStoreService:GetDataStore(Cfg.DataStoreName)
+	end)
+	if not ok then
+		warn("[DataService] Không mở được DataStore (đã Publish và bật API Services chưa?):", err)
+	end
+end
+
+local sessions: { [Player]: any } = {}
+local canSave: { [Player]: boolean } = {}
+local activeSaves = 0
+
+local function deepCopy(value)
+	if type(value) ~= "table" then
+		return value
+	end
+	local copy = {}
+	for k, v in pairs(value) do
+		copy[k] = deepCopy(v)
+	end
+	return copy
+end
+
+local TEMPLATE = {
+	coins = Cfg.StartingCoins,
+	seeds = {}, -- [cropId] = số hạt
+	produce = {}, -- ["CaRot:3"] = số nông sản
+	fertilizer = Cfg.StartingFertilizer,
+	water = Cfg.WaterCapacity,
+	zones = { ["1"] = true }, -- khu đất đã mở
+	tiles = {}, -- ["1:5"] = tile (xem FarmLogic)
+	totalHarvested = 0,
+	lastDay = -1, -- ngày trong game lần cuối xử lý bình minh
+	isNew = true,
+}
+
+local function reconcile(data, template)
+	for key, value in pairs(template) do
+		if data[key] == nil then
+			data[key] = deepCopy(value)
+		elseif type(value) == "table" and type(data[key]) == "table" then
+			reconcile(data[key], value)
+		end
+	end
+end
+
+local function keyFor(player: Player): string
+	return "Farm_" .. player.UserId
+end
+
+-- Trả về (data, loadedOk). data = nil nếu người chơi rời game trong lúc tải.
+function DataService.load(player: Player)
+	local stored = nil
+	local success = false
+
+	if store then
+		for attempt = 1, LOAD_ATTEMPTS do
+			local lockedByOther = false
+			local ok, err = pcall(function()
+				(store :: DataStore):UpdateAsync(keyFor(player), function(old)
+					old = if type(old) == "table" then old else {}
+					local lock = old.lock
+					local stillLocked = lock and lock.job ~= game.JobId and os.time() - (lock.t or 0) < LOCK_TIMEOUT
+					if stillLocked and attempt < LOAD_ATTEMPTS then
+						lockedByOther = true
+						return nil -- huỷ cập nhật, thử lại sau
+					end
+					old.lock = { job = game.JobId, t = os.time() }
+					stored = old.data
+					return old
+				end)
+			end)
+			if ok and not lockedByOther then
+				success = true
+				break
+			end
+			if not ok then
+				warn(string.format("[DataService] Tải %s lỗi (lần %d): %s", player.Name, attempt, tostring(err)))
+			end
+			if player.Parent == nil then
+				return nil, false
+			end
+			task.wait(if lockedByOther then 6 else attempt * 2)
+		end
+	end
+
+	if player.Parent == nil then
+		-- Đã rời game: nhả khoá vừa lấy
+		if success then
+			sessions[player] = if type(stored) == "table" then stored else deepCopy(TEMPLATE)
+			canSave[player] = true
+			DataService.release(player)
+		end
+		return nil, false
+	end
+
+	local data = if type(stored) == "table" then stored else deepCopy(TEMPLATE)
+	reconcile(data, TEMPLATE)
+
+	sessions[player] = data
+	canSave[player] = success
+	return data, success
+end
+
+function DataService.get(player: Player)
+	return sessions[player]
+end
+
+function DataService.canSave(player: Player): boolean
+	return canSave[player] == true
+end
+
+local function write(player: Player, releaseLock: boolean): boolean
+	local data = sessions[player]
+	if not data or not canSave[player] or not store then
+		return false
+	end
+	activeSaves += 1
+	local saved = false
+	for attempt = 1, 3 do
+		local ok, err = pcall(function()
+			(store :: DataStore):UpdateAsync(keyFor(player), function(old)
+				old = if type(old) == "table" then old else {}
+				local lock = old.lock
+				if lock and lock.job ~= game.JobId and os.time() - (lock.t or 0) < LOCK_TIMEOUT then
+					return nil -- server khác đang giữ: không ghi đè
+				end
+				old.data = data
+				old.lock = if releaseLock then nil else { job = game.JobId, t = os.time() }
+				return old, { player.UserId }
+			end)
+		end)
+		if ok then
+			saved = true
+			break
+		end
+		warn(string.format("[DataService] Lưu %s lỗi (lần %d): %s", player.Name, attempt, tostring(err)))
+		task.wait(attempt * 2)
+	end
+	activeSaves -= 1
+	return saved
+end
+
+function DataService.save(player: Player): boolean
+	return write(player, false)
+end
+
+function DataService.release(player: Player)
+	if sessions[player] then
+		write(player, true)
+	end
+	sessions[player] = nil
+	canSave[player] = nil
+end
+
+function DataService.start()
+	task.spawn(function()
+		while true do
+			task.wait(AUTOSAVE_INTERVAL)
+			for _, player in ipairs(Players:GetPlayers()) do
+				if sessions[player] then
+					task.spawn(DataService.save, player)
+				end
+			end
+		end
+	end)
+
+	game:BindToClose(function()
+		for player in pairs(sessions) do
+			task.spawn(DataService.release, player)
+		end
+		task.wait()
+		local startTime = os.clock()
+		while activeSaves > 0 and os.clock() - startTime < 25 do
+			task.wait(0.1)
+		end
+	end)
+end
+
+return DataService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="14">
+        <Properties>
+          <string name="Name">FarmService</string>
+          <string name="Source"><![CDATA[--[[
+	FarmService: xử lý dùng công cụ, cỏ/sâu theo giờ, cây lớn lúc bình minh,
+	mở khu đất, múc nước, và vẽ lại ô đất.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local Crops = require(ReplicatedStorage.Shared.Config.Crops)
+local FarmLogic = require(ReplicatedStorage.Shared.FarmLogic)
+local Format = require(ReplicatedStorage.Shared.Format)
+local GameTime = require(ReplicatedStorage.Shared.GameTime)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+local DataService = require(script.Parent.DataService)
+local IslandService = require(script.Parent.IslandService)
+local Models = require(script.Parent.Models)
+local Net = require(script.Parent.Net)
+local TimeService = require(script.Parent.TimeService)
+local WorldBuilder = require(script.Parent.WorldBuilder)
+
+local FarmService = {}
+
+local rng = Random.new()
+local lastUse: { [Player]: number } = {}
+local lastHelpNotice: { [string]: number } = {}
+
+local function randomNumber(): number
+	return rng:NextNumber()
+end
+
+-- ===================== Vẽ =====================
+function FarmService.render(island: WorldBuilder.Island, key: string)
+	local owner = IslandService.ownerOf(island)
+	local data = owner and DataService.get(owner)
+	local part = IslandService.tilePart(island, key)
+	if data and part and data.tiles[key] then
+		Models.renderTile(part, data.tiles[key])
+	end
+end
+
+function FarmService.renderIsland(island: WorldBuilder.Island)
+	for key in pairs(IslandService.tileKeys(island)) do
+		FarmService.render(island, key)
+	end
+end
+
+-- ===================== Hạt giống đang chọn =====================
+-- Nếu hạt đang chọn đã hết, tự chọn hạt khác (ưu tiên đúng mùa)
+function FarmService.ensureSeed(player: Player, data, season: string)
+	local current = Net.getSelectedSeed(player)
+	if current and (data.seeds[current] or 0) > 0 then
+		return
+	end
+	local fallback = nil
+	for _, cropId in ipairs(Crops.Order) do
+		if (data.seeds[cropId] or 0) > 0 then
+			if Crops.List[cropId].Season == season then
+				Net.setSelectedSeed(player, cropId)
+				return
+			end
+			fallback = fallback or cropId
+		end
+	end
+	Net.setSelectedSeed(player, fallback)
+end
+
+-- ===================== Mở khu đất =====================
+local function ensureZoneTiles(player: Player, data, zoneId: number)
+	local zone = IslandService.zone(zoneId)
+	local generated = nil
+	for i = 1, zone.Cols * zone.Rows do
+		local key = IslandService.tileKey(zoneId, i)
+		if not data.tiles[key] then
+			generated = generated or FarmLogic.generateZone(zone, Cfg, player.UserId)
+			data.tiles[key] = generated[i]
+		end
+	end
+end
+
+-- Gọi khi người chơi vào game và đã có đảo
+function FarmService.attach(player: Player, island: WorldBuilder.Island, data)
+	local info = TimeService.now()
+
+	-- Bù 1 bình minh nếu đã sang ngày mới khi offline (cây tưới hôm trước vẫn được lớn)
+	if data.lastDay >= 0 and data.lastDay < info.day then
+		for _, tile in pairs(data.tiles) do
+			FarmLogic.dawnTick(tile, info.season, Crops)
+		end
+	end
+	data.lastDay = info.day
+
+	for _, zone in ipairs(Cfg.Zones) do
+		if data.zones[tostring(zone.Id)] then
+			ensureZoneTiles(player, data, zone.Id)
+			IslandService.buildZone(island, zone.Id)
+		end
+	end
+	FarmService.renderIsland(island)
+	FarmService.ensureSeed(player, data, info.season)
+end
+
+local function onBuyZone(island: WorldBuilder.Island, zoneId: number, player: Player)
+	if IslandService.ownerOf(island) ~= player then
+		Net.notify(player, "Đây không phải đảo của bạn.", "error")
+		return
+	end
+	local data = DataService.get(player)
+	local zone = IslandService.zone(zoneId)
+	if not data or data.zones[tostring(zoneId)] then
+		return
+	end
+	if data.coins < zone.Price then
+		Net.notify(player, "Cần " .. Format.number(zone.Price) .. " Xu để mua " .. zone.Name .. ".", "error")
+		return
+	end
+	data.coins -= zone.Price
+	data.zones[tostring(zoneId)] = true
+	ensureZoneTiles(player, data, zoneId)
+	IslandService.buildZone(island, zoneId)
+	FarmService.renderIsland(island)
+	Net.notify(player, "Đã mua " .. zone.Name .. "! Hãy dọn đá và gốc cây.", "success")
+	Net.push(player)
+end
+
+-- ===================== Dùng công cụ =====================
+local function onUseTool(player: Player, tilePart: any, toolId: any)
+	if typeof(tilePart) ~= "Instance" or not tilePart:IsA("BasePart") then
+		return
+	end
+	if type(toolId) ~= "string" or not Cfg.Tools[toolId] then
+		return
+	end
+	local now = os.clock()
+	if now - (lastUse[player] or 0) < Cfg.ToolCooldown then
+		return
+	end
+	lastUse[player] = now
+
+	local island, key = IslandService.lookup(tilePart)
+	if not island or not key then
+		return
+	end
+	local owner = IslandService.ownerOf(island)
+	local ownerData = owner and DataService.get(owner)
+	local data = DataService.get(player)
+	local tile = ownerData and ownerData.tiles[key]
+	if not owner or not data or not tile then
+		return
+	end
+
+	-- Phải đang cầm đúng công cụ và đứng đủ gần
+	local character = player.Character
+	local equipped = character and character:FindFirstChildOfClass("Tool")
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not equipped or equipped.Name ~= toolId or not root then
+		return
+	end
+	if (root.Position - tilePart.Position).Magnitude > Cfg.ToolRange then
+		Net.notify(player, "Lại gần ô đất hơn nữa.", "error")
+		return
+	end
+
+	local info = TimeService.now()
+	local isOwner = owner == player
+	local seedId = Net.getSelectedSeed(player)
+	local result = FarmLogic.useTool(tile, toolId, {
+		crops = Crops,
+		cfg = Cfg,
+		season = info.season,
+		isOwner = isOwner,
+		water = data.water,
+		seedId = seedId,
+		seedCount = if seedId then data.seeds[seedId] or 0 else 0,
+		fertilizer = data.fertilizer,
+	})
+
+	if not result.ok then
+		Net.notify(player, result.msg or "Không làm được.", "error")
+		return
+	end
+
+	if result.waterUsed then
+		data.water = math.max(0, data.water - result.waterUsed)
+	end
+	if result.seedUsed then
+		data.seeds[result.seedUsed] = math.max(0, (data.seeds[result.seedUsed] or 0) - 1)
+		FarmService.ensureSeed(player, data, info.season)
+	end
+	if result.fertilizerUsed then
+		data.fertilizer = math.max(0, data.fertilizer - result.fertilizerUsed)
+	end
+	if result.harvest then
+		local harvest = result.harvest
+		local produceKey = Format.produceKey(harvest.id, harvest.stars)
+		data.produce[produceKey] = (data.produce[produceKey] or 0) + 1
+		data.totalHarvested += 1
+		Net.notify(player, "+1 " .. Crops.List[harvest.id].Name .. " " .. Format.stars(harvest.stars), "success")
+	elseif result.msg then
+		Net.notify(player, result.msg, "info")
+	end
+
+	if result.helped then
+		local noticeKey = owner.UserId .. ":" .. player.UserId
+		if os.clock() - (lastHelpNotice[noticeKey] or 0) > 60 then
+			lastHelpNotice[noticeKey] = os.clock()
+			Net.notify(owner, player.DisplayName .. " đang giúp chăm ruộng của bạn!", "info")
+		end
+	end
+
+	FarmService.render(island, key)
+	Net.push(player)
+end
+
+-- ===================== Theo thời gian =====================
+local function forEachOwnedIsland(callback: (WorldBuilder.Island, Player, any) -> ())
+	for _, island in ipairs(IslandService.world().islands) do
+		local owner = IslandService.ownerOf(island)
+		local data = owner and DataService.get(owner)
+		if owner and data then
+			callback(island, owner, data)
+		end
+	end
+end
+
+local function onHour(_info: GameTime.Info)
+	forEachOwnedIsland(function(island, _owner, data)
+		for key, tile in pairs(data.tiles) do
+			if FarmLogic.hourTick(tile, Cfg, Crops, randomNumber) then
+				FarmService.render(island, key)
+			end
+		end
+	end)
+end
+
+local function onDawn(info: GameTime.Info, seasonChanged: boolean)
+	forEachOwnedIsland(function(island, owner, data)
+		for _, tile in pairs(data.tiles) do
+			FarmLogic.dawnTick(tile, info.season, Crops)
+		end
+		data.lastDay = info.day
+		FarmService.renderIsland(island)
+		if seasonChanged then
+			Net.notify(owner, "Mùa " .. info.season .. " đã đến! Tiệm hạt có hạt giống mới. Cây trái mùa sẽ ngừng lớn.", "info")
+		else
+			Net.notify(owner, string.format("Ngày %d mùa %s. Đất đã khô, nhớ tưới cây!", info.dayOfSeason, info.season), "info")
+		end
+		FarmService.ensureSeed(owner, data, info.season)
+		Net.push(owner)
+	end)
+end
+
+-- ===================== Khởi động =====================
+function FarmService.init()
+	local world = IslandService.world()
+
+	Remotes.event("UseTool").OnServerEvent:Connect(onUseTool)
+
+	for _, island in ipairs(world.islands) do
+		for zoneId, visual in pairs(island.zones) do
+			visual.prompt.Triggered:Connect(function(player)
+				onBuyZone(island, zoneId, player)
+			end)
+		end
+	end
+
+	local function refill(player: Player)
+		local data = DataService.get(player)
+		if not data then
+			return
+		end
+		data.water = Cfg.WaterCapacity
+		Net.notify(player, string.format("Đã múc đầy bình (%d/%d).", data.water, Cfg.WaterCapacity), "success")
+		Net.push(player)
+	end
+	world.market.wellPrompt.Triggered:Connect(refill)
+	for _, island in ipairs(world.islands) do
+		island.wellPrompt.Triggered:Connect(refill)
+	end
+
+	TimeService.onHour(onHour)
+	TimeService.onDawn(onDawn)
+
+	Players.PlayerRemoving:Connect(function(player)
+		lastUse[player] = nil
+	end)
+end
+
+return FarmService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="15">
+        <Properties>
+          <string name="Name">IslandService</string>
+          <string name="Source"><![CDATA[--[[
+	IslandService: giao đảo cho người chơi, tạo/xoá các ô đất trên đảo,
+	và tra cứu ô đất từ Part (để kiểm tra yêu cầu từ client).
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local WorldBuilder = require(script.Parent.WorldBuilder)
+
+local IslandService = {}
+
+local world: WorldBuilder.World
+local owners: { [number]: Player } = {}
+local playerIsland: { [Player]: WorldBuilder.Island } = {}
+local tileParts: { [number]: { [string]: BasePart } } = {}
+local partLookup: { [BasePart]: { island: WorldBuilder.Island, key: string } } = {}
+
+local zoneById = {}
+for _, zone in ipairs(Cfg.Zones) do
+	zoneById[zone.Id] = zone
+end
+
+function IslandService.init(builtWorld: WorldBuilder.World)
+	world = builtWorld
+	for _, island in ipairs(world.islands) do
+		tileParts[island.index] = {}
+	end
+end
+
+function IslandService.world(): WorldBuilder.World
+	return world
+end
+
+function IslandService.zone(zoneId: number)
+	return zoneById[zoneId]
+end
+
+function IslandService.islandOf(player: Player): WorldBuilder.Island?
+	return playerIsland[player]
+end
+
+function IslandService.ownerOf(island: WorldBuilder.Island): Player?
+	return owners[island.index]
+end
+
+-- Tra cứu ô đất từ Part. Trả về nil nếu không phải ô đất hợp lệ.
+function IslandService.lookup(part: BasePart): (WorldBuilder.Island?, string?)
+	local entry = partLookup[part]
+	if not entry then
+		return nil, nil
+	end
+	return entry.island, entry.key
+end
+
+function IslandService.tilePart(island: WorldBuilder.Island, key: string): BasePart?
+	return tileParts[island.index][key]
+end
+
+function IslandService.tileKeys(island: WorldBuilder.Island): { [string]: BasePart }
+	return tileParts[island.index]
+end
+
+function IslandService.tileKey(zoneId: number, i: number): string
+	return zoneId .. ":" .. i
+end
+
+-- Tạo các Part ô đất cho một khu đã mở; ẩn tấm phủ "chưa mở"
+function IslandService.buildZone(island: WorldBuilder.Island, zoneId: number)
+	local zone = zoneById[zoneId]
+	local visual = island.zones[zoneId]
+	visual.plate.Transparency = 1
+	visual.post.Transparency = 1
+	visual.post.CanCollide = false
+	visual.prompt.Enabled = false
+	visual.label.Visible = false
+
+	for i = 1, zone.Cols * zone.Rows do
+		local key = IslandService.tileKey(zoneId, i)
+		if not tileParts[island.index][key] then
+			local part = Instance.new("Part")
+			part.Name = key
+			part.Anchored = true
+			part.CanCollide = true
+			part.CastShadow = false
+			part.TopSurface = Enum.SurfaceType.Smooth
+			part.Size = Vector3.new(Cfg.TileSize - 0.15, 0.4, Cfg.TileSize - 0.15)
+			part.CFrame = WorldBuilder.tileCFrame(island, zone, i)
+			part:SetAttribute("TileKey", key)
+			part:SetAttribute("IslandIndex", island.index)
+			part.Parent = island.tilesFolder
+			tileParts[island.index][key] = part
+			partLookup[part] = { island = island, key = key }
+		end
+	end
+end
+
+local function resetZones(island: WorldBuilder.Island, ownerName: string?)
+	for zoneId, visual in pairs(island.zones) do
+		local zone = zoneById[zoneId]
+		visual.plate.Transparency = 0.35
+		visual.post.Transparency = 0
+		visual.post.CanCollide = true
+		visual.prompt.Enabled = ownerName ~= nil
+		visual.label.Visible = true
+		visual.label.Text = if ownerName then string.format("%s · %d Xu", zone.Name, zone.Price) else zone.Name
+	end
+end
+
+local function clearTiles(island: WorldBuilder.Island)
+	for _, part in pairs(tileParts[island.index]) do
+		partLookup[part] = nil
+		part:Destroy()
+	end
+	tileParts[island.index] = {}
+end
+
+-- Giao đảo trống đầu tiên. Trả về nil nếu hết đảo.
+function IslandService.assign(player: Player): WorldBuilder.Island?
+	for _, island in ipairs(world.islands) do
+		if not owners[island.index] then
+			owners[island.index] = player
+			playerIsland[player] = island
+			island.model:SetAttribute("OwnerId", player.UserId)
+			island.ownerLabel.Text = "Đảo của " .. player.DisplayName
+			resetZones(island, player.DisplayName)
+			return island
+		end
+	end
+	return nil
+end
+
+function IslandService.release(player: Player)
+	local island = playerIsland[player]
+	if not island then
+		return
+	end
+	playerIsland[player] = nil
+	owners[island.index] = nil
+	island.model:SetAttribute("OwnerId", 0)
+	island.ownerLabel.Text = "Đảo trống"
+	clearTiles(island)
+	resetZones(island, nil)
+end
+
+return IslandService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="Script" referent="16">
+        <Properties>
+          <string name="Name">Main</string>
+          <token name="RunContext">0</token>
+          <string name="Source"><![CDATA[--[[
+	Main (Script): khởi động server và quản lý người chơi vào/ra, di chuyển giữa các đảo.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local Crops = require(ReplicatedStorage.Shared.Config.Crops)
+local Remotes = require(ReplicatedStorage.Shared.Remotes) -- tạo các remote trước tiên
+
+local DataService = require(script.Parent.DataService)
+local FarmService = require(script.Parent.FarmService)
+local IslandService = require(script.Parent.IslandService)
+local Net = require(script.Parent.Net)
+local ShopService = require(script.Parent.ShopService)
+local TimeService = require(script.Parent.TimeService)
+local ToolService = require(script.Parent.ToolService)
+local WorldBuilder = require(script.Parent.WorldBuilder)
+
+Players.CharacterAutoLoads = true
+
+local world = WorldBuilder.build()
+IslandService.init(world)
+DataService.start()
+TimeService.start()
+FarmService.init()
+ShopService.init()
+
+-- ===================== Di chuyển =====================
+local function teleport(player: Player, cframe: CFrame)
+	local character = player.Character
+	if character and character:FindFirstChild("HumanoidRootPart") then
+		character:PivotTo(cframe)
+	end
+end
+
+local function goHome(player: Player)
+	local island = IslandService.islandOf(player)
+	if island then
+		teleport(player, island.spawnCFrame)
+	else
+		teleport(player, world.market.spawnCFrame)
+	end
+end
+
+Remotes.event("Travel").OnServerEvent:Connect(function(player, target)
+	if target == "market" then
+		teleport(player, world.market.spawnCFrame)
+	elseif target == "home" then
+		goHome(player)
+	elseif type(target) == "number" then
+		local friend = Players:GetPlayerByUserId(target)
+		local island = friend and IslandService.islandOf(friend)
+		if island then
+			teleport(player, island.spawnCFrame)
+			Net.notify(player, "Bạn đang thăm đảo của " .. (friend :: Player).DisplayName .. ". Có thể tưới, cắt cỏ, diệt sâu giúp bạn ấy.", "info")
+		end
+	end
+end)
+
+world.market.travelPrompt.Triggered:Connect(goHome)
+for _, island in ipairs(world.islands) do
+	island.travelPrompt.Triggered:Connect(function(player)
+		teleport(player, world.market.spawnCFrame)
+	end)
+end
+
+Remotes.func("GetState").OnServerInvoke = function(player)
+	return Net.buildState(player)
+end
+
+-- ===================== Người chơi vào / ra =====================
+local function giveStarterKit(data, season: string)
+	-- Tặng hạt rẻ nhất của mùa hiện tại để trồng được ngay
+	local cheapest, price = nil, math.huge
+	for _, cropId in ipairs(Crops.Order) do
+		local def = Crops.List[cropId]
+		if def.Season == season and def.SeedPrice < price then
+			cheapest, price = cropId, def.SeedPrice
+		end
+	end
+	if cheapest then
+		data.seeds[cheapest] = (data.seeds[cheapest] or 0) + Cfg.StartingSeedCount
+	end
+end
+
+local function onPlayerAdded(player: Player)
+	player.CharacterAdded:Connect(function()
+		ToolService.give(player)
+		task.wait(0.2)
+		goHome(player)
+	end)
+
+	local data, loadedOk = DataService.load(player)
+	if not data then
+		return
+	end
+
+	local stats = Instance.new("Folder")
+	stats.Name = "leaderstats"
+	local coins = Instance.new("IntValue")
+	coins.Name = "Xu"
+	coins.Parent = stats
+	local harvested = Instance.new("IntValue")
+	harvested.Name = "Thu hoạch"
+	harvested.Parent = stats
+	stats.Parent = player
+
+	local info = TimeService.now()
+	if data.isNew then
+		giveStarterKit(data, info.season)
+		data.isNew = false
+	end
+
+	local island = IslandService.assign(player)
+	if island then
+		FarmService.attach(player, island, data)
+		task.spawn(goHome, player)
+		Net.notify(player, "Chào mừng đến Nông Trại Vui Vẻ! Cầm Cuốc (phím 1) và bấm vào ô cỏ để cuốc đất.", "info")
+	else
+		FarmService.ensureSeed(player, data, info.season)
+		Net.notify(player, "Server đã hết đảo trống. Hãy thử server khác!", "error")
+	end
+	if not loadedOk then
+		Net.notify(player, "Không tải được dữ liệu. Tiến trình lần này sẽ KHÔNG được lưu.", "error")
+	end
+	Net.push(player)
+end
+
+local function onPlayerRemoving(player: Player)
+	IslandService.release(player)
+	DataService.release(player)
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+Players.PlayerRemoving:Connect(onPlayerRemoving)
+for _, player in ipairs(Players:GetPlayers()) do
+	task.spawn(onPlayerAdded, player)
+end
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="17">
+        <Properties>
+          <string name="Name">Models</string>
+          <string name="Source"><![CDATA[--[[
+	Models: dựng hình ô đất, cây trồng, vật cản và công cụ bằng code,
+	theo bản thiết kế (hoạt hình, khối bo tròn, màu tươi).
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local Crops = require(ReplicatedStorage.Shared.Config.Crops)
+local FarmLogic = require(ReplicatedStorage.Shared.FarmLogic)
+
+local Models = {}
+
+Models.Colors = {
+	Grass = Color3.fromRGB(124, 195, 91),
+	GrassDark = Color3.fromRGB(90, 154, 61),
+	SoilDry = Color3.fromRGB(160, 123, 85),
+	SoilWet = Color3.fromRGB(90, 61, 40),
+	Leaf = Color3.fromRGB(93, 187, 76),
+	LeafDark = Color3.fromRGB(47, 122, 40),
+	Sprout = Color3.fromRGB(126, 217, 87),
+	Seed = Color3.fromRGB(200, 163, 106),
+	Weed = Color3.fromRGB(158, 157, 36),
+	Pest = Color3.fromRGB(192, 57, 43),
+	Rock = Color3.fromRGB(158, 158, 158),
+	Wood = Color3.fromRGB(141, 110, 79),
+	WoodDark = Color3.fromRGB(94, 69, 47),
+	Gold = Color3.fromRGB(255, 201, 60),
+}
+local C = Models.Colors
+
+function Models.rgb(c: { number }): Color3
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+-- Tạo Part trang trí (không va chạm)
+function Models.part(parent: Instance, size: Vector3, color: Color3, cframe: CFrame, props: { [string]: any }?): Part
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Material = Enum.Material.SmoothPlastic
+	p.Size = size
+	p.Color = color
+	p.CFrame = cframe
+	if props then
+		for key, value in pairs(props) do
+			(p :: any)[key] = value
+		end
+	end
+	p.Parent = parent
+	return p
+end
+
+local function ball(parent: Instance, diameter: number, color: Color3, position: Vector3): Part
+	return Models.part(parent, Vector3.one * diameter, color, CFrame.new(position), { Shape = Enum.PartType.Ball })
+end
+
+-- ===================== Cây trồng =====================
+local function buildRipe(model: Model, top: Vector3, cropId: string)
+	local def = Crops.List[cropId]
+	local color = Models.rgb(def.Color)
+	local shape = def.Shape
+
+	if shape == "ball" then
+		local size = def.Size or 2.4
+		ball(model, size * 0.55, C.Leaf, top + Vector3.new(-0.9, 0.35, 0.6))
+		ball(model, size, color, top + Vector3.new(0, size / 2, 0))
+	elseif shape == "root" then
+		ball(model, 1.6, C.Leaf, top + Vector3.new(0, 1.5, 0))
+		Models.part(model, Vector3.new(0.3, 0.9, 0.3), C.LeafDark, CFrame.new(top + Vector3.new(0, 0.7, 0)))
+		ball(model, 1.0, color, top + Vector3.new(0, 0.25, 0))
+	elseif shape == "tall" then
+		for _, dx in ipairs({ -0.7, 0.7 }) do
+			Models.part(model, Vector3.new(0.35, 3.2, 0.35), C.LeafDark, CFrame.new(top + Vector3.new(dx, 1.6, 0)))
+			Models.part(model, Vector3.new(0.6, 1.2, 0.6), color, CFrame.new(top + Vector3.new(dx + 0.35, 2.4, 0)))
+		end
+	elseif shape == "leafy" then
+		ball(model, 1.4, color, top + Vector3.new(-0.6, 0.6, 0))
+		ball(model, 1.4, color, top + Vector3.new(0.6, 0.6, 0.3))
+		ball(model, 1.5, C.Leaf, top + Vector3.new(0, 0.9, -0.5))
+	else -- "bush"
+		ball(model, 2.4, C.Leaf, top + Vector3.new(0, 1.1, 0))
+		ball(model, 0.7, color, top + Vector3.new(0.9, 1.4, 0.6))
+		ball(model, 0.7, color, top + Vector3.new(-0.8, 1.0, 0.8))
+		ball(model, 0.7, color, top + Vector3.new(0.2, 2.1, -0.7))
+	end
+end
+
+local function buildCrop(model: Model, top: Vector3, cropId: string, stage: number)
+	if stage == 1 then
+		ball(model, 0.5, C.Seed, top + Vector3.new(0, 0.15, 0))
+	elseif stage == 2 then
+		Models.part(model, Vector3.new(0.2, 0.6, 0.2), C.LeafDark, CFrame.new(top + Vector3.new(0, 0.3, 0)))
+		ball(model, 0.9, C.Sprout, top + Vector3.new(0, 0.75, 0))
+	elseif stage == 3 then
+		Models.part(model, Vector3.new(0.3, 1.4, 0.3), C.LeafDark, CFrame.new(top + Vector3.new(0, 0.7, 0)))
+		ball(model, 1.7, C.Leaf, top + Vector3.new(0, 1.6, 0))
+	else
+		buildRipe(model, top, cropId)
+	end
+end
+
+-- ===================== Ô đất =====================
+--[[
+	Vẽ một ô đất theo dữ liệu `tile`. Chỉ dựng lại hình khi trạng thái đổi.
+	Đồng thời ghi thuộc tính để client hiển thị bảng thông tin ô.
+]]
+function Models.renderTile(tilePart: BasePart, tile)
+	local stage = FarmLogic.stage(tile, Crops)
+	local crop = tile.crop
+
+	if tile.s == "tilled" then
+		tilePart.Color = if tile.w then C.SoilWet else C.SoilDry
+		tilePart.Material = Enum.Material.Ground
+	else
+		tilePart.Color = C.Grass
+		tilePart.Material = Enum.Material.Grass
+	end
+
+	tilePart:SetAttribute("State", tile.s)
+	tilePart:SetAttribute("Watered", tile.w)
+	tilePart:SetAttribute("Weed", tile.weed)
+	tilePart:SetAttribute("Pest", tile.pest)
+	tilePart:SetAttribute("Fertility", tile.f)
+	tilePart:SetAttribute("Hp", tile.hp)
+	tilePart:SetAttribute("Crop", if crop then crop.id else nil)
+	tilePart:SetAttribute("Growth", if crop then crop.g else nil)
+	tilePart:SetAttribute("Stars", if crop then FarmLogic.stars(tile, Cfg) else nil)
+
+	local sig = table.concat({
+		tile.s,
+		tile.dk or "",
+		if crop then crop.id else "",
+		tostring(stage),
+		tostring(tile.weed),
+		tostring(tile.pest),
+	}, "|")
+	if tilePart:GetAttribute("Sig") == sig then
+		return
+	end
+	tilePart:SetAttribute("Sig", sig)
+
+	local old = tilePart:FindFirstChild("Visual")
+	if old then
+		old:Destroy()
+	end
+
+	local model = Instance.new("Model")
+	model.Name = "Visual"
+	local top = tilePart.Position + Vector3.new(0, tilePart.Size.Y / 2, 0)
+
+	if tile.s == "debris" then
+		if tile.dk == "stump" then
+			Models.part(model, Vector3.new(1.8, 1.2, 1.8), C.Wood, CFrame.new(top + Vector3.new(0, 0.6, 0)), { Material = Enum.Material.Wood })
+			Models.part(model, Vector3.new(1.4, 0.1, 1.4), Color3.fromRGB(214, 180, 130), CFrame.new(top + Vector3.new(0, 1.25, 0)))
+		else
+			Models.part(model, Vector3.new(2.8, 1.6, 2.4), C.Rock, CFrame.new(top + Vector3.new(0, 0.8, 0)) * CFrame.Angles(0, math.rad(20), 0), { Material = Enum.Material.Slate })
+		end
+	end
+
+	if crop then
+		buildCrop(model, top, crop.id, stage)
+		if stage == 4 then
+			local box = Instance.new("SelectionBox")
+			box.Name = "RipeBox"
+			box.Adornee = tilePart
+			box.Color3 = C.Gold
+			box.LineThickness = 0.08
+			box.SurfaceTransparency = 1
+			box.Parent = model
+		end
+		if tile.pest then
+			ball(model, 0.45, C.Pest, top + Vector3.new(0.5, 1.2, 0.4))
+			ball(model, 0.45, C.Pest, top + Vector3.new(-0.4, 0.8, -0.3))
+		end
+	end
+
+	if tile.weed then
+		for _, offset in ipairs({ Vector3.new(-1.4, 0, -1.3), Vector3.new(1.3, 0, 1.4), Vector3.new(1.4, 0, -1.2) }) do
+			Models.part(model, Vector3.new(0.35, 0.9, 0.35), C.Weed, CFrame.new(top + offset + Vector3.new(0, 0.45, 0)))
+		end
+	end
+
+	model.Parent = tilePart
+end
+
+-- ===================== Công cụ =====================
+local function toolPart(tool: Tool, handle: BasePart, size: Vector3, color: Color3, offset: CFrame, material: Enum.Material?)
+	local p = Instance.new("Part")
+	p.Size = size
+	p.Color = color
+	p.Material = material or Enum.Material.SmoothPlastic
+	p.CanCollide = false
+	p.Massless = true
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.CFrame = handle.CFrame * offset
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = handle
+	weld.Part1 = p
+	weld.Parent = p
+	p.Parent = tool
+	return p
+end
+
+function Models.buildTool(toolId: string): Tool
+	local tool = Instance.new("Tool")
+	tool.Name = toolId
+	tool.CanBeDropped = false
+	tool.RequiresHandle = true
+	tool.ToolTip = Cfg.Tools[toolId].Name
+
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.TopSurface = Enum.SurfaceType.Smooth
+	handle.BottomSurface = Enum.SurfaceType.Smooth
+	handle.CFrame = CFrame.new()
+	handle.Parent = tool
+
+	local red = Color3.fromRGB(192, 57, 43)
+	local blue = Color3.fromRGB(31, 111, 181)
+	local metal = Color3.fromRGB(176, 176, 176)
+
+	if toolId == "Hoe" or toolId == "Sickle" then
+		handle.Size = Vector3.new(0.3, 0.3, 3.4)
+		handle.Color = C.Wood
+		handle.Material = Enum.Material.Wood
+		if toolId == "Hoe" then
+			toolPart(tool, handle, Vector3.new(1.2, 0.9, 0.2), metal, CFrame.new(0, -0.35, -1.7), Enum.Material.Metal)
+		else
+			handle.Size = Vector3.new(0.3, 0.3, 1.6)
+			toolPart(tool, handle, Vector3.new(0.15, 0.25, 1.4), metal, CFrame.new(0, 0.5, -0.9) * CFrame.Angles(math.rad(50), 0, 0), Enum.Material.Metal)
+			toolPart(tool, handle, Vector3.new(0.15, 0.25, 1.0), metal, CFrame.new(0, 0.9, -0.25) * CFrame.Angles(math.rad(-20), 0, 0), Enum.Material.Metal)
+		end
+	elseif toolId == "WateringCan" then
+		handle.Size = Vector3.new(1.2, 1.1, 1.4)
+		handle.Color = blue
+		toolPart(tool, handle, Vector3.new(0.25, 0.25, 1.3), blue, CFrame.new(0, 0.3, -1.1) * CFrame.Angles(math.rad(25), 0, 0))
+		toolPart(tool, handle, Vector3.new(0.2, 0.9, 0.2), Color3.fromRGB(20, 78, 130), CFrame.new(0, 0.8, 0.3))
+	elseif toolId == "SeedBag" or toolId == "Fertilizer" then
+		handle.Size = Vector3.new(1.1, 1.3, 0.9)
+		handle.Color = if toolId == "SeedBag" then Color3.fromRGB(200, 163, 106) else Color3.fromRGB(109, 76, 51)
+		handle.Material = Enum.Material.Fabric
+		toolPart(tool, handle, Vector3.new(0.6, 0.25, 0.6), C.LeafDark, CFrame.new(0, 0.75, 0))
+	else -- Sprayer
+		handle.Size = Vector3.new(0.8, 1.3, 0.8)
+		handle.Color = red
+		toolPart(tool, handle, Vector3.new(0.2, 0.2, 1.2), metal, CFrame.new(0, 0.5, -0.8), Enum.Material.Metal)
+	end
+
+	return tool
+end
+
+return Models
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="18">
+        <Properties>
+          <string name="Name">Net</string>
+          <string name="Source"><![CDATA[--[[
+	Net: gửi thông báo và trạng thái người chơi xuống client.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local DataService = require(script.Parent.DataService)
+
+local Net = {}
+
+local NotifyRemote = Remotes.event("Notify")
+local StateChanged = Remotes.event("StateChanged")
+
+local selectedSeed: { [Player]: string? } = {}
+
+function Net.notify(player: Player, text: string, kind: string?)
+	NotifyRemote:FireClient(player, text, kind or "info")
+end
+
+function Net.getSelectedSeed(player: Player): string?
+	return selectedSeed[player]
+end
+
+function Net.setSelectedSeed(player: Player, cropId: string?)
+	selectedSeed[player] = cropId
+end
+
+function Net.buildState(player: Player)
+	local data = DataService.get(player)
+	if not data then
+		return nil
+	end
+	return {
+		coins = data.coins,
+		seeds = data.seeds,
+		produce = data.produce,
+		fertilizer = data.fertilizer,
+		water = data.water,
+		zones = data.zones,
+		totalHarvested = data.totalHarvested,
+		selectedSeed = selectedSeed[player],
+		canSave = DataService.canSave(player),
+	}
+end
+
+function Net.push(player: Player)
+	local data = DataService.get(player)
+	if not data then
+		return
+	end
+	local stats = player:FindFirstChild("leaderstats")
+	if stats then
+		(stats:FindFirstChild("Xu") :: IntValue).Value = data.coins;
+		(stats:FindFirstChild("Thu hoạch") :: IntValue).Value = data.totalHarvested
+	end
+	StateChanged:FireClient(player, Net.buildState(player))
+end
+
+Players.PlayerRemoving:Connect(function(player)
+	selectedSeed[player] = nil
+end)
+
+return Net
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="19">
+        <Properties>
+          <string name="Name">ShopService</string>
+          <string name="Source"><![CDATA[--[[
+	ShopService: tiệm hạt (chỉ bán hạt đúng mùa), phân bón, quầy thu mua,
+	và chọn hạt giống để gieo.
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local Crops = require(ReplicatedStorage.Shared.Config.Crops)
+local FarmLogic = require(ReplicatedStorage.Shared.FarmLogic)
+local Format = require(ReplicatedStorage.Shared.Format)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+local DataService = require(script.Parent.DataService)
+local IslandService = require(script.Parent.IslandService)
+local Net = require(script.Parent.Net)
+local TimeService = require(script.Parent.TimeService)
+
+local ShopService = {}
+
+local function validAmount(amount: any): number?
+	if type(amount) ~= "number" or amount ~= amount or amount % 1 ~= 0 then
+		return nil
+	end
+	return math.clamp(amount, 1, 99)
+end
+
+local function onBuySeed(player: Player, cropId: any, amount: any)
+	local data = DataService.get(player)
+	local count = validAmount(amount)
+	if not data or not count or type(cropId) ~= "string" or not Crops.List[cropId] then
+		return
+	end
+	local def = Crops.List[cropId]
+	local season = TimeService.now().season
+	if def.Season ~= season then
+		Net.notify(player, "Hạt " .. def.Name .. " chỉ bán vào mùa " .. def.Season .. ".", "error")
+		return
+	end
+	local cost = def.SeedPrice * count
+	if data.coins < cost then
+		Net.notify(player, "Không đủ Xu! Cần " .. Format.number(cost) .. " Xu.", "error")
+		return
+	end
+	data.coins -= cost
+	data.seeds[cropId] = (data.seeds[cropId] or 0) + count
+	if not Net.getSelectedSeed(player) or (data.seeds[Net.getSelectedSeed(player) :: string] or 0) <= 0 then
+		Net.setSelectedSeed(player, cropId)
+	end
+	Net.notify(player, string.format("Đã mua %d hạt %s.", count, def.Name), "success")
+	Net.push(player)
+end
+
+local function onBuyItem(player: Player, itemId: any, amount: any)
+	local data = DataService.get(player)
+	local count = validAmount(amount)
+	if not data or not count or itemId ~= "Fertilizer" then
+		return
+	end
+	local cost = Cfg.FertilizerPrice * count
+	if data.coins < cost then
+		Net.notify(player, "Không đủ Xu! Cần " .. Format.number(cost) .. " Xu.", "error")
+		return
+	end
+	data.coins -= cost
+	data.fertilizer += count
+	Net.notify(player, string.format("Đã mua %d bao phân bón.", count), "success")
+	Net.push(player)
+end
+
+local function onSell(player: Player)
+	local data = DataService.get(player)
+	if not data then
+		return
+	end
+	local earned, sold = 0, 0
+	for key, amount in pairs(data.produce) do
+		local cropId, stars = Format.parseProduceKey(key)
+		if cropId and stars and Crops.List[cropId] and amount > 0 then
+			earned += FarmLogic.sellPrice(cropId, stars, Crops, Cfg) * amount
+			sold += amount
+		end
+		data.produce[key] = nil
+	end
+	if sold == 0 then
+		Net.notify(player, "Túi chưa có nông sản nào để bán.", "error")
+		return
+	end
+	data.coins += earned
+	Net.notify(player, string.format("Đã bán %d nông sản: +%s Xu", sold, Format.number(earned)), "success")
+	Net.push(player)
+end
+
+local function onSelectSeed(player: Player, cropId: any)
+	local data = DataService.get(player)
+	if not data or type(cropId) ~= "string" or not Crops.List[cropId] then
+		return
+	end
+	if (data.seeds[cropId] or 0) <= 0 then
+		return
+	end
+	Net.setSelectedSeed(player, cropId)
+	Net.push(player)
+end
+
+function ShopService.init()
+	local market = IslandService.world().market
+	local openShop = Remotes.event("OpenShop")
+
+	market.shopPrompt.Triggered:Connect(function(player)
+		openShop:FireClient(player)
+	end)
+	market.sellPrompt.Triggered:Connect(onSell)
+
+	Remotes.event("BuySeed").OnServerEvent:Connect(onBuySeed)
+	Remotes.event("BuyItem").OnServerEvent:Connect(onBuyItem)
+	Remotes.event("SelectSeed").OnServerEvent:Connect(onSelectSeed)
+end
+
+return ShopService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="20">
+        <Properties>
+          <string name="Name">TimeService</string>
+          <string name="Source"><![CDATA[--[[
+	TimeService: chạy đồng hồ trong game, điều khiển ngày/đêm và báo
+	"sang giờ mới" / "bình minh ngày mới" cho các service khác.
+]]
+
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local GameTime = require(ReplicatedStorage.Shared.GameTime)
+
+local TimeService = {}
+
+local hourListeners: { (GameTime.Info) -> () } = {}
+local dawnListeners: { (GameTime.Info, boolean) -> () } = {}
+
+function TimeService.now(): GameTime.Info
+	return GameTime.at(workspace:GetServerTimeNow(), Cfg.Time)
+end
+
+function TimeService.onHour(callback: (GameTime.Info) -> ())
+	table.insert(hourListeners, callback)
+end
+
+-- callback(info, seasonChanged)
+function TimeService.onDawn(callback: (GameTime.Info, boolean) -> ())
+	table.insert(dawnListeners, callback)
+end
+
+local function applyLighting(info: GameTime.Info)
+	Lighting.ClockTime = info.hour
+	-- Đêm không quá tối để vẫn chơi được trên điện thoại
+	local night = info.hour < 6 or info.hour >= 19
+	Lighting.Ambient = if night then Color3.fromRGB(70, 80, 120) else Color3.fromRGB(120, 115, 105)
+	Lighting.OutdoorAmbient = if night then Color3.fromRGB(90, 100, 140) else Color3.fromRGB(150, 145, 135)
+end
+
+function TimeService.start()
+	Lighting.Brightness = 2.5
+	Lighting.GlobalShadows = true
+
+	local current = TimeService.now()
+	local lastHour = current.hourIndex
+	local lastDay = current.day
+	local lastSeason = current.season
+	applyLighting(current)
+
+	task.spawn(function()
+		while true do
+			task.wait(0.25)
+			local info = TimeService.now()
+			applyLighting(info)
+
+			if info.day ~= lastDay then
+				local seasonChanged = info.season ~= lastSeason
+				lastDay = info.day
+				lastSeason = info.season
+				for _, callback in ipairs(dawnListeners) do
+					task.spawn(callback, info, seasonChanged)
+				end
+			end
+			if info.hourIndex ~= lastHour then
+				lastHour = info.hourIndex
+				for _, callback in ipairs(hourListeners) do
+					task.spawn(callback, info)
+				end
+			end
+		end
+	end)
+end
+
+return TimeService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="21">
+        <Properties>
+          <string name="Name">ToolService</string>
+          <string name="Source"><![CDATA[--[[
+	ToolService: phát bộ công cụ cho người chơi mỗi lần hồi sinh.
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local Models = require(script.Parent.Models)
+
+local ToolService = {}
+
+local templates = Instance.new("Folder")
+templates.Name = "ToolTemplates"
+templates.Parent = ServerStorage
+
+for _, toolId in ipairs(Cfg.ToolOrder) do
+	Models.buildTool(toolId).Parent = templates
+end
+
+function ToolService.give(player: Player)
+	local backpack = player:FindFirstChildOfClass("Backpack") or player:WaitForChild("Backpack", 10)
+	if not backpack then
+		return
+	end
+	for _, toolId in ipairs(Cfg.ToolOrder) do
+		if not backpack:FindFirstChild(toolId) then
+			local template = templates:FindFirstChild(toolId)
+			if template then
+				template:Clone().Parent = backpack
+			end
+		end
+	end
+end
+
+return ToolService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="22">
+        <Properties>
+          <string name="Name">WorldBuilder</string>
+          <string name="Source"><![CDATA[--[[
+	WorldBuilder: dựng thế giới khi server chạy.
+	- Biển (Terrain) bao quanh
+	- Đảo Chợ ở giữa: tiệm hạt, quầy bán, giếng, cổng về đảo
+	- 8 đảo riêng xếp vòng tròn: nhà, giếng, chỗ nhà kính, cổng sang chợ, các khu đất
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local Models = require(script.Parent.Models)
+
+local WorldBuilder = {}
+
+local ISLAND_TOP = 2
+local RING_RADIUS = 230
+local ISLAND_SIZE = 100
+
+local Colors = {
+	Sand = Color3.fromRGB(232, 213, 154),
+	Grass = Models.Colors.Grass,
+	Wood = Models.Colors.Wood,
+	WoodDark = Models.Colors.WoodDark,
+	Roof = Color3.fromRGB(192, 57, 43),
+	Wall = Color3.fromRGB(255, 246, 229),
+	Water = Color3.fromRGB(31, 111, 181),
+	Stone = Color3.fromRGB(150, 150, 150),
+	Portal = Color3.fromRGB(126, 87, 194),
+	Locked = Color3.fromRGB(70, 90, 60),
+	Shop = Color3.fromRGB(46, 125, 50),
+	Sell = Color3.fromRGB(255, 201, 60),
+}
+
+export type ZoneVisual = { plate: BasePart, post: BasePart, prompt: ProximityPrompt, label: TextLabel }
+export type Island = {
+	index: number,
+	center: Vector3,
+	model: Model,
+	tilesFolder: Folder,
+	spawnCFrame: CFrame,
+	ownerLabel: TextLabel,
+	wellPrompt: ProximityPrompt,
+	travelPrompt: ProximityPrompt,
+	zones: { [number]: ZoneVisual },
+}
+export type Market = {
+	spawnCFrame: CFrame,
+	shopPrompt: ProximityPrompt,
+	sellPrompt: ProximityPrompt,
+	wellPrompt: ProximityPrompt,
+	travelPrompt: ProximityPrompt,
+}
+export type World = { market: Market, islands: { Island } }
+
+-- ===================== Tiện ích =====================
+local function solid(parent: Instance, name: string, size: Vector3, color: Color3, cframe: CFrame, material: Enum.Material?): Part
+	local p = Models.part(parent, size, color, cframe, { CanCollide = true, CastShadow = true })
+	p.Name = name
+	p.Material = material or Enum.Material.SmoothPlastic
+	return p
+end
+
+local function billboard(parent: Instance, text: string, width: number, offsetY: number, maxDistance: number): TextLabel
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(width, 44)
+	gui.StudsOffset = Vector3.new(0, offsetY, 0)
+	gui.MaxDistance = maxDistance
+	gui.LightInfluence = 0
+	gui.Parent = parent
+
+	local label = Instance.new("TextLabel")
+	label.Name = "Label"
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.TextScaled = true
+	label.FontFace = Font.new(Font.fromEnum(Enum.Font.Nunito).Family, Enum.FontWeight.Heavy)
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.TextStrokeTransparency = 0
+	label.Parent = gui
+	return label
+end
+
+local function prompt(parent: Instance, action: string, object: string, hold: number?): ProximityPrompt
+	local p = Instance.new("ProximityPrompt")
+	p.ActionText = action
+	p.ObjectText = object
+	p.HoldDuration = hold or 0
+	p.MaxActivationDistance = 12
+	p.RequiresLineOfSight = false
+	p.Parent = parent
+	return p
+end
+
+local function islandBase(parent: Instance, center: Vector3, size: number)
+	solid(parent, "Sand", Vector3.new(size + 12, 5, size + 12), Colors.Sand, CFrame.new(center + Vector3.new(0, ISLAND_TOP - 3.5, 0)), Enum.Material.Sand)
+	solid(parent, "Ground", Vector3.new(size, 6, size), Colors.Grass, CFrame.new(center + Vector3.new(0, ISLAND_TOP - 3, 0)), Enum.Material.Grass)
+end
+
+local function stall(parent: Instance, position: Vector3, color: Color3, title: string): BasePart
+	local model = Instance.new("Model")
+	model.Name = title
+	model.Parent = parent
+	local counter = solid(model, "Counter", Vector3.new(12, 3.5, 4), color, CFrame.new(position + Vector3.new(0, 1.75, 0)), Enum.Material.WoodPlanks)
+	for _, dx in ipairs({ -5.5, 5.5 }) do
+		solid(model, "Post", Vector3.new(0.8, 8, 0.8), Colors.Wood, CFrame.new(position + Vector3.new(dx, 4, -1.5)), Enum.Material.Wood)
+	end
+	solid(model, "Roof", Vector3.new(14, 0.8, 6), Colors.Roof, CFrame.new(position + Vector3.new(0, 8.4, -0.5)))
+	billboard(counter, title, 240, 8, 160)
+	return counter
+end
+
+local function well(parent: Instance, position: Vector3): BasePart
+	local model = Instance.new("Model")
+	model.Name = "Well"
+	model.Parent = parent
+	local base = solid(model, "Base", Vector3.new(5, 3, 5), Colors.Stone, CFrame.new(position + Vector3.new(0, 1.5, 0)), Enum.Material.Cobblestone)
+	Models.part(model, Vector3.new(3.6, 0.2, 3.6), Colors.Water, CFrame.new(position + Vector3.new(0, 3.05, 0)), { Material = Enum.Material.Glass, Transparency = 0.2 })
+	for _, dx in ipairs({ -2.2, 2.2 }) do
+		solid(model, "Post", Vector3.new(0.5, 4, 0.5), Colors.Wood, CFrame.new(position + Vector3.new(dx, 5, 0)), Enum.Material.Wood)
+	end
+	solid(model, "Roof", Vector3.new(6, 0.6, 4), Colors.Roof, CFrame.new(position + Vector3.new(0, 7.2, 0)))
+	billboard(base, "Giếng nước", 160, 7, 80)
+	return base
+end
+
+local function portal(parent: Instance, position: Vector3, title: string): BasePart
+	local pad = solid(parent, "TravelPad", Vector3.new(8, 0.6, 8), Colors.Portal, CFrame.new(position + Vector3.new(0, 0.3, 0)), Enum.Material.Neon)
+	billboard(pad, title, 220, 4, 120)
+	return pad
+end
+
+local function house(parent: Instance, position: Vector3)
+	local model = Instance.new("Model")
+	model.Name = "House"
+	model.Parent = parent
+	solid(model, "Walls", Vector3.new(16, 9, 12), Colors.Wall, CFrame.new(position + Vector3.new(0, 4.5, 0)), Enum.Material.WoodPlanks)
+	solid(model, "Roof", Vector3.new(18, 1.2, 14), Colors.Roof, CFrame.new(position + Vector3.new(0, 9.6, 0)))
+	Models.part(model, Vector3.new(3, 5, 0.2), Colors.WoodDark, CFrame.new(position + Vector3.new(0, 2.5, 6.05)))
+end
+
+-- ===================== Đảo Chợ =====================
+local function buildMarket(world: Instance): Market
+	local model = Instance.new("Model")
+	model.Name = "Market"
+	model.Parent = world
+	islandBase(model, Vector3.zero, 150)
+
+	local top = Vector3.new(0, ISLAND_TOP, 0)
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Anchored = true
+	spawn.Size = Vector3.new(10, 1, 10)
+	spawn.CFrame = CFrame.new(top + Vector3.new(0, 0.5, 10))
+	spawn.Color = Colors.Sand
+	spawn.TopSurface = Enum.SurfaceType.Smooth
+	spawn.Duration = 0
+	spawn.Parent = model
+
+	local shopCounter = stall(model, top + Vector3.new(-26, 0, -20), Colors.Shop, "Tiệm hạt Bà Bảy")
+	local sellCounter = stall(model, top + Vector3.new(26, 0, -20), Colors.Sell, "Quầy thu mua")
+	local wellBase = well(model, top + Vector3.new(0, 0, 34))
+	local pad = portal(model, top + Vector3.new(0, 0, -40), "Về đảo của tôi")
+
+	return {
+		spawnCFrame = CFrame.new(top + Vector3.new(0, 4, 10)),
+		shopPrompt = prompt(shopCounter, "Mua hạt giống", "Tiệm hạt"),
+		sellPrompt = prompt(sellCounter, "Bán tất cả", "Quầy thu mua", 0.4),
+		wellPrompt = prompt(wellBase, "Múc nước", "Giếng"),
+		travelPrompt = prompt(pad, "Về đảo", "Cổng dịch chuyển"),
+	}
+end
+
+-- ===================== Đảo riêng =====================
+local function buildIsland(world: Instance, index: number): Island
+	local angle = (index - 1) / Cfg.MaxIslands * math.pi * 2
+	local center = Vector3.new(math.cos(angle) * RING_RADIUS, 0, math.sin(angle) * RING_RADIUS)
+	local top = center + Vector3.new(0, ISLAND_TOP, 0)
+
+	local model = Instance.new("Model")
+	model.Name = "Island" .. index
+	model:SetAttribute("IslandIndex", index)
+	model:SetAttribute("OwnerId", 0)
+	model.Parent = world
+	islandBase(model, center, ISLAND_SIZE)
+
+	house(model, top + Vector3.new(-30, 0, -38))
+	local wellBase = well(model, top + Vector3.new(-10, 0, -38))
+	local greenhouse = Models.part(model, Vector3.new(14, 0.3, 10), Color3.fromRGB(200, 230, 255), CFrame.new(top + Vector3.new(14, 0.15, -38)), { Transparency = 0.4 })
+	billboard(greenhouse, "Nhà kính (sắp có)", 200, 3, 60)
+	local pad = portal(model, top + Vector3.new(34, 0, 34), "Đến Đảo Chợ")
+
+	local signPost = solid(model, "OwnerSign", Vector3.new(0.8, 6, 0.8), Colors.Wood, CFrame.new(top + Vector3.new(24, 3, 14)), Enum.Material.Wood)
+	local ownerLabel = billboard(signPost, "Đảo trống", 280, 5, 200)
+
+	local tilesFolder = Instance.new("Folder")
+	tilesFolder.Name = "Tiles"
+	tilesFolder.Parent = model
+
+	-- Khu đất: tấm phủ "chưa mở" + cọc biển có nút mua
+	local zones = {}
+	for _, zone in ipairs(Cfg.Zones) do
+		local w, d = zone.Cols * Cfg.TileSize, zone.Rows * Cfg.TileSize
+		local zoneCenter = top + Vector3.new(zone.X + w / 2, 0, zone.Z + d / 2)
+		local plate = Models.part(model, Vector3.new(w, 0.2, d), Colors.Locked, CFrame.new(zoneCenter + Vector3.new(0, 0.1, 0)), { Transparency = 0.35, Material = Enum.Material.Grass })
+		plate.Name = "ZonePlate" .. zone.Id
+		local post = solid(model, "ZonePost" .. zone.Id, Vector3.new(0.6, 5, 0.6), Colors.Wood, CFrame.new(zoneCenter + Vector3.new(0, 2.5, 0)), Enum.Material.Wood)
+		local label = billboard(post, zone.Name, 220, 4, 80)
+		local buy = prompt(post, "Mua khu đất", zone.Name, 0.5)
+		zones[zone.Id] = { plate = plate, post = post, prompt = buy, label = label }
+	end
+
+	return {
+		index = index,
+		center = center,
+		model = model,
+		tilesFolder = tilesFolder,
+		spawnCFrame = CFrame.lookAt(top + Vector3.new(24, 4, 4), top + Vector3.new(-20, 4, 4)),
+		ownerLabel = ownerLabel,
+		wellPrompt = prompt(wellBase, "Múc nước", "Giếng"),
+		travelPrompt = prompt(pad, "Sang chợ", "Cổng dịch chuyển"),
+		zones = zones,
+	}
+end
+
+function WorldBuilder.build(): World
+	local old = workspace:FindFirstChild("World")
+	if old then
+		old:Destroy()
+	end
+	local world = Instance.new("Folder")
+	world.Name = "World"
+	world.Parent = workspace
+
+	-- Biển & đáy cát
+	local terrain = workspace.Terrain
+	terrain:FillBlock(CFrame.new(0, -12, 0), Vector3.new(1400, 8, 1400), Enum.Material.Sand)
+	terrain:FillBlock(CFrame.new(0, -4, 0), Vector3.new(1400, 8, 1400), Enum.Material.Water)
+	terrain.WaterColor = Color3.fromRGB(94, 194, 232)
+	terrain.WaterTransparency = 0.4
+
+	local market = buildMarket(world)
+	local islands = {}
+	for i = 1, Cfg.MaxIslands do
+		islands[i] = buildIsland(world, i)
+	end
+	return { market = market, islands = islands }
+end
+
+-- Vị trí ô số i (1-based, theo hàng) của một khu trên đảo
+function WorldBuilder.tileCFrame(island: Island, zone, i: number): CFrame
+	local col = (i - 1) % zone.Cols
+	local row = (i - 1) // zone.Cols
+	local x = zone.X + (col + 0.5) * Cfg.TileSize
+	local z = zone.Z + (row + 0.5) * Cfg.TileSize
+	return CFrame.new(island.center + Vector3.new(x, ISLAND_TOP + 0.2, z))
+end
+
+return WorldBuilder
+]]></string>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="StarterPlayer" referent="23">
+    <Properties>
+      <string name="Name">StarterPlayer</string>
+    </Properties>
+    <Item class="StarterPlayerScripts" referent="24">
+      <Properties>
+        <string name="Name">StarterPlayerScripts</string>
+      </Properties>
+      <Item class="Folder" referent="25">
+        <Properties>
+          <string name="Name">Client</string>
+        </Properties>
+        <Item class="ModuleScript" referent="26">
+          <Properties>
+            <string name="Name">HUD</string>
+            <string name="Source"><![CDATA[--[[
+	HUD: đồng hồ & mùa (giữa trên), Xu (trái trên), nút Túi đồ / Đi lại.
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Format = require(ReplicatedStorage.Shared.Format)
+
+local Theme = require(script.Parent.UI.Theme)
+local Components = require(script.Parent.UI.Components)
+local Panels = require(script.Parent.UI.Panels)
+local State = require(script.Parent.State)
+
+local HUD = {}
+local C = Theme.Colors
+local create = Components.create
+
+local function sideButton(parent: Instance, order: number, icon: string, caption: string, color: Color3, dark: Color3, onClick: () -> ())
+	local root, button = Components.button({
+		Text = "",
+		Color = color,
+		Dark = dark,
+		Size = UDim2.fromOffset(60, 64),
+		LayoutOrder = order,
+		Parent = parent,
+	})
+	Components.text({
+		Size = UDim2.new(1, 0, 0, 34),
+		Position = UDim2.fromOffset(0, 4),
+		Text = icon,
+		TextSize = 26,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		Parent = button,
+	})
+	Components.text({
+		Size = UDim2.new(1, 0, 0, 16),
+		Position = UDim2.new(0, 0, 1, -20),
+		Text = caption,
+		TextSize = 12,
+		TextColor3 = C.White,
+		FontFace = Theme.Font.Heavy,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		Parent = button,
+	})
+	button.Activated:Connect(onClick)
+	return root
+end
+
+function HUD.init(gui: ScreenGui)
+	-- ===== Đồng hồ =====
+	local clockCard = Components.panel({
+		Name = "Clock",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 8),
+		Size = UDim2.fromOffset(0, 58),
+		AutomaticSize = Enum.AutomaticSize.X,
+		Parent = gui,
+	})
+	create("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 8) }).Parent = clockCard
+	Components.list(Enum.FillDirection.Horizontal, 10).Parent = clockCard
+
+	local timeColumn = create("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(110, 50),
+		LayoutOrder = 1,
+		Parent = clockCard,
+	})
+	local dayLabel = Components.text({
+		Size = UDim2.new(1, 0, 0, 18),
+		Position = UDim2.fromOffset(0, 4),
+		TextSize = 13,
+		TextColor3 = C.InkSoft,
+		FontFace = Theme.Font.Heavy,
+		Text = "",
+		Parent = timeColumn,
+	})
+	local clockLabel = Components.text({
+		Size = UDim2.new(1, 0, 0, 26),
+		Position = UDim2.fromOffset(0, 21),
+		TextSize = 26,
+		FontFace = Theme.Font.Heavy,
+		Text = "",
+		Parent = timeColumn,
+	})
+	local seasonChip = Components.text({
+		Size = UDim2.fromOffset(0, 34),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundTransparency = 0,
+		TextSize = 17,
+		FontFace = Theme.Font.Heavy,
+		Text = "",
+		LayoutOrder = 2,
+		Parent = clockCard,
+	})
+	Components.corner(12).Parent = seasonChip
+	create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }).Parent = seasonChip
+	local seasonStroke = Components.stroke(C.Ink, 3)
+	seasonStroke.Parent = seasonChip
+
+	task.spawn(function()
+		while clockCard.Parent do
+			local info = State.time()
+			dayLabel.Text = string.format("NGÀY %d · NĂM %d", info.dayOfSeason, info.year)
+			clockLabel.Text = info.clock
+			seasonChip.Text = "Mùa " .. info.season
+			local colors = Theme.Seasons[info.season]
+			seasonChip.BackgroundColor3 = colors.Fill
+			seasonStroke.Color = colors.Border
+			task.wait(0.5)
+		end
+	end)
+
+	-- ===== Xu + nút bên trái =====
+	local leftLayout = Components.list(Enum.FillDirection.Vertical, 8)
+	leftLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+	local left = create("Frame", {
+		Name = "Left",
+		Position = UDim2.fromOffset(12, 8),
+		Size = UDim2.fromOffset(160, 240),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	}, { leftLayout })
+
+	local coinPill = create("Frame", {
+		Size = UDim2.fromOffset(0, 44),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = C.Cream,
+		LayoutOrder = 1,
+		Parent = left,
+	}, { Components.corner(22), Components.stroke(C.SunDark, 3), Components.list(Enum.FillDirection.Horizontal, 8) })
+	create("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 14) }).Parent = coinPill
+	create("Frame", {
+		Size = UDim2.fromOffset(28, 28),
+		BackgroundColor3 = C.Sun,
+		LayoutOrder = 1,
+		Parent = coinPill,
+	}, { Components.corner(14), Components.stroke(C.SunDark, 3) })
+	local coinLabel = Components.text({
+		Size = UDim2.fromOffset(0, 30),
+		AutomaticSize = Enum.AutomaticSize.X,
+		TextSize = 22,
+		FontFace = Theme.Font.Heavy,
+		Text = "...",
+		LayoutOrder = 2,
+		Parent = coinPill,
+	})
+
+	sideButton(left, 2, "🎒", "Túi đồ", C.Bag, C.SoilDark, function()
+		Panels.toggle("Inventory")
+	end)
+	sideButton(left, 3, "🧭", "Đi lại", C.Water, C.WaterDark, function()
+		Panels.toggle("Travel")
+	end)
+
+	State.onChanged(function(data)
+		coinLabel.Text = Format.number(data.coins)
+	end)
+end
+
+return HUD
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="27">
+          <Properties>
+            <string name="Name">Hotbar</string>
+            <string name="Source"><![CDATA[--[[
+	Hotbar: thanh 6 công cụ to (dưới giữa) thay cho Backpack mặc định,
+	phím 1-6 trên máy tính, và hàng chọn hạt khi đang cầm Túi hạt.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local Crops = require(ReplicatedStorage.Shared.Config.Crops)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+local Theme = require(script.Parent.UI.Theme)
+local Components = require(script.Parent.UI.Components)
+local State = require(script.Parent.State)
+local ToolController = require(script.Parent.ToolController)
+
+local Hotbar = {}
+local C = Theme.Colors
+local create = Components.create
+
+local player = Players.LocalPlayer
+local SelectSeed = Remotes.event("SelectSeed")
+
+local KEYS = {
+	[Enum.KeyCode.One] = 1,
+	[Enum.KeyCode.Two] = 2,
+	[Enum.KeyCode.Three] = 3,
+	[Enum.KeyCode.Four] = 4,
+	[Enum.KeyCode.Five] = 5,
+	[Enum.KeyCode.Six] = 6,
+}
+
+type Slot = { button: TextButton, stroke: UIStroke, badge: TextLabel, bar: Frame?, barFill: Frame? }
+local slots: { [string]: Slot } = {}
+
+local function equip(toolId: string)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+	local current = ToolController.equipped()
+	if current and current.Name == toolId then
+		humanoid:UnequipTools()
+		return
+	end
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	local tool = backpack and backpack:FindFirstChild(toolId)
+	if tool and tool:IsA("Tool") then
+		humanoid:EquipTool(tool)
+	end
+end
+
+local function disableDefaultBackpack()
+	for _ = 1, 20 do
+		local ok = pcall(function()
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+		end)
+		if ok then
+			return
+		end
+		task.wait(0.5)
+	end
+end
+
+function Hotbar.init(gui: ScreenGui)
+	task.spawn(disableDefaultBackpack)
+
+	local bar = create("Frame", {
+		Name = "Hotbar",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -8),
+		Size = UDim2.fromOffset(0, 84),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = C.Shade,
+		BackgroundTransparency = 0.45,
+		Parent = gui,
+	}, {
+		Components.corner(20),
+		Components.padding(8),
+		Components.list(Enum.FillDirection.Horizontal, 8),
+	})
+
+	for index, toolId in ipairs(Cfg.ToolOrder) do
+		local button = create("TextButton", {
+			Name = toolId,
+			Size = UDim2.fromOffset(64, 68),
+			BackgroundColor3 = C.Cream,
+			AutoButtonColor = true,
+			Text = "",
+			LayoutOrder = index,
+			Parent = bar,
+		}, { Components.corner(14) })
+		local stroke = Components.stroke(C.CreamBorder, 3)
+		stroke.Parent = button
+
+		Components.text({
+			Size = UDim2.new(1, 0, 0, 32),
+			Position = UDim2.fromOffset(0, 6),
+			Text = Theme.ToolIcons[toolId],
+			TextSize = 28,
+			TextXAlignment = Enum.TextXAlignment.Center,
+			Parent = button,
+		})
+		Components.text({
+			Size = UDim2.new(1, 0, 0, 14),
+			Position = UDim2.fromOffset(0, 40),
+			Text = Cfg.Tools[toolId].Name,
+			TextSize = 12,
+			FontFace = Theme.Font.Heavy,
+			TextXAlignment = Enum.TextXAlignment.Center,
+			Parent = button,
+		})
+		Components.text({
+			Size = UDim2.fromOffset(14, 14),
+			Position = UDim2.fromOffset(5, 2),
+			Text = tostring(index),
+			TextSize = 11,
+			TextColor3 = C.InkSoft,
+			FontFace = Theme.Font.Heavy,
+			Parent = button,
+		})
+		local badge = Components.text({
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -4, 0, 2),
+			Size = UDim2.fromOffset(40, 14),
+			Text = "",
+			TextSize = 12,
+			FontFace = Theme.Font.Heavy,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			Parent = button,
+		})
+
+		local slot: Slot = { button = button, stroke = stroke, badge = badge }
+		if toolId == "WateringCan" then
+			local track = create("Frame", {
+				Position = UDim2.new(0, 8, 1, -10),
+				Size = UDim2.new(1, -16, 0, 5),
+				BackgroundColor3 = C.WaterLight,
+				Parent = button,
+			}, { Components.corner(3) })
+			slot.bar = track
+			slot.barFill = create("Frame", {
+				Size = UDim2.fromScale(1, 1),
+				BackgroundColor3 = C.Water,
+				Parent = track,
+			}, { Components.corner(3) })
+		end
+		slots[toolId] = slot
+
+		button.Activated:Connect(function()
+			equip(toolId)
+		end)
+	end
+
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed then
+			return
+		end
+		local index = KEYS[input.KeyCode]
+		if index then
+			equip(Cfg.ToolOrder[index])
+		end
+	end)
+
+	-- ===== Hàng chọn hạt giống =====
+	local seedRow = create("Frame", {
+		Name = "SeedPicker",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -100),
+		Size = UDim2.fromOffset(0, 58),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundTransparency = 1,
+		Visible = false,
+		Parent = gui,
+	}, { Components.list(Enum.FillDirection.Horizontal, 6) })
+
+	local function renderSeeds()
+		Components.clear(seedRow)
+		local data = State.data
+		if not data then
+			return
+		end
+		local season = State.time().season
+		local any = false
+		for order, cropId in ipairs(Crops.Order) do
+			local count = data.seeds[cropId] or 0
+			if count > 0 then
+				any = true
+				local def = Crops.List[cropId]
+				local selected = data.selectedSeed == cropId
+				local inSeason = def.Season == season
+				local chip = create("TextButton", {
+					Size = UDim2.fromOffset(0, 52),
+					AutomaticSize = Enum.AutomaticSize.X,
+					BackgroundColor3 = if selected then C.White elseif inSeason then C.Cream else C.Muted,
+					Text = "",
+					LayoutOrder = order,
+					Parent = seedRow,
+				}, {
+					Components.corner(14),
+					Components.stroke(if selected then C.Sun else C.CreamBorder, if selected then 4 else 3),
+					Components.list(Enum.FillDirection.Horizontal, 8),
+					create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 12) }),
+				})
+				create("Frame", {
+					Size = UDim2.fromOffset(26, 26),
+					BackgroundColor3 = Color3.fromRGB(def.Color[1], def.Color[2], def.Color[3]),
+					LayoutOrder = 1,
+					Parent = chip,
+				}, { Components.corner(13), Components.stroke(C.Ink, 2) })
+				Components.text({
+					Size = UDim2.fromOffset(0, 40),
+					AutomaticSize = Enum.AutomaticSize.X,
+					Text = string.format("%s x%d%s", def.Name, count, if inSeason then "" else "\n(trái mùa)"),
+					TextSize = 15,
+					TextColor3 = if inSeason then C.Ink else C.InkSoft,
+					LayoutOrder = 2,
+					Parent = chip,
+				})
+				chip.Activated:Connect(function()
+					SelectSeed:FireServer(cropId)
+				end)
+			end
+		end
+		if not any then
+			local hint = Components.text({
+				Size = UDim2.fromOffset(0, 44),
+				AutomaticSize = Enum.AutomaticSize.X,
+				BackgroundTransparency = 0,
+				BackgroundColor3 = C.Cream,
+				Text = "Hết hạt giống: mua ở Tiệm hạt trên Đảo Chợ",
+				TextSize = 15,
+				Parent = seedRow,
+			})
+			Components.corner(12).Parent = hint
+			create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }).Parent = hint
+		end
+	end
+
+	local function renderCounts(data)
+		local seedId = data.selectedSeed
+		slots.SeedBag.badge.Text = if seedId then "x" .. tostring(data.seeds[seedId] or 0) else "x0"
+		slots.Fertilizer.badge.Text = "x" .. tostring(data.fertilizer)
+		local can = slots.WateringCan
+		if can.barFill then
+			can.barFill.Size = UDim2.fromScale(math.clamp(data.water / Cfg.WaterCapacity, 0, 1), 1)
+		end
+		can.badge.Text = tostring(data.water)
+	end
+
+	State.onChanged(function(data)
+		renderCounts(data)
+		if seedRow.Visible then
+			renderSeeds()
+		end
+	end)
+
+	-- Viền vàng ô đang cầm + hiện hàng chọn hạt khi cầm Túi hạt
+	local lastEquipped: string? = nil
+	task.spawn(function()
+		while bar.Parent do
+			local tool = ToolController.equipped()
+			local name = if tool then tool.Name else nil
+			if name ~= lastEquipped then
+				lastEquipped = name
+				for toolId, slot in pairs(slots) do
+					local active = toolId == name
+					slot.stroke.Color = if active then C.Sun else C.CreamBorder
+					slot.stroke.Thickness = if active then 4 else 3
+					slot.button.BackgroundColor3 = if active then C.White else C.Cream
+				end
+				seedRow.Visible = name == "SeedBag"
+				if seedRow.Visible then
+					renderSeeds()
+				end
+			end
+			task.wait(0.1)
+		end
+	end)
+end
+
+return Hotbar
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="28">
+          <Properties>
+            <string name="Name">Inventory</string>
+            <string name="Source"><![CDATA[--[[
+	Inventory: túi đồ: nông sản (theo sao), hạt giống, phân bón, nước.
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local Crops = require(ReplicatedStorage.Shared.Config.Crops)
+local FarmLogic = require(ReplicatedStorage.Shared.FarmLogic)
+local Format = require(ReplicatedStorage.Shared.Format)
+
+local Theme = require(script.Parent.UI.Theme)
+local Components = require(script.Parent.UI.Components)
+local Panels = require(script.Parent.UI.Panels)
+local State = require(script.Parent.State)
+
+local Inventory = {}
+local C = Theme.Colors
+local create = Components.create
+
+function Inventory.init(gui: ScreenGui)
+	local panel = Components.panel({
+		Name = "Inventory",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.8, 0.84),
+		Parent = gui,
+	})
+	create("UISizeConstraint", { MaxSize = Vector2.new(560, 440) }).Parent = panel
+
+	Components.text({
+		Position = UDim2.fromOffset(18, 12),
+		Size = UDim2.new(1, -90, 0, 30),
+		Text = "Túi đồ",
+		TextSize = 26,
+		FontFace = Theme.Font.Heavy,
+		TextColor3 = C.Leaf,
+		Parent = panel,
+	})
+	Components.closeButton(panel, function()
+		Panels.close("Inventory")
+	end)
+
+	local list = create("ScrollingFrame", {
+		Position = UDim2.fromOffset(12, 64),
+		Size = UDim2.new(1, -24, 1, -76),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ScrollBarThickness = 6,
+		ScrollBarImageColor3 = C.InkSoft,
+		Parent = panel,
+	}, { Components.list(Enum.FillDirection.Vertical, 6) })
+
+	local order = 0
+	local function header(text: string)
+		order += 1
+		Components.text({ Size = UDim2.new(1, 0, 0, 28), Text = text, TextSize = 18, FontFace = Theme.Font.Heavy, LayoutOrder = order, Parent = list })
+	end
+	local function row(color: Color3, name: string, right: string)
+		order += 1
+		local frame = create("Frame", {
+			Size = UDim2.new(1, -8, 0, 44),
+			BackgroundColor3 = C.White,
+			LayoutOrder = order,
+			Parent = list,
+		}, { Components.corner(12), Components.stroke(C.CreamBorder, 2) })
+		create("Frame", { Position = UDim2.fromOffset(10, 9), Size = UDim2.fromOffset(26, 26), BackgroundColor3 = color, Parent = frame }, {
+			Components.corner(13),
+			Components.stroke(C.Ink, 2),
+		})
+		Components.text({ Position = UDim2.fromOffset(46, 0), Size = UDim2.new(0.55, -46, 1, 0), Text = name, TextSize = 16, Parent = frame })
+		Components.text({
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -12, 0, 0),
+			Size = UDim2.new(0.45, 0, 1, 0),
+			Text = right,
+			TextSize = 15,
+			TextColor3 = C.InkSoft,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			Parent = frame,
+		})
+	end
+	local function note(text: string)
+		order += 1
+		Components.text({ Size = UDim2.new(1, 0, 0, 22), Text = text, TextSize = 14, TextColor3 = C.InkSoft, LayoutOrder = order, Parent = list })
+	end
+
+	local function render()
+		Components.clear(list)
+		order = 0
+		local data = State.data
+		if not data then
+			return
+		end
+		local season = State.time().season
+
+		header("Nông sản (bán ở Quầy thu mua, Đảo Chợ)")
+		local total, any = 0, false
+		for _, cropId in ipairs(Crops.Order) do
+			for stars = 3, 1, -1 do
+				local count = data.produce[Format.produceKey(cropId, stars)] or 0
+				if count > 0 then
+					any = true
+					local def = Crops.List[cropId]
+					local price = FarmLogic.sellPrice(cropId, stars, Crops, Cfg)
+					total += price * count
+					row(Color3.fromRGB(def.Color[1], def.Color[2], def.Color[3]), def.Name .. " " .. Format.stars(stars), string.format("x%d · %s Xu/cái", count, Format.number(price)))
+				end
+			end
+		end
+		if any then
+			note("Tổng giá trị: " .. Format.number(total) .. " Xu")
+		else
+			note("Chưa có nông sản. Thu hoạch bằng Liềm khi cây chín.")
+		end
+
+		header("Hạt giống")
+		any = false
+		for _, cropId in ipairs(Crops.Order) do
+			local count = data.seeds[cropId] or 0
+			if count > 0 then
+				any = true
+				local def = Crops.List[cropId]
+				row(
+					Color3.fromRGB(def.Color[1], def.Color[2], def.Color[3]),
+					def.Name,
+					string.format("x%d · mùa %s%s", count, def.Season, if def.Season == season then "" else " (chờ mùa)")
+				)
+			end
+		end
+		if not any then
+			note("Hết hạt giống. Mua ở Tiệm hạt trên Đảo Chợ.")
+		end
+
+		header("Vật dụng")
+		row(C.Soil, "Phân bón", "x" .. tostring(data.fertilizer))
+		row(C.Water, "Nước trong bình", string.format("%d/%d", data.water, Cfg.WaterCapacity))
+		row(C.Sun, "Đã thu hoạch tổng cộng", Format.number(data.totalHarvested))
+	end
+
+	Panels.register("Inventory", panel, render)
+	State.onChanged(function()
+		if panel.Visible then
+			render()
+		end
+	end)
+end
+
+return Inventory
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="LocalScript" referent="29">
+          <Properties>
+            <string name="Name">Main</string>
+            <string name="Source"><![CDATA[--[[
+	Main (LocalScript): dựng giao diện và nhận dữ liệu từ server.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+local Components = require(script.Parent.UI.Components)
+local HUD = require(script.Parent.HUD)
+local Hotbar = require(script.Parent.Hotbar)
+local Inventory = require(script.Parent.Inventory)
+local Notifications = require(script.Parent.Notifications)
+local Shop = require(script.Parent.Shop)
+local State = require(script.Parent.State)
+local TilePopup = require(script.Parent.TilePopup)
+local ToolController = require(script.Parent.ToolController)
+local Travel = require(script.Parent.Travel)
+
+local player = Players.LocalPlayer
+
+local gui = Components.create("ScreenGui", {
+	Name = "NongTraiUI",
+	ResetOnSpawn = false,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	Parent = player:WaitForChild("PlayerGui"),
+})
+
+Notifications.init(gui)
+ToolController.init()
+HUD.init(gui)
+Hotbar.init(gui)
+TilePopup.init(gui)
+Shop.init(gui)
+Inventory.init(gui)
+Travel.init(gui)
+
+Remotes.event("Notify").OnClientEvent:Connect(function(text, kind)
+	Notifications.show(text, kind)
+end)
+Remotes.event("StateChanged").OnClientEvent:Connect(function(data)
+	State.set(data)
+end)
+
+task.spawn(function()
+	local ok, data = pcall(function()
+		return Remotes.func("GetState"):InvokeServer()
+	end)
+	if ok and data and not State.data then
+		State.set(data)
+	end
+end)
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="30">
+          <Properties>
+            <string name="Name">Notifications</string>
+            <string name="Source"><![CDATA[--[[
+	Notifications: thông báo nổi ở giữa phía trên màn hình.
+]]
+
+local TweenService = game:GetService("TweenService")
+
+local Theme = require(script.Parent.UI.Theme)
+local Components = require(script.Parent.UI.Components)
+
+local Notifications = {}
+local C = Theme.Colors
+
+local holder: Frame
+local counter = 0
+
+function Notifications.init(gui: ScreenGui)
+	local layout = Components.list(Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Center)
+	layout.VerticalAlignment = Enum.VerticalAlignment.Top
+	holder = Components.create("Frame", {
+		Name = "Toasts",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 78),
+		Size = UDim2.new(0.6, 0, 0, 200),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	}, {
+		Components.create("UISizeConstraint", { MaxSize = Vector2.new(460, 200) }),
+		layout,
+	})
+end
+
+function Notifications.show(text: string, kind: string?)
+	if not holder then
+		return
+	end
+	counter += 1
+	local bg, fg = C.Water, C.White
+	if kind == "error" then
+		bg = C.Danger
+	elseif kind == "success" then
+		bg = C.Leaf
+	end
+
+	local toast = Components.text({
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 0.05,
+		BackgroundColor3 = bg,
+		TextColor3 = fg,
+		TextSize = 17,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		Text = text,
+		LayoutOrder = counter,
+		Parent = holder,
+	})
+	Components.corner(12).Parent = toast
+	Components.padding(8).Parent = toast
+
+	-- Giữ tối đa 3 thông báo
+	local toasts = {}
+	for _, child in ipairs(holder:GetChildren()) do
+		if child:IsA("TextLabel") then
+			table.insert(toasts, child)
+		end
+	end
+	table.sort(toasts, function(a, b)
+		return a.LayoutOrder < b.LayoutOrder
+	end)
+	for i = 1, #toasts - 3 do
+		toasts[i]:Destroy()
+	end
+
+	task.delay(3, function()
+		if toast.Parent then
+			local tween = TweenService:Create(toast, TweenInfo.new(0.4), { BackgroundTransparency = 1, TextTransparency = 1 })
+			tween:Play()
+			tween.Completed:Wait()
+			toast:Destroy()
+		end
+	end)
+end
+
+return Notifications
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="31">
+          <Properties>
+            <string name="Name">Shop</string>
+            <string name="Source"><![CDATA[--[[
+	Shop: Tiệm hạt Bà Bảy, chỉ bán hạt của mùa hiện tại, cùng phân bón.
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local Crops = require(ReplicatedStorage.Shared.Config.Crops)
+local FarmLogic = require(ReplicatedStorage.Shared.FarmLogic)
+local Format = require(ReplicatedStorage.Shared.Format)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+local Theme = require(script.Parent.UI.Theme)
+local Components = require(script.Parent.UI.Components)
+local Panels = require(script.Parent.UI.Panels)
+local State = require(script.Parent.State)
+
+local Shop = {}
+local C = Theme.Colors
+local create = Components.create
+
+local BuySeed = Remotes.event("BuySeed")
+local BuyItem = Remotes.event("BuyItem")
+
+function Shop.init(gui: ScreenGui)
+	local panel = Components.panel({
+		Name = "Shop",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.92, 0.84),
+		Parent = gui,
+	})
+	create("UISizeConstraint", { MaxSize = Vector2.new(780, 440) }).Parent = panel
+
+	Components.text({
+		Position = UDim2.fromOffset(18, 12),
+		Size = UDim2.new(1, -200, 0, 30),
+		Text = "Tiệm hạt Bà Bảy",
+		TextSize = 26,
+		FontFace = Theme.Font.Heavy,
+		TextColor3 = C.Leaf,
+		Parent = panel,
+	})
+	local subtitle = Components.text({
+		Position = UDim2.fromOffset(18, 42),
+		Size = UDim2.new(1, -200, 0, 18),
+		TextSize = 14,
+		TextColor3 = C.InkSoft,
+		Parent = panel,
+	})
+	local coins = Components.text({
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -70, 0, 18),
+		Size = UDim2.fromOffset(120, 30),
+		TextSize = 20,
+		FontFace = Theme.Font.Heavy,
+		TextXAlignment = Enum.TextXAlignment.Right,
+		Parent = panel,
+	})
+	Components.closeButton(panel, function()
+		Panels.close("Shop")
+	end)
+
+	local grid = create("ScrollingFrame", {
+		Position = UDim2.fromOffset(12, 70),
+		Size = UDim2.new(1, -24, 1, -82),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ScrollBarThickness = 6,
+		ScrollBarImageColor3 = C.InkSoft,
+		Parent = panel,
+	}, {
+		create("UIGridLayout", {
+			CellSize = UDim2.new(1 / 3, -8, 0, 166),
+			CellPadding = UDim2.fromOffset(8, 8),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+
+	local function card(order: number, color: Color3, name: string, line1: string, line2: string, tag: string?, onBuy: (number) -> ())
+		local frame = create("Frame", { BackgroundColor3 = C.White, LayoutOrder = order, Parent = grid }, {
+			Components.corner(16),
+			Components.stroke(C.CreamBorder, 3),
+		})
+		create("Frame", {
+			Position = UDim2.fromOffset(10, 10),
+			Size = UDim2.fromOffset(40, 40),
+			BackgroundColor3 = color,
+			Parent = frame,
+		}, { Components.corner(20), Components.stroke(C.Ink, 2) })
+		Components.text({ Position = UDim2.fromOffset(58, 8), Size = UDim2.new(1, -66, 0, 22), Text = name, TextSize = 18, FontFace = Theme.Font.Heavy, TextTruncate = Enum.TextTruncate.AtEnd, Parent = frame })
+		Components.text({ Position = UDim2.fromOffset(58, 30), Size = UDim2.new(1, -66, 0, 18), Text = line1, TextSize = 13, TextColor3 = C.InkSoft, Parent = frame })
+		Components.text({ Position = UDim2.fromOffset(10, 56), Size = UDim2.new(1, -20, 0, 18), Text = line2, TextSize = 13, TextWrapped = true, Parent = frame })
+		if tag then
+			local label = Components.text({
+				Position = UDim2.fromOffset(10, 78),
+				Size = UDim2.new(1, -20, 0, 20),
+				BackgroundTransparency = 0,
+				BackgroundColor3 = Color3.fromRGB(227, 242, 228),
+				TextColor3 = C.LeafDark,
+				TextSize = 12,
+				TextXAlignment = Enum.TextXAlignment.Center,
+				Text = tag,
+				Parent = frame,
+			})
+			Components.corner(8).Parent = label
+		end
+		for i, amount in ipairs({ 1, 5 }) do
+			local _, button = Components.button({
+				Text = "Mua " .. amount,
+				Color = C.Leaf,
+				Dark = C.LeafDark,
+				TextSize = 16,
+				Size = UDim2.new(0.5, -14, 0, 50),
+				Position = UDim2.new(if i == 1 then 0 else 0.5, if i == 1 then 10 else 4, 1, -58),
+				Parent = frame,
+			})
+			button.Activated:Connect(function()
+				onBuy(amount)
+			end)
+		end
+	end
+
+	local function render()
+		Components.clear(grid)
+		local data = State.data
+		local season = State.time().season
+		subtitle.Text = "Mùa " .. season .. ": hạt mùa khác sẽ bán khi tới mùa"
+		coins.Text = if data then Format.number(data.coins) .. " Xu" else ""
+
+		local order = 0
+		for _, cropId in ipairs(Crops.Order) do
+			local def = Crops.List[cropId]
+			if def.Season == season then
+				order += 1
+				card(
+					order,
+					Color3.fromRGB(def.Color[1], def.Color[2], def.Color[3]),
+					def.Name,
+					"Lớn trong " .. def.Days .. " ngày",
+					string.format("Hạt %s Xu · Bán %s–%s Xu", Format.number(def.SeedPrice), Format.number(def.SellPrice), Format.number(FarmLogic.sellPrice(cropId, 3, Crops, Cfg))),
+					if def.Regrow then "Thu nhiều lần · ra quả lại sau " .. def.Regrow .. " ngày" else nil,
+					function(amount)
+						BuySeed:FireServer(cropId, amount)
+					end
+				)
+			end
+		end
+		card(
+			order + 1,
+			C.Soil,
+			"Phân bón",
+			"Đang có: " .. (if data then tostring(data.fertilizer) else "0"),
+			string.format("%d Xu/bao · +%d màu mỡ cho 1 ô", Cfg.FertilizerPrice, Cfg.Fertility.FertilizerGain),
+			"Đất màu mỡ giúp nông sản đạt 3 sao",
+			function(amount)
+				BuyItem:FireServer("Fertilizer", amount)
+			end
+		)
+	end
+
+	Panels.register("Shop", panel, render)
+	State.onChanged(function()
+		if panel.Visible then
+			render()
+		end
+	end)
+	Remotes.event("OpenShop").OnClientEvent:Connect(function()
+		Panels.open("Shop")
+	end)
+end
+
+return Shop
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="32">
+          <Properties>
+            <string name="Name">State</string>
+            <string name="Source"><![CDATA[--[[
+	State: trạng thái người chơi do server gửi xuống + tiện ích thời gian.
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local GameTime = require(ReplicatedStorage.Shared.GameTime)
+
+local State = {}
+
+State.data = nil :: any
+local listeners: { (any) -> () } = {}
+
+function State.set(data)
+	State.data = data
+	for _, callback in ipairs(listeners) do
+		task.spawn(callback, data)
+	end
+end
+
+function State.onChanged(callback: (any) -> ())
+	table.insert(listeners, callback)
+	if State.data then
+		task.spawn(callback, State.data)
+	end
+end
+
+function State.time(): GameTime.Info
+	return GameTime.at(workspace:GetServerTimeNow(), Cfg.Time)
+end
+
+return State
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="33">
+          <Properties>
+            <string name="Name">TilePopup</string>
+            <string name="Source"><![CDATA[--[[
+	TilePopup: bảng nhỏ cho biết tình trạng ô đất đang nhắm
+	(cây gì, ngày mấy, sao chất lượng, ướt/khô, cỏ, sâu, màu mỡ, nên làm gì tiếp).
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local Crops = require(ReplicatedStorage.Shared.Config.Crops)
+local Format = require(ReplicatedStorage.Shared.Format)
+
+local Theme = require(script.Parent.UI.Theme)
+local Components = require(script.Parent.UI.Components)
+local State = require(script.Parent.State)
+local ToolController = require(script.Parent.ToolController)
+
+local TilePopup = {}
+local C = Theme.Colors
+local create = Components.create
+
+local function chip(parent: Instance, text: string, bg: Color3, fg: Color3, order: number)
+	local label = Components.text({
+		Size = UDim2.fromOffset(0, 22),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundTransparency = 0,
+		BackgroundColor3 = bg,
+		TextColor3 = fg,
+		TextSize = 13,
+		FontFace = Theme.Font.Heavy,
+		Text = text,
+		LayoutOrder = order,
+		Parent = parent,
+	})
+	Components.corner(8).Parent = label
+	create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }).Parent = label
+end
+
+-- Ô đất nằm trong Island > Tiles > ô. Trả về chủ đảo (nếu đang online).
+local function ownerOf(tile: BasePart): Player?
+	local island = tile.Parent and tile.Parent.Parent
+	local ownerId = island and island:GetAttribute("OwnerId")
+	if type(ownerId) ~= "number" or ownerId == 0 then
+		return nil
+	end
+	return Players:GetPlayerByUserId(ownerId)
+end
+
+function TilePopup.init(gui: ScreenGui)
+	local panel = Components.panel({
+		Name = "TilePopup",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -12, 0.45, 0),
+		Size = UDim2.fromOffset(230, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		Visible = false,
+		Parent = gui,
+	})
+	Components.padding(10).Parent = panel
+	local layout = Components.list(Enum.FillDirection.Vertical, 6)
+	layout.VerticalAlignment = Enum.VerticalAlignment.Top
+	layout.Parent = panel
+
+	local title = Components.text({ Size = UDim2.new(1, 0, 0, 22), TextSize = 19, FontFace = Theme.Font.Heavy, LayoutOrder = 1, Parent = panel })
+	local subtitle = Components.text({ Size = UDim2.new(1, 0, 0, 16), TextSize = 13, TextColor3 = C.InkSoft, LayoutOrder = 2, Parent = panel })
+	local stars = Components.text({ Size = UDim2.new(1, 0, 0, 20), TextSize = 18, TextColor3 = C.SunDark, FontFace = Theme.Font.Heavy, LayoutOrder = 3, Parent = panel })
+	local chips = create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		LayoutOrder = 4,
+		Parent = panel,
+	}, {
+		create("UIGridLayout", {
+			CellSize = UDim2.fromOffset(100, 22),
+			CellPadding = UDim2.fromOffset(4, 4),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+	local fertRow = create("Frame", { Size = UDim2.new(1, 0, 0, 16), BackgroundTransparency = 1, LayoutOrder = 5, Parent = panel })
+	Components.text({ Size = UDim2.fromOffset(62, 16), Text = "Màu mỡ", TextSize = 12, TextColor3 = C.InkSoft, Parent = fertRow })
+	local fertTrack = create("Frame", {
+		Position = UDim2.fromOffset(66, 4),
+		Size = UDim2.new(1, -66, 0, 8),
+		BackgroundColor3 = C.Track,
+		Parent = fertRow,
+	}, { Components.corner(4) })
+	local fertFill = create("Frame", { Size = UDim2.fromScale(0.5, 1), BackgroundColor3 = C.Soil, Parent = fertTrack }, { Components.corner(4) })
+	local hint = Components.text({
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		TextSize = 13,
+		TextWrapped = true,
+		TextColor3 = C.Leaf,
+		FontFace = Theme.Font.Heavy,
+		LayoutOrder = 6,
+		Parent = panel,
+	})
+
+	local function render(tile: BasePart)
+		local state = tile:GetAttribute("State")
+		local cropId = tile:GetAttribute("Crop")
+		local watered = tile:GetAttribute("Watered") == true
+		local weed = tile:GetAttribute("Weed") == true
+		local pest = tile:GetAttribute("Pest") == true
+		local fertility = tile:GetAttribute("Fertility") or 0
+		local season = State.time().season
+		local owner = ownerOf(tile)
+
+		Components.clear(chips)
+		stars.Visible = false
+		fertRow.Visible = state == "tilled"
+		fertFill.Size = UDim2.fromScale(math.clamp(fertility / 100, 0, 1), 1)
+		local nextStep = ""
+
+		if state == "debris" then
+			title.Text = "Đá / gốc cây"
+			subtitle.Text = "Cuốc thêm " .. tostring(tile:GetAttribute("Hp") or 1) .. " nhát để dọn"
+			nextStep = "Dùng Cuốc"
+		elseif state == "grass" then
+			title.Text = "Đất cỏ"
+			subtitle.Text = "Chưa trồng được"
+			nextStep = "Dùng Cuốc để làm luống"
+		elseif type(cropId) == "string" and Crops.List[cropId] then
+			local def = Crops.List[cropId]
+			local growth = tonumber(tile:GetAttribute("Growth")) or 0
+			local ripe = growth >= def.Days
+			title.Text = def.Name
+			subtitle.Text = if ripe then "Đã chín!" else string.format("Ngày %s/%d", tostring(math.floor(growth * 10) / 10), def.Days)
+			stars.Visible = true
+			stars.Text = Format.stars(tonumber(tile:GetAttribute("Stars")) or 1)
+			if ripe then
+				nextStep = "Dùng Liềm để thu hoạch"
+			elseif pest then
+				nextStep = "Dùng Bình xịt diệt sâu"
+			elseif weed then
+				nextStep = "Dùng Liềm cắt cỏ"
+			elseif not watered then
+				nextStep = "Dùng Bình tưới"
+			elseif fertility < Cfg.Fertility.Good then
+				nextStep = "Bón phân để được 3 sao"
+			else
+				nextStep = "Chờ sáng mai cây sẽ lớn"
+			end
+			if def.Season ~= season then
+				chip(chips, "Trái mùa", C.GreyDark, C.White, 0)
+				nextStep = "Trái mùa: cây đứng yên tới mùa " .. def.Season
+			end
+		else
+			title.Text = "Đất đã cuốc"
+			subtitle.Text = "Sẵn sàng gieo hạt"
+			nextStep = if weed then "Dùng Liềm cắt cỏ" else "Dùng Túi hạt để gieo"
+		end
+
+		if state == "tilled" then
+			chip(chips, if watered then "Đất ướt" else "Đất khô", if watered then C.Water else C.Bag, C.White, 1)
+			if weed then
+				chip(chips, "Có cỏ dại", C.Danger, C.White, 2)
+			end
+			if pest then
+				chip(chips, "Có sâu", C.Danger, C.White, 3)
+			end
+		end
+
+		if owner and owner ~= Players.LocalPlayer then
+			nextStep = "Đảo của " .. owner.DisplayName .. ": bạn có thể tưới, cắt cỏ, diệt sâu giúp."
+		end
+		hint.Text = nextStep
+	end
+
+	task.spawn(function()
+		while panel.Parent do
+			local tile = ToolController.target()
+			panel.Visible = tile ~= nil
+			if tile then
+				render(tile)
+			end
+			task.wait(0.15)
+		end
+	end)
+end
+
+return TilePopup
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="34">
+          <Properties>
+            <string name="Name">ToolController</string>
+            <string name="Source"><![CDATA[--[[
+	ToolController: tìm ô đất đang nhắm (chuột / chạm, hoặc ô ngay trước mặt),
+	viền sáng ô đó và gửi yêu cầu dùng công cụ lên server.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Cfg = require(ReplicatedStorage.Shared.Config.Game)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+local Theme = require(script.Parent.UI.Theme)
+local Notifications = require(script.Parent.Notifications)
+
+local ToolController = {}
+
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+local UseTool = Remotes.event("UseTool")
+
+local currentTarget: BasePart? = nil
+local hooked: { [Tool]: boolean } = {}
+
+local selection = Instance.new("SelectionBox")
+selection.Name = "TileTarget"
+selection.Color3 = Theme.Colors.White
+selection.LineThickness = 0.07
+selection.SurfaceColor3 = Theme.Colors.White
+selection.SurfaceTransparency = 0.85
+
+local overlapParams = OverlapParams.new()
+overlapParams.FilterType = Enum.RaycastFilterType.Include
+
+-- Leo ngược từ Part trúng chuột lên tới Part ô đất (có thuộc tính TileKey)
+local function tileFrom(instance: Instance?): BasePart?
+	while instance and instance ~= workspace do
+		if instance:IsA("BasePart") and instance:GetAttribute("TileKey") then
+			return instance
+		end
+		instance = instance.Parent
+	end
+	return nil
+end
+
+local function rootPart(): BasePart?
+	local character = player.Character
+	return character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+end
+
+function ToolController.equipped(): Tool?
+	local character = player.Character
+	return character and character:FindFirstChildOfClass("Tool")
+end
+
+local function findTarget(): BasePart?
+	local root = rootPart()
+	if not root then
+		return nil
+	end
+	local hit = tileFrom(mouse.Target)
+	if hit and (hit.Position - root.Position).Magnitude <= Cfg.ToolRange then
+		return hit
+	end
+
+	-- Không nhắm được bằng chuột: lấy ô gần nhất ngay trước mặt nhân vật
+	local world = workspace:FindFirstChild("World")
+	if not world then
+		return nil
+	end
+	overlapParams.FilterDescendantsInstances = { world }
+	local probe = root.Position + root.CFrame.LookVector * 3.5 - Vector3.new(0, 2.5, 0)
+	local best, bestDistance = nil, math.huge
+	for _, part in ipairs(workspace:GetPartBoundsInRadius(probe, 3, overlapParams)) do
+		local tile = tileFrom(part)
+		if tile then
+			local distance = (tile.Position - probe).Magnitude
+			if distance < bestDistance then
+				best, bestDistance = tile, distance
+			end
+		end
+	end
+	return best
+end
+
+function ToolController.target(): BasePart?
+	return currentTarget
+end
+
+local function hookTool(tool: Instance)
+	if not tool:IsA("Tool") or hooked[tool] then
+		return
+	end
+	hooked[tool] = true
+	tool.Activated:Connect(function()
+		local target = findTarget()
+		if target then
+			UseTool:FireServer(target, tool.Name)
+		else
+			Notifications.show("Bấm vào một ô đất trên đảo (hoặc đứng ngay trước ô đất).", "info")
+		end
+	end)
+	tool.Destroying:Connect(function()
+		hooked[tool] = nil
+	end)
+end
+
+local function watchContainer(container: Instance)
+	for _, child in ipairs(container:GetChildren()) do
+		hookTool(child)
+	end
+	container.ChildAdded:Connect(hookTool)
+end
+
+function ToolController.init()
+	selection.Parent = player:WaitForChild("PlayerGui")
+
+	local function onCharacter(character: Model)
+		watchContainer(character)
+		watchContainer(player:WaitForChild("Backpack"))
+	end
+	if player.Character then
+		onCharacter(player.Character)
+	end
+	player.CharacterAdded:Connect(onCharacter)
+
+	RunService.RenderStepped:Connect(function()
+		currentTarget = if ToolController.equipped() then findTarget() else nil
+		selection.Adornee = currentTarget
+	end)
+end
+
+return ToolController
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="35">
+          <Properties>
+            <string name="Name">Travel</string>
+            <string name="Source"><![CDATA[--[[
+	Travel: bảng "Đi lại": sang Đảo Chợ, về đảo mình, thăm đảo bạn bè.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+local Theme = require(script.Parent.UI.Theme)
+local Components = require(script.Parent.UI.Components)
+local Panels = require(script.Parent.UI.Panels)
+
+local Travel = {}
+local C = Theme.Colors
+local create = Components.create
+
+local TravelRemote = Remotes.event("Travel")
+local player = Players.LocalPlayer
+
+function Travel.init(gui: ScreenGui)
+	local panel = Components.panel({
+		Name = "Travel",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(320, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		Parent = gui,
+	})
+	Components.padding(14).Parent = panel
+	local layout = Components.list(Enum.FillDirection.Vertical, 8, Enum.HorizontalAlignment.Center)
+	layout.VerticalAlignment = Enum.VerticalAlignment.Top
+	layout.Parent = panel
+
+	local body = create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		LayoutOrder = 2,
+		Parent = panel,
+	}, { Components.list(Enum.FillDirection.Vertical, 8, Enum.HorizontalAlignment.Center) })
+
+	Components.text({
+		Size = UDim2.new(1, 0, 0, 30),
+		Text = "Đi đâu bây giờ?",
+		TextSize = 22,
+		FontFace = Theme.Font.Heavy,
+		TextColor3 = C.Leaf,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		LayoutOrder = 1,
+		Parent = panel,
+	})
+
+	local function destination(order: number, text: string, color: Color3, dark: Color3, target: any)
+		local _, button = Components.button({
+			Text = text,
+			Color = color,
+			Dark = dark,
+			TextSize = 17,
+			Size = UDim2.new(1, 0, 0, 52),
+			LayoutOrder = order,
+			Parent = body,
+		})
+		button.Activated:Connect(function()
+			TravelRemote:FireServer(target)
+			Panels.close("Travel")
+		end)
+	end
+
+	local function render()
+		Components.clear(body)
+		destination(1, "Đảo Chợ", C.Leaf, C.LeafDark, "market")
+		destination(2, "Về đảo của tôi", C.Bag, C.SoilDark, "home")
+		local order = 2
+		local islands = workspace:FindFirstChild("World")
+		if islands then
+			for _, island in ipairs(islands:GetChildren()) do
+				local ownerId = island:GetAttribute("OwnerId")
+				if type(ownerId) == "number" and ownerId ~= 0 and ownerId ~= player.UserId then
+					local owner = Players:GetPlayerByUserId(ownerId)
+					if owner then
+						order += 1
+						destination(order, "Thăm đảo " .. owner.DisplayName, C.Water, C.WaterDark, ownerId)
+					end
+				end
+			end
+		end
+		order += 1
+		local _, close = Components.button({
+			Text = "Đóng",
+			Color = C.Grey,
+			Dark = C.GreyDark,
+			TextSize = 16,
+			Size = UDim2.new(1, 0, 0, 46),
+			LayoutOrder = order,
+			Parent = body,
+		})
+		close.Activated:Connect(function()
+			Panels.close("Travel")
+		end)
+	end
+
+	Panels.register("Travel", panel, render)
+end
+
+return Travel
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="Folder" referent="36">
+          <Properties>
+            <string name="Name">UI</string>
+          </Properties>
+          <Item class="ModuleScript" referent="37">
+            <Properties>
+              <string name="Name">Components</string>
+              <string name="Source"><![CDATA[--[[
+	Components: các khối giao diện dùng chung (dựng bằng code).
+]]
+
+local Theme = require(script.Parent.Theme)
+
+local Components = {}
+local C = Theme.Colors
+
+function Components.create(className: string, props: { [string]: any }?, children: { Instance }?): any
+	local inst = Instance.new(className)
+	local parent = nil
+	if props then
+		for key, value in pairs(props) do
+			if key == "Parent" then
+				parent = value
+			else
+				(inst :: any)[key] = value
+			end
+		end
+	end
+	if children then
+		for _, child in ipairs(children) do
+			child.Parent = inst
+		end
+	end
+	if parent then
+		inst.Parent = parent
+	end
+	return inst
+end
+local create = Components.create
+
+function Components.corner(radius: number?): UICorner
+	return create("UICorner", { CornerRadius = UDim.new(0, radius or 12) })
+end
+
+function Components.stroke(color: Color3, thickness: number?): UIStroke
+	return create("UIStroke", {
+		Color = color,
+		Thickness = thickness or 3,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	})
+end
+
+function Components.padding(px: number): UIPadding
+	return create("UIPadding", {
+		PaddingTop = UDim.new(0, px),
+		PaddingBottom = UDim.new(0, px),
+		PaddingLeft = UDim.new(0, px),
+		PaddingRight = UDim.new(0, px),
+	})
+end
+
+function Components.list(direction: Enum.FillDirection, gap: number, align: Enum.HorizontalAlignment?): UIListLayout
+	return create("UIListLayout", {
+		FillDirection = direction,
+		Padding = UDim.new(0, gap),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		HorizontalAlignment = align or Enum.HorizontalAlignment.Left,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+	})
+end
+
+-- Chữ: nền trong suốt, font Nunito đậm, màu mực
+function Components.text(props: { [string]: any }): TextLabel
+	local defaults = {
+		BackgroundTransparency = 1,
+		FontFace = Theme.Font.ExtraBold,
+		TextColor3 = C.Ink,
+		TextSize = 16,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}
+	for key, value in pairs(defaults) do
+		if props[key] == nil then
+			props[key] = value
+		end
+	end
+	return create("TextLabel", props)
+end
+
+-- Bảng nền kem viền vàng nhạt
+function Components.panel(props: { [string]: any }): Frame
+	props.BackgroundColor3 = props.BackgroundColor3 or C.Cream
+	local frame = create("Frame", props)
+	Components.corner(18).Parent = frame
+	Components.stroke(C.CreamBorder, 4).Parent = frame
+	return frame
+end
+
+--[[
+	Nút "khối" theo thiết kế: nền màu + gờ đáy sẫm. Trả về (khung ngoài, nút).
+	Đặt Size/Position/LayoutOrder lên khung ngoài.
+]]
+function Components.button(props: {
+	Text: string,
+	Color: Color3,
+	Dark: Color3,
+	TextColor: Color3?,
+	TextSize: number?,
+	Size: UDim2?,
+	Position: UDim2?,
+	AnchorPoint: Vector2?,
+	LayoutOrder: number?,
+	Parent: Instance?,
+}): (Frame, TextButton)
+	local root = create("Frame", {
+		BackgroundColor3 = props.Dark,
+		Size = props.Size or UDim2.fromOffset(120, 50),
+		Position = props.Position or UDim2.new(),
+		AnchorPoint = props.AnchorPoint or Vector2.zero,
+		LayoutOrder = props.LayoutOrder or 0,
+	}, { Components.corner(14) })
+
+	local button = create("TextButton", {
+		Size = UDim2.new(1, 0, 1, -5),
+		BackgroundColor3 = props.Color,
+		AutoButtonColor = true,
+		Text = props.Text,
+		FontFace = Theme.Font.Heavy,
+		TextSize = props.TextSize or 18,
+		TextColor3 = props.TextColor or C.White,
+		TextWrapped = true,
+		Parent = root,
+	}, { Components.corner(14), Components.stroke(props.Dark, 3) })
+
+	button.MouseButton1Down:Connect(function()
+		button.Position = UDim2.fromOffset(0, 3)
+	end)
+	local function release()
+		button.Position = UDim2.new()
+	end
+	button.MouseButton1Up:Connect(release)
+	button.MouseLeave:Connect(release)
+
+	if props.Parent then
+		root.Parent = props.Parent
+	end
+	return root, button
+end
+
+-- Xoá mọi GuiObject con (giữ lại layout)
+function Components.clear(container: Instance)
+	for _, child in ipairs(container:GetChildren()) do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+end
+
+-- Nút đóng (X đỏ) ở góc phải trên của một bảng
+function Components.closeButton(parent: Instance, onClick: () -> ())
+	local _, button = Components.button({
+		Text = "X",
+		Color = C.Danger,
+		Dark = C.DangerDark,
+		Size = UDim2.fromOffset(48, 48),
+		Position = UDim2.new(1, -10, 0, 10),
+		AnchorPoint = Vector2.new(1, 0),
+		Parent = parent,
+	})
+	button.Activated:Connect(onClick)
+end
+
+return Components
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="38">
+            <Properties>
+              <string name="Name">Panels</string>
+              <string name="Source"><![CDATA[--[[
+	Panels: chỉ mở một bảng (cửa hàng, túi đồ, đi lại) tại một thời điểm.
+]]
+
+local Panels = {}
+
+type Entry = { frame: GuiObject, onOpen: (() -> ())? }
+local entries: { [string]: Entry } = {}
+
+function Panels.register(name: string, frame: GuiObject, onOpen: (() -> ())?)
+	entries[name] = { frame = frame, onOpen = onOpen }
+	frame.Visible = false
+end
+
+function Panels.isOpen(name: string): boolean
+	local entry = entries[name]
+	return entry ~= nil and entry.frame.Visible
+end
+
+function Panels.open(name: string)
+	for other, entry in pairs(entries) do
+		if other ~= name then
+			entry.frame.Visible = false
+		end
+	end
+	local entry = entries[name]
+	if entry then
+		entry.frame.Visible = true
+		if entry.onOpen then
+			entry.onOpen()
+		end
+	end
+end
+
+function Panels.close(name: string)
+	local entry = entries[name]
+	if entry then
+		entry.frame.Visible = false
+	end
+end
+
+function Panels.toggle(name: string)
+	if Panels.isOpen(name) then
+		Panels.close(name)
+	else
+		Panels.open(name)
+	end
+end
+
+return Panels
+]]></string>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="39">
+            <Properties>
+              <string name="Name">Theme</string>
+              <string name="Source"><![CDATA[--[[
+	Theme: màu & chữ theo bản thiết kế đã duyệt.
+]]
+
+local Theme = {}
+
+Theme.Colors = {
+	Leaf = Color3.fromRGB(46, 125, 50),
+	LeafDark = Color3.fromRGB(27, 94, 32),
+	Water = Color3.fromRGB(31, 111, 181),
+	WaterDark = Color3.fromRGB(20, 78, 130),
+	WaterLight = Color3.fromRGB(207, 227, 245),
+	Sun = Color3.fromRGB(255, 201, 60),
+	SunDark = Color3.fromRGB(201, 148, 0),
+	Danger = Color3.fromRGB(192, 57, 43),
+	DangerDark = Color3.fromRGB(142, 42, 32),
+	Soil = Color3.fromRGB(109, 76, 51),
+	SoilDark = Color3.fromRGB(74, 51, 34),
+	Bag = Color3.fromRGB(160, 115, 77),
+	Cream = Color3.fromRGB(255, 246, 229),
+	CreamBorder = Color3.fromRGB(232, 200, 143),
+	Ink = Color3.fromRGB(59, 42, 30),
+	InkSoft = Color3.fromRGB(90, 68, 51),
+	White = Color3.new(1, 1, 1),
+	Muted = Color3.fromRGB(237, 227, 209),
+	Grey = Color3.fromRGB(158, 158, 158),
+	GreyDark = Color3.fromRGB(110, 110, 110),
+	Shade = Color3.fromRGB(59, 42, 30),
+	Track = Color3.fromRGB(232, 220, 198),
+}
+
+Theme.Seasons = {
+	["Xuân"] = { Fill = Color3.fromRGB(248, 187, 208), Border = Color3.fromRGB(217, 131, 159) },
+	["Hạ"] = { Fill = Color3.fromRGB(255, 213, 79), Border = Color3.fromRGB(201, 162, 30) },
+	["Thu"] = { Fill = Color3.fromRGB(255, 178, 122), Border = Color3.fromRGB(217, 128, 63) },
+	["Đông"] = { Fill = Color3.fromRGB(179, 229, 252), Border = Color3.fromRGB(111, 184, 218) },
+}
+
+local family = Font.fromEnum(Enum.Font.Nunito).Family
+
+Theme.Font = {
+	Bold = Font.new(family, Enum.FontWeight.Bold),
+	ExtraBold = Font.new(family, Enum.FontWeight.ExtraBold),
+	Heavy = Font.new(family, Enum.FontWeight.Heavy),
+}
+
+-- Biểu tượng tạm cho công cụ (bản sau có thể thay bằng ảnh tải lên Roblox)
+Theme.ToolIcons = {
+	Hoe = "⛏️",
+	WateringCan = "💧",
+	SeedBag = "🌱",
+	Sickle = "🌾",
+	Fertilizer = "🧪",
+	Sprayer = "💨",
+}
+
+return Theme
+]]></string>
+            </Properties>
+          </Item>
+        </Item>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="Workspace" referent="40">
+    <Properties>
+      <string name="Name">Workspace</string>
+      <bool name="NeedsPivotMigration">false</bool>
+      <bool name="StreamingEnabled">false</bool>
+    </Properties>
+  </Item>
+</roblox>
